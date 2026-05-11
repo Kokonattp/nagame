@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { AqiBento } from "@/components/bento/aqi-bento";
 import { AiInsightBento } from "@/components/bento/ai-insight-bento";
 import { CrowdBento } from "@/components/bento/crowd-bento";
@@ -7,7 +7,6 @@ import { RainBento } from "@/components/bento/rain-bento";
 import { WeatherBento } from "@/components/bento/weather-bento";
 import { WindBento } from "@/components/bento/wind-bento";
 import { BottomNav } from "@/components/bottom-nav";
-import { JapanMap } from "@/components/japan-map";
 import { MobileShell } from "@/components/mobile-shell";
 import { RecommendationSection } from "@/components/sections/recommendation-section";
 import { getCityConfigBySlug } from "@/lib/cities/city-configs";
@@ -22,6 +21,10 @@ export const revalidate = 1800;
 
 export default async function CityPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  if (slug !== "fukuoka") {
+    redirect("/city/fukuoka");
+  }
+
   const city = await resolveCity(slug);
 
   if (!city) notFound();
@@ -49,8 +52,8 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
 
   return (
     <MobileShell>
-      <div className="space-y-5 lg:grid lg:h-[calc(100dvh-3rem)] lg:grid-cols-[minmax(0,1.08fr)_minmax(420px,0.92fr)] lg:gap-6 lg:space-y-0">
-        <div className="lg:h-full lg:min-h-0">
+      <div id="top" className="space-y-5">
+        <div>
           <WeatherBento
             cityName={city.name}
             japaneseName={config?.japaneseName ?? city.japaneseName}
@@ -59,21 +62,21 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
           />
         </div>
 
-        <div className="space-y-5 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:rounded-[2rem] lg:bg-[#f7f7fb] lg:p-5 lg:shadow-2xl lg:shadow-black/20">
-          <section id="signals" className="relative z-20 -mt-16 grid grid-cols-4 gap-2 px-4 lg:mt-0 lg:grid-cols-2 lg:px-0">
+        <div className="space-y-5">
+          <section id="signals" className="relative z-20 -mt-16 grid grid-cols-4 gap-2 px-4">
             <RainBento rainChance={weather.rainChance} />
             <AqiBento aqi={aqi} />
             <CrowdBento score={crowdScore} />
             <WindBento windSpeed={weather.windSpeed} />
           </section>
 
-          <section id="livecam" className="grid grid-cols-2 gap-3 px-4 lg:px-0">
+          <section id="livecam" className="grid grid-cols-2 gap-3 px-4">
             <LivecamBento webcam={webcam} cityName={city.name} />
             <AiInsightBento summary={summary} />
           </section>
 
           {events.available ? (
-            <section id="events" className="mx-4 rounded-3xl border border-white/70 bg-white p-4 shadow-lg shadow-sky-950/5 lg:mx-0">
+            <section id="events" className="mx-4 rounded-3xl border border-white/70 bg-white p-4 shadow-lg shadow-sky-950/5">
               <p className="text-sm font-bold text-zinc-500">Events</p>
               <div className="mt-3 grid gap-2">
                 {events.items.map((item) => (
@@ -84,8 +87,6 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
               </div>
             </section>
           ) : null}
-
-          <JapanMap />
 
           <div id="local" className="space-y-7 pt-1">
             <RecommendationSection kind="see" configured={hasVerifiedLocalRecommendations} items={recommendations.filter((item) => item.kind === "see")} />

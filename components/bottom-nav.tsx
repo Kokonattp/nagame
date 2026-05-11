@@ -1,19 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, Home, MapPin, Sparkles } from "lucide-react";
+import { Camera, Home, Sparkles } from "lucide-react";
 
 const items = [
-  { label: "วันนี้", href: "/", icon: Home },
-  { label: "แผนที่", href: "#map", icon: MapPin },
+  { label: "วันนี้", href: "#top", icon: Home },
   { label: "กล้อง", href: "#livecam", icon: Camera },
   { label: "แนะนำ", href: "#local", icon: Sparkles },
 ];
 
 export function BottomNav() {
   return (
-    <nav className="fixed inset-x-0 bottom-3 z-40 mx-auto max-w-[430px] px-8 lg:hidden">
-      <div className="grid grid-cols-4 items-center rounded-[2rem] border border-white/70 bg-white/86 px-2 py-1.5 shadow-2xl shadow-zinc-900/15 backdrop-blur-2xl">
+    <nav className="fixed inset-x-0 bottom-3 z-40 mx-auto max-w-[430px] px-8">
+      <div className="grid grid-cols-3 items-center rounded-[2rem] border border-white/70 bg-white/86 px-2 py-1.5 shadow-2xl shadow-zinc-900/15 backdrop-blur-2xl">
         {items.map((item) => {
           const Icon = item.icon;
           return (

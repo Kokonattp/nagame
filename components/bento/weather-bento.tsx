@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CloudSun, Droplets, MapPin, Search, ThermometerSun } from "lucide-react";
+import { CloudSun, Droplets, MapPin, ThermometerSun } from "lucide-react";
 import { ShareableCard } from "@/components/bento/shareable-card";
 import type { WeatherSignal } from "@/lib/services/weather";
 import { cn } from "@/lib/utils/cn";
@@ -21,12 +21,12 @@ export function WeatherBento({
   return (
     <ShareableCard
       title={`${cityName}-weather`}
-      className={cn("min-h-[485px] rounded-b-[2.25rem] rounded-t-none border-0 bg-gradient-to-br p-6 text-white shadow-none lg:h-full lg:min-h-0 lg:rounded-[2rem] lg:p-8 lg:shadow-2xl lg:shadow-black/25", heroTone)}
+      className={cn("min-h-[485px] rounded-b-[2.25rem] rounded-t-none border-0 bg-gradient-to-br p-6 text-white shadow-none", heroTone)}
     >
       <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${heroImage})` }} />
       <div className="absolute inset-0 bg-gradient-to-b from-sky-900/15 via-sky-700/10 to-zinc-950/45" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_32%,rgba(255,255,255,0.36),transparent_24%)]" />
-      <div className="relative z-10 flex h-full min-h-[435px] flex-col justify-between lg:min-h-0">
+      <div className="relative z-10 flex h-full min-h-[435px] flex-col justify-between">
         <div className="flex items-center justify-between pr-11 text-sm font-bold">
           <span>9:41</span>
           <div className="flex items-center gap-1.5">
@@ -38,15 +38,8 @@ export function WeatherBento({
 
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-4xl font-black leading-none tracking-normal lg:text-6xl">Nagame</h1>
-            {japaneseName ? <p className="mt-1 text-2xl font-bold text-white/85 lg:text-4xl">{japaneseName}</p> : null}
-          </div>
-          <div className="flex items-center gap-4 pr-8">
-            <Search className="h-6 w-6 text-white/90" aria-hidden />
-            <div className="relative">
-              <Bell className="h-6 w-6 text-white/90" aria-hidden />
-              <span className="absolute -right-0.5 -top-1 h-2.5 w-2.5 rounded-full bg-red-500" />
-            </div>
+            <h1 className="text-4xl font-black leading-none tracking-normal">Nagame</h1>
+            {japaneseName ? <p className="mt-1 text-2xl font-bold text-white/85">{japaneseName}</p> : null}
           </div>
         </div>
 
@@ -59,13 +52,13 @@ export function WeatherBento({
             <CloudSun className="h-20 w-20 drop-shadow-lg" aria-hidden />
             <div>
               <div className="flex items-start gap-1">
-                <span className="text-7xl font-black leading-none tracking-normal lg:text-9xl">
+                <span className="text-7xl font-black leading-none tracking-normal">
                   {weather.temperature ?? "--"}
                 </span>
                 <span className="mt-1 text-4xl font-bold">°</span>
               </div>
-              <p className="mt-1 text-lg font-bold lg:text-2xl">{weather.condition}</p>
-              <p className="text-sm font-semibold text-white/82 lg:text-base">รู้สึกเหมือน {weather.feelsLike ?? "--"}°</p>
+              <p className="mt-1 text-lg font-bold">{weather.condition}</p>
+              <p className="text-sm font-semibold text-white/82">รู้สึกเหมือน {weather.feelsLike ?? "--"}°</p>
             </div>
           </div>
           <div className="mt-8 flex justify-end">
