@@ -16,20 +16,17 @@ export function WeatherBento({
   weather: WeatherSignal;
   heroTone: string;
 }) {
-  const heroImage =
-    cityName.toLowerCase() === "fukuoka"
-      ? "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/View_from_Fukuoka_Tower_at_Blue_Hour.jpg/1280px-View_from_Fukuoka_Tower_at_Blue_Hour.jpg"
-      : "https://images.unsplash.com/photo-1528164344705-47542687000d?auto=format&fit=crop&w=900&q=82";
+  const heroImage = cityHeroImages[cityName.toLowerCase()] ?? cityHeroImages.default;
 
   return (
     <ShareableCard
       title={`${cityName}-weather`}
-      className={cn("min-h-[485px] rounded-b-[2.25rem] rounded-t-none border-0 bg-gradient-to-br p-6 text-white shadow-none lg:h-full lg:min-h-[720px] lg:rounded-[2rem] lg:p-8 lg:shadow-2xl lg:shadow-black/25", heroTone)}
+      className={cn("min-h-[485px] rounded-b-[2.25rem] rounded-t-none border-0 bg-gradient-to-br p-6 text-white shadow-none lg:h-full lg:min-h-0 lg:rounded-[2rem] lg:p-8 lg:shadow-2xl lg:shadow-black/25", heroTone)}
     >
       <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${heroImage})` }} />
       <div className="absolute inset-0 bg-gradient-to-b from-sky-900/15 via-sky-700/10 to-zinc-950/45" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_32%,rgba(255,255,255,0.36),transparent_24%)]" />
-      <div className="relative z-10 flex h-full min-h-[435px] flex-col justify-between lg:min-h-[660px]">
+      <div className="relative z-10 flex h-full min-h-[435px] flex-col justify-between lg:min-h-0">
         <div className="flex items-center justify-between pr-11 text-sm font-bold">
           <span>9:41</span>
           <div className="flex items-center gap-1.5">
@@ -104,3 +101,20 @@ export function WeatherBento({
     </ShareableCard>
   );
 }
+
+const cityHeroImages: Record<string, string> = {
+  fukuoka:
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/View_from_Fukuoka_Tower_at_Blue_Hour.jpg/1280px-View_from_Fukuoka_Tower_at_Blue_Hour.jpg",
+  osaka:
+    "https://images.unsplash.com/photo-1590559899731-a382839e5549?auto=format&fit=crop&w=1400&q=82",
+  tokyo:
+    "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1400&q=82",
+  kyoto:
+    "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1400&q=82",
+  sapporo:
+    "https://images.unsplash.com/photo-1614155375772-0beae6925b0d?auto=format&fit=crop&w=1400&q=82",
+  naha:
+    "https://images.unsplash.com/photo-1580282628335-2d6b8c760bb5?auto=format&fit=crop&w=1400&q=82",
+  default:
+    "https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d?auto=format&fit=crop&w=1400&q=82",
+};
