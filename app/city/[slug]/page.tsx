@@ -48,45 +48,49 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
 
   return (
     <MobileShell>
-      <div className="space-y-5">
-        <WeatherBento
-          cityName={city.name}
-          japaneseName={config?.japaneseName ?? city.japaneseName}
-          weather={weather}
-          heroTone={config?.heroTone ?? "from-sky-500 via-cyan-200 to-amber-100"}
-        />
+      <div className="space-y-5 lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(390px,0.9fr)] lg:gap-6 lg:space-y-0">
+        <div className="lg:sticky lg:top-8 lg:h-[calc(100dvh-4rem)] lg:min-h-[720px]">
+          <WeatherBento
+            cityName={city.name}
+            japaneseName={config?.japaneseName ?? city.japaneseName}
+            weather={weather}
+            heroTone={config?.heroTone ?? "from-sky-500 via-cyan-200 to-amber-100"}
+          />
+        </div>
 
-        <section id="signals" className="relative z-20 -mt-16 grid grid-cols-4 gap-2 px-4">
-          <RainBento rainChance={weather.rainChance} />
-          <AqiBento aqi={aqi} />
-          <CrowdBento score={crowdScore} />
-          <WindBento windSpeed={weather.windSpeed} />
-        </section>
-
-        <section id="livecam" className="grid grid-cols-2 gap-3 px-4">
-          <LivecamBento webcam={webcam} cityName={city.name} />
-          <AiInsightBento summary={summary} />
-        </section>
-
-        {events.available ? (
-          <section id="events" className="mx-4 rounded-3xl border border-white/70 bg-white p-4 shadow-lg shadow-sky-950/5">
-            <p className="text-sm font-bold text-zinc-500">Events</p>
-            <div className="mt-3 grid gap-2">
-              {events.items.map((item) => (
-                <a key={item.url} href={item.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-zinc-950 underline-offset-4 hover:underline">
-                  {item.title}
-                </a>
-              ))}
-            </div>
+        <div className="space-y-5 lg:min-h-[calc(100dvh-4rem)] lg:overflow-y-auto lg:rounded-[2rem] lg:bg-[#f7f7fb] lg:p-5 lg:shadow-2xl lg:shadow-black/20">
+          <section id="signals" className="relative z-20 -mt-16 grid grid-cols-4 gap-2 px-4 lg:mt-0 lg:grid-cols-2 lg:px-0">
+            <RainBento rainChance={weather.rainChance} />
+            <AqiBento aqi={aqi} />
+            <CrowdBento score={crowdScore} />
+            <WindBento windSpeed={weather.windSpeed} />
           </section>
-        ) : null}
 
-        <JapanMap />
+          <section id="livecam" className="grid grid-cols-2 gap-3 px-4 lg:px-0">
+            <LivecamBento webcam={webcam} cityName={city.name} />
+            <AiInsightBento summary={summary} />
+          </section>
 
-        <div id="local" className="space-y-7 pt-1">
-          <RecommendationSection kind="see" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "see")} />
-          <RecommendationSection kind="eat" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "eat")} />
-          <RecommendationSection kind="sleep" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "sleep")} />
+          {events.available ? (
+            <section id="events" className="mx-4 rounded-3xl border border-white/70 bg-white p-4 shadow-lg shadow-sky-950/5 lg:mx-0">
+              <p className="text-sm font-bold text-zinc-500">Events</p>
+              <div className="mt-3 grid gap-2">
+                {events.items.map((item) => (
+                  <a key={item.url} href={item.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-zinc-950 underline-offset-4 hover:underline">
+                    {item.title}
+                  </a>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <JapanMap />
+
+          <div id="local" className="space-y-7 pt-1">
+            <RecommendationSection kind="see" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "see")} />
+            <RecommendationSection kind="eat" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "eat")} />
+            <RecommendationSection kind="sleep" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "sleep")} />
+          </div>
         </div>
       </div>
       <BottomNav />

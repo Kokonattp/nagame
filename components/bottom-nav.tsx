@@ -13,7 +13,7 @@ const items = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed inset-x-0 bottom-3 z-40 mx-auto max-w-[430px] px-8">
+    <nav className="fixed inset-x-0 bottom-3 z-40 mx-auto max-w-[430px] px-8 lg:max-w-[720px]">
       <div className="grid grid-cols-5 items-center rounded-[2rem] border border-white/70 bg-white/86 px-2 py-1.5 shadow-2xl shadow-zinc-900/15 backdrop-blur-2xl">
         {items.slice(0, 2).map((item) => {
           const Icon = item.icon;

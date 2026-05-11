@@ -15,7 +15,7 @@ const cities = [
 
 export function JapanMap() {
   return (
-    <section id="map" className="mx-4 rounded-[2rem] bg-zinc-950 p-4 text-white shadow-2xl shadow-zinc-950/20">
+    <section id="map" className="mx-4 rounded-[2rem] bg-zinc-950 p-4 text-white shadow-2xl shadow-zinc-950/20 lg:mx-0">
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-200/80">Japan map</p>
