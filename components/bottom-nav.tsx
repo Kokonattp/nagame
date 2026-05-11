@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Home, MapPin, UserRound } from "lucide-react";
+import { Bell, Camera, Home, MapPin } from "lucide-react";
 import { ReportModal } from "@/components/report-modal";
 
 const items = [
   { label: "วันนี้", href: "/", icon: Home },
-  { label: "แผนที่", href: "#signals", icon: MapPin },
-  { label: "แจ้งเตือน", href: "#livecam", icon: Bell },
-  { label: "บัญชี", href: "#local", icon: UserRound },
+  { label: "แผนที่", href: "#map", icon: MapPin },
+  { label: "กล้อง", href: "#livecam", icon: Camera },
+  { label: "แจ้งเตือน", href: "#events", icon: Bell },
 ];
 
 export function BottomNav() {

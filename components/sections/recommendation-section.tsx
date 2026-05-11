@@ -20,7 +20,14 @@ export function RecommendationSection({
     <section className="space-y-3">
       <div className="flex items-end justify-between px-4">
         <h2 className="text-2xl font-black tracking-normal">{titles[kind]}</h2>
-        <p className="text-sm font-bold text-violet-600">ดูทั้งหมด ›</p>
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${titles[kind]} Fukuoka Japan`)}`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm font-bold text-violet-600"
+        >
+          ดูทั้งหมด ›
+        </a>
       </div>
       {configured && items.length ? (
         <div className="flex gap-3 overflow-x-auto px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

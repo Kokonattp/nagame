@@ -7,6 +7,7 @@ import { RainBento } from "@/components/bento/rain-bento";
 import { WeatherBento } from "@/components/bento/weather-bento";
 import { WindBento } from "@/components/bento/wind-bento";
 import { BottomNav } from "@/components/bottom-nav";
+import { JapanMap } from "@/components/japan-map";
 import { MobileShell } from "@/components/mobile-shell";
 import { RecommendationSection } from "@/components/sections/recommendation-section";
 import { getCityConfigBySlug } from "@/lib/cities/city-configs";
@@ -68,7 +69,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
         </section>
 
         {events.available ? (
-          <section className="mx-4 rounded-3xl border border-white/70 bg-white p-4 shadow-lg shadow-sky-950/5">
+          <section id="events" className="mx-4 rounded-3xl border border-white/70 bg-white p-4 shadow-lg shadow-sky-950/5">
             <p className="text-sm font-bold text-zinc-500">Events</p>
             <div className="mt-3 grid gap-2">
               {events.items.map((item) => (
@@ -79,6 +80,8 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
             </div>
           </section>
         ) : null}
+
+        <JapanMap />
 
         <div id="local" className="space-y-7 pt-1">
           <RecommendationSection kind="see" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "see")} />
