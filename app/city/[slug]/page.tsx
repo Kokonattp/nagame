@@ -44,7 +44,8 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
   });
 
   const crowdScore = buildCrowdScore(config?.crowdBaseline, weather.rainChance);
-  const recommendations = config?.recommendations ?? [];
+  const hasVerifiedLocalRecommendations = city.slug === "fukuoka";
+  const recommendations = hasVerifiedLocalRecommendations ? (config?.recommendations ?? []) : [];
 
   return (
     <MobileShell>
@@ -87,9 +88,9 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
           <JapanMap />
 
           <div id="local" className="space-y-7 pt-1">
-            <RecommendationSection kind="see" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "see")} />
-            <RecommendationSection kind="eat" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "eat")} />
-            <RecommendationSection kind="sleep" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "sleep")} />
+            <RecommendationSection kind="see" configured={hasVerifiedLocalRecommendations} items={recommendations.filter((item) => item.kind === "see")} />
+            <RecommendationSection kind="eat" configured={hasVerifiedLocalRecommendations} items={recommendations.filter((item) => item.kind === "eat")} />
+            <RecommendationSection kind="sleep" configured={hasVerifiedLocalRecommendations} items={recommendations.filter((item) => item.kind === "sleep")} />
           </div>
         </div>
       </div>

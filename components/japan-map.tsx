@@ -14,6 +14,11 @@ const cities = [
 ];
 
 export function JapanMap() {
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const mapImage = mapboxToken
+    ? `https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/138.2529,36.2048,4.15,0/960x640@2x?access_token=${mapboxToken}`
+    : "https://staticmap.openstreetmap.de/staticmap.php?center=36.2048,138.2529&zoom=5&size=960x640&maptype=mapnik";
+
   return (
     <section id="map" className="mx-4 rounded-[2rem] bg-zinc-950 p-4 text-white shadow-2xl shadow-zinc-950/20 lg:mx-0">
       <div className="mb-3 flex items-center justify-between">
@@ -24,13 +29,12 @@ export function JapanMap() {
         <MapPin className="h-6 w-6 text-cyan-200" aria-hidden />
       </div>
       <div className="relative h-[360px] overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-900 lg:h-[420px]">
-        <iframe
-          title="Japan map"
-          className="absolute inset-0 h-full w-full grayscale-[0.25] contrast-110"
-          src="https://www.openstreetmap.org/export/embed.html?bbox=121.5%2C23.0%2C147.5%2C46.8&layer=mapnik"
-          loading="lazy"
-        />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-zinc-950/5 via-transparent to-zinc-950/25" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={mapImage} alt="Japan map" className="absolute inset-0 h-full w-full object-cover" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-zinc-950/10 via-transparent to-zinc-950/35" />
+        <div className="pointer-events-none absolute bottom-2 left-3 rounded-full bg-white/85 px-2 py-1 text-[10px] font-bold text-zinc-700">
+          {mapboxToken ? "Mapbox" : "OpenStreetMap fallback"}
+        </div>
 
         {cities.map((city) => (
           <Link

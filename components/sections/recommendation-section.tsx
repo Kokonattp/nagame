@@ -38,7 +38,7 @@ export function RecommendationSection({
       ) : (
         <div className="mx-4 rounded-3xl border border-white/70 bg-white p-5 shadow-lg shadow-sky-950/5">
           <p className="text-sm leading-6 text-zinc-600">
-            ข้อมูลแนะนำท้องถิ่นของเมืองนี้ยังไม่ครบ แต่คุณยังดูสภาพอากาศ AQI และกล้องใกล้เคียงได้
+            V1 มีข้อมูลแนะนำท้องถิ่นที่ตรวจภาพและลิงก์แล้วเฉพาะ Fukuoka ตอนนี้ เมืองนี้จึงแสดงเฉพาะ weather, AQI, livecam และแผนที่ก่อน
           </p>
         </div>
       )}
