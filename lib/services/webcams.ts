@@ -37,7 +37,9 @@ export async function getWebcams(
   lon: number,
   cityConfig?: CityConfig,
 ): Promise<WebcamSignal> {
-  return cached(`webcam:${lat.toFixed(3)}:${lon.toFixed(3)}`, 60 * 30, async () => {
+  const ttlSeconds = process.env.WINDY_WEBCAMS_API_KEY ? 60 * 9 : 60 * 30;
+
+  return cached(`webcam:${lat.toFixed(3)}:${lon.toFixed(3)}`, ttlSeconds, async () => {
     if (process.env.WINDY_WEBCAMS_API_KEY) {
       const windy = await getWindyWebcam(lat, lon);
       if (windy.available) return windy;
