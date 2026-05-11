@@ -1,0 +1,119 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Search } from "lucide-react";
+import { AqiBento } from "@/components/bento/aqi-bento";
+import { AiInsightBento } from "@/components/bento/ai-insight-bento";
+import { CrowdBento } from "@/components/bento/crowd-bento";
+import { LivecamBento } from "@/components/bento/livecam-bento";
+import { RainBento } from "@/components/bento/rain-bento";
+import { WeatherBento } from "@/components/bento/weather-bento";
+import { WindBento } from "@/components/bento/wind-bento";
+import { BottomNav } from "@/components/bottom-nav";
+import { MobileShell } from "@/components/mobile-shell";
+import { ReportModal } from "@/components/report-modal";
+import { RecommendationSection } from "@/components/sections/recommendation-section";
+import { getCityConfigBySlug } from "@/lib/cities/city-configs";
+import { getAqi } from "@/lib/services/aqi";
+import { getAiSummary } from "@/lib/services/ai-summary";
+import { getEvents } from "@/lib/services/events";
+import { resolveCity } from "@/lib/services/geocode";
+import { getWebcams } from "@/lib/services/webcams";
+import { getWeather } from "@/lib/services/weather";
+
+export const revalidate = 1800;
+
+export default async function CityPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const city = await resolveCity(slug);
+
+  if (!city) notFound();
+
+  const config = getCityConfigBySlug(city.slug);
+  const [weather, aqi, webcam, events] = await Promise.all([
+    getWeather(city.lat, city.lon),
+    getAqi(city.lat, city.lon),
+    getWebcams(city.lat, city.lon, config),
+    getEvents(config),
+  ]);
+
+  const summary = await getAiSummary({
+    cityName: city.name,
+    cityConfig: config,
+    weather,
+    aqi,
+    webcam,
+    events,
+  });
+
+  const crowdScore = buildCrowdScore(config?.crowdBaseline, weather.rainChance);
+  const recommendations = config?.recommendations ?? [];
+
+  return (
+    <MobileShell>
+      <div className="space-y-4">
+        <header className="flex items-center justify-between gap-3 px-1 pb-1">
+          <div className="min-w-0">
+            <p className="text-sm font-black text-zinc-500">Nagame · 眺め</p>
+            <h1 className="truncate text-2xl font-black tracking-normal">{city.name}</h1>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <ReportModal />
+            <Link
+              href="/"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/52 shadow-sm backdrop-blur-xl"
+              title="ค้นหาเมือง"
+            >
+              <Search className="h-4 w-4" aria-hidden />
+              <span className="sr-only">ค้นหาเมือง</span>
+            </Link>
+          </div>
+        </header>
+
+        <WeatherBento
+          cityName={city.name}
+          japaneseName={config?.japaneseName ?? city.japaneseName}
+          weather={weather}
+          heroTone={config?.heroTone ?? "from-sky-500 via-cyan-200 to-amber-100"}
+        />
+
+        <section id="signals" className="grid grid-cols-2 gap-3">
+          <RainBento rainChance={weather.rainChance} />
+          <AqiBento aqi={aqi} />
+          <CrowdBento score={crowdScore} />
+          <WindBento windSpeed={weather.windSpeed} />
+        </section>
+
+        <section id="livecam">
+          <LivecamBento webcam={webcam} cityName={city.name} />
+        </section>
+
+        <AiInsightBento summary={summary} />
+
+        {events.available ? (
+          <section className="rounded-3xl border border-white/70 bg-white/55 p-4 shadow-lg shadow-sky-950/5 backdrop-blur-xl">
+            <p className="text-sm font-bold text-zinc-500">Events</p>
+            <div className="mt-3 grid gap-2">
+              {events.items.map((item) => (
+                <a key={item.url} href={item.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-zinc-950 underline-offset-4 hover:underline">
+                  {item.title}
+                </a>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <div id="local" className="space-y-6 pt-2">
+          <RecommendationSection kind="see" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "see")} />
+          <RecommendationSection kind="eat" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "eat")} />
+          <RecommendationSection kind="sleep" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "sleep")} />
+        </div>
+      </div>
+      <BottomNav />
+    </MobileShell>
+  );
+}
+
+function buildCrowdScore(baseline = 46, rainChance: number | null) {
+  const rainAdjustment = typeof rainChance === "number" ? (rainChance >= 70 ? -14 : rainChance >= 40 ? -6 : 4) : 0;
+  return Math.max(18, Math.min(92, baseline + rainAdjustment));
+}
