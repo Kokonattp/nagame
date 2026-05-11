@@ -35,6 +35,18 @@ export async function getAiSummary(input: SummaryInput): Promise<SummarySignal> 
       }
     }
 
+    if (process.env.GEMINI_API_KEY) {
+      const geminiText = await requestGeminiSummary(input);
+      if (geminiText) {
+        return {
+          available: true,
+          source: "Gemini summary",
+          text: geminiText,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+    }
+
     return {
       available: true,
       source: "Rule-based summary",
@@ -45,25 +57,7 @@ export async function getAiSummary(input: SummaryInput): Promise<SummarySignal> 
 }
 
 async function requestAiSummary(input: SummaryInput) {
-  const prompt = [
-    "เขียนสรุปภาษาไทยไม่เกิน 3 บรรทัดสำหรับแอป travel signal ญี่ปุ่น",
-    "ห้ามเดาข้อมูลที่ไม่มี ให้บอกชัดว่าข้อมูลไหนยังไม่พร้อม",
-    JSON.stringify({
-      city: input.cityName,
-      weather: input.weather.available
-        ? {
-            temp: input.weather.temperature,
-            condition: input.weather.condition,
-            rainChance: input.weather.rainChance,
-            windSpeed: input.weather.windSpeed,
-          }
-        : null,
-      aqi: input.aqi.available ? { aqi: input.aqi.aqi, label: input.aqi.label, pm25: input.aqi.pm25 } : null,
-      webcamAvailable: input.webcam.available,
-      eventsAvailable: input.events.available,
-      configuredRecommendations: Boolean(input.cityConfig),
-    }),
-  ].join("\n");
+  const prompt = buildSummaryPrompt(input);
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -92,6 +86,69 @@ async function requestAiSummary(input: SummaryInput) {
   } catch {
     return null;
   }
+}
+
+async function requestGeminiSummary(input: SummaryInput) {
+  const prompt = buildSummaryPrompt(input);
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            maxOutputTokens: 120,
+            temperature: 0.2,
+          },
+        }),
+        next: { revalidate: 2700 },
+      },
+    );
+
+    if (!response.ok) return null;
+    const data = (await response.json()) as {
+      candidates?: {
+        content?: {
+          parts?: { text?: string }[];
+        };
+      }[];
+    };
+    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().slice(0, 260) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function buildSummaryPrompt(input: SummaryInput) {
+  return [
+    "เขียนสรุปภาษาไทยไม่เกิน 3 บรรทัดสำหรับแอป travel signal ญี่ปุ่น",
+    "ห้ามเดาข้อมูลที่ไม่มี ให้บอกชัดว่าข้อมูลไหนยังไม่พร้อม",
+    JSON.stringify({
+      city: input.cityName,
+      weather: input.weather.available
+        ? {
+            temp: input.weather.temperature,
+            condition: input.weather.condition,
+            rainChance: input.weather.rainChance,
+            windSpeed: input.weather.windSpeed,
+          }
+        : null,
+      aqi: input.aqi.available ? { aqi: input.aqi.aqi, label: input.aqi.label, pm25: input.aqi.pm25 } : null,
+      webcamAvailable: input.webcam.available,
+      eventsAvailable: input.events.available,
+      configuredRecommendations: Boolean(input.cityConfig),
+    }),
+  ].join("\n");
 }
 
 function buildDeterministicThaiSummary({ cityName, weather, aqi, webcam, events }: SummaryInput) {

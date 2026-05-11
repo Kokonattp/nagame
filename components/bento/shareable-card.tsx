@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useRef, useState } from "react";
-import { Download, Share2 } from "lucide-react";
+import { Share2 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { cn } from "@/lib/utils/cn";
 
@@ -28,8 +28,20 @@ export function ShareableCard({
         pixelRatio: 2,
         backgroundColor: "#f8fbff",
       });
+      const filename = `nagame-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.png`;
+      const file = await dataUrlToFile(dataUrl, filename);
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          title: "Nagame 眺め",
+          text: "แชร์สัญญาณเมืองจาก Nagame",
+          files: [file],
+        });
+        return;
+      }
+
       const link = document.createElement("a");
-      link.download = `nagame-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.png`;
+      link.download = filename;
       link.href = dataUrl;
       link.click();
     } finally {
@@ -53,10 +65,16 @@ export function ShareableCard({
         title="Export PNG"
         disabled={busy}
       >
-        {busy ? <Share2 className="h-4 w-4 animate-pulse" aria-hidden /> : <Download className="h-4 w-4" aria-hidden />}
-        <span className="sr-only">Export PNG</span>
+        <Share2 className={cn("h-4 w-4", busy && "animate-pulse")} aria-hidden />
+        <span className="sr-only">Share PNG</span>
       </button>
       {children}
     </section>
   );
+}
+
+async function dataUrlToFile(dataUrl: string, filename: string) {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  return new File([blob], filename, { type: blob.type || "image/png" });
 }
