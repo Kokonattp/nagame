@@ -6,7 +6,7 @@ import type { WebcamSignal } from "@/lib/services/webcams";
 
 export function LivecamBento({ webcam, cityName }: { webcam: WebcamSignal; cityName: string }) {
   return (
-    <ShareableCard title={`${cityName}-livecam`} className="min-h-[220px]" square>
+    <ShareableCard title={`${cityName}-livecam`} className="min-h-[184px]" square>
       <div className="flex h-full flex-col justify-between">
         <div className="absolute inset-0">
           {webcam.previewImage ? (
@@ -26,10 +26,10 @@ export function LivecamBento({ webcam, cityName }: { webcam: WebcamSignal; cityN
           </p>
         </div>
         <div className="relative z-10 text-white">
-          <h2 className="max-w-[15rem] text-2xl font-black tracking-normal">
+          <h2 className="max-w-[15rem] text-xl font-black tracking-normal">
             {webcam.title ?? "ยังไม่พบกล้องใกล้เมืองนี้"}
           </h2>
-          <p className="mt-2 text-sm font-medium text-white/78">
+          <p className="mt-1 line-clamp-2 text-xs font-medium text-white/78">
             {webcam.available ? webcam.source : webcam.message}
           </p>
           {webcam.url ? (
@@ -37,7 +37,7 @@ export function LivecamBento({ webcam, cityName }: { webcam: WebcamSignal; cityN
               href={webcam.url}
               target="_blank"
               rel="noreferrer"
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-zinc-950"
+              className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-bold text-zinc-950"
             >
               เปิดกล้อง <ExternalLink className="h-4 w-4" aria-hidden />
             </a>

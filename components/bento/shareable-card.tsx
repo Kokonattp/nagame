@@ -49,7 +49,7 @@ export function ShareableCard({
       <button
         type="button"
         onClick={exportPng}
-        className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/70 bg-white/70 text-zinc-700 shadow-sm backdrop-blur-xl transition hover:bg-white disabled:opacity-60"
+        className="absolute right-2.5 top-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/70 bg-white/70 text-zinc-700 shadow-sm backdrop-blur-xl transition hover:bg-white disabled:opacity-60"
         title="Export PNG"
         disabled={busy}
       >

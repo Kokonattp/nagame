@@ -18,18 +18,18 @@ export function RecommendationSection({
 }) {
   return (
     <section className="space-y-3">
-      <div className="flex items-end justify-between px-1">
-        <h2 className="text-xl font-black tracking-normal">{titles[kind]}</h2>
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">Local</p>
+      <div className="flex items-end justify-between px-4">
+        <h2 className="text-2xl font-black tracking-normal">{titles[kind]}</h2>
+        <p className="text-sm font-bold text-violet-600">ดูทั้งหมด ›</p>
       </div>
       {configured && items.length ? (
-        <div className="grid gap-3">
+        <div className="flex gap-3 overflow-x-auto px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {items.map((item) => (
             <RecommendationCard key={`${item.kind}-${item.title}`} item={item} />
           ))}
         </div>
       ) : (
-        <div className="rounded-3xl border border-white/70 bg-white/55 p-5 shadow-lg shadow-sky-950/5 backdrop-blur-xl">
+        <div className="mx-4 rounded-3xl border border-white/70 bg-white p-5 shadow-lg shadow-sky-950/5">
           <p className="text-sm leading-6 text-zinc-600">
             ข้อมูลแนะนำท้องถิ่นของเมืองนี้ยังไม่ครบ แต่คุณยังดูสภาพอากาศ AQI และกล้องใกล้เคียงได้
           </p>

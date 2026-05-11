@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Search } from "lucide-react";
 import { AqiBento } from "@/components/bento/aqi-bento";
 import { AiInsightBento } from "@/components/bento/ai-insight-bento";
 import { CrowdBento } from "@/components/bento/crowd-bento";
@@ -10,7 +8,6 @@ import { WeatherBento } from "@/components/bento/weather-bento";
 import { WindBento } from "@/components/bento/wind-bento";
 import { BottomNav } from "@/components/bottom-nav";
 import { MobileShell } from "@/components/mobile-shell";
-import { ReportModal } from "@/components/report-modal";
 import { RecommendationSection } from "@/components/sections/recommendation-section";
 import { getCityConfigBySlug } from "@/lib/cities/city-configs";
 import { getAqi } from "@/lib/services/aqi";
@@ -50,25 +47,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
 
   return (
     <MobileShell>
-      <div className="space-y-4">
-        <header className="flex items-center justify-between gap-3 px-1 pb-1">
-          <div className="min-w-0">
-            <p className="text-sm font-black text-zinc-500">Nagame · 眺め</p>
-            <h1 className="truncate text-2xl font-black tracking-normal">{city.name}</h1>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <ReportModal />
-            <Link
-              href="/"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/52 shadow-sm backdrop-blur-xl"
-              title="ค้นหาเมือง"
-            >
-              <Search className="h-4 w-4" aria-hidden />
-              <span className="sr-only">ค้นหาเมือง</span>
-            </Link>
-          </div>
-        </header>
-
+      <div className="space-y-5">
         <WeatherBento
           cityName={city.name}
           japaneseName={config?.japaneseName ?? city.japaneseName}
@@ -76,21 +55,20 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
           heroTone={config?.heroTone ?? "from-sky-500 via-cyan-200 to-amber-100"}
         />
 
-        <section id="signals" className="grid grid-cols-2 gap-3">
+        <section id="signals" className="relative z-20 -mt-16 grid grid-cols-4 gap-2 px-4">
           <RainBento rainChance={weather.rainChance} />
           <AqiBento aqi={aqi} />
           <CrowdBento score={crowdScore} />
           <WindBento windSpeed={weather.windSpeed} />
         </section>
 
-        <section id="livecam">
+        <section id="livecam" className="grid grid-cols-2 gap-3 px-4">
           <LivecamBento webcam={webcam} cityName={city.name} />
+          <AiInsightBento summary={summary} />
         </section>
 
-        <AiInsightBento summary={summary} />
-
         {events.available ? (
-          <section className="rounded-3xl border border-white/70 bg-white/55 p-4 shadow-lg shadow-sky-950/5 backdrop-blur-xl">
+          <section className="mx-4 rounded-3xl border border-white/70 bg-white p-4 shadow-lg shadow-sky-950/5">
             <p className="text-sm font-bold text-zinc-500">Events</p>
             <div className="mt-3 grid gap-2">
               {events.items.map((item) => (
@@ -102,7 +80,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
           </section>
         ) : null}
 
-        <div id="local" className="space-y-6 pt-2">
+        <div id="local" className="space-y-7 pt-1">
           <RecommendationSection kind="see" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "see")} />
           <RecommendationSection kind="eat" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "eat")} />
           <RecommendationSection kind="sleep" configured={Boolean(config)} items={recommendations.filter((item) => item.kind === "sleep")} />
