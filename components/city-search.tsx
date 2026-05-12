@@ -90,7 +90,11 @@ export function CitySearch({
           <button
             key={city.slug}
             type="button"
-            onClick={() => goToCity(city.name)}
+            onClick={() => {
+              setQuery(city.name);
+              setError("");
+              router.push(`/city/${city.slug}`);
+            }}
             className="rounded-full border border-[var(--line)] bg-[rgba(255,253,250,0.92)] px-3 py-2 text-xs font-medium text-[var(--accent)] transition hover:border-[var(--line-strong)] hover:bg-white md:text-sm"
           >
             {city.name}

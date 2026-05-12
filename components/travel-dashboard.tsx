@@ -93,6 +93,7 @@ export function TravelDashboard({
   const [chatError, setChatError] = useState("");
   const [webcamOpen, setWebcamOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const canEmbedWebcam = canEmbedInIframe(webcam);
 
   const weatherTone = useMemo(() => {
     if ((weather.rainChance ?? 0) >= 70) return "ควรมีแผน indoor สำรอง";
@@ -456,7 +457,7 @@ export function TravelDashboard({
             </div>
             <div className="grid gap-0 lg:grid-cols-[1.35fr_0.65fr]">
               <div className="min-h-[320px] bg-[#111317]">
-                {webcam.url ? (
+                {webcam.url && canEmbedWebcam ? (
                   <iframe src={webcam.url} title={webcam.title ?? "Live webcam"} className="h-[60vh] min-h-[320px] w-full" allow="autoplay; fullscreen" />
                 ) : webcam.previewImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -469,7 +470,9 @@ export function TravelDashboard({
               </div>
               <div className="space-y-4 p-5">
                 <p className="text-sm leading-7 text-[#ddd5cb]">
-                  viewer นี้เปิดจากในแอปก่อน เพื่อให้เช็กบรรยากาศจริงแบบเร็วและไม่หลุด flow ของการวางแผน
+                  {canEmbedWebcam
+                    ? "viewer นี้เปิดจากในแอปก่อน เพื่อให้เช็กบรรยากาศจริงแบบเร็วและไม่หลุด flow ของการวางแผน"
+                    : "แหล่ง webcam นี้ไม่รองรับการฝังในแอปโดยตรง ตอนนี้จึงแสดงภาพล่าสุดแทน และยังเปิดต้นทางต่อได้ทันที"}
                 </p>
                 <div className="rounded-[22px] border border-white/10 bg-white/4 p-4 text-sm leading-7 text-[#e6ddd1]">
                   <p>Source: {webcam.source}</p>
@@ -646,4 +649,10 @@ function formatPublishedAt(value: string) {
   } catch {
     return value;
   }
+}
+
+function canEmbedInIframe(webcam: WebcamSignal) {
+  if (!webcam.url) return false;
+
+  return !/windy|webcams\.travel|kbc\.co\.jp/i.test(`${webcam.source} ${webcam.url}`);
 }

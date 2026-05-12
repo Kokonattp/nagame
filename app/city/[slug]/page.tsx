@@ -4,6 +4,7 @@ import { japanMajorCities } from "@/lib/cities/japan-major-cities";
 import { getCityConfigBySlug } from "@/lib/cities/city-configs";
 import { getCityMeta, getNearbyCities, getRecommendationSets } from "@/lib/cities/travel-meta";
 import { getAqi } from "@/lib/services/aqi";
+import { getCityHeroImage } from "@/lib/services/city-images";
 import { getEvents } from "@/lib/services/events";
 import { resolveCity } from "@/lib/services/geocode";
 import { getWebcams } from "@/lib/services/webcams";
@@ -29,8 +30,33 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
     getEvents(config),
   ]);
 
-  const cityMeta = getCityMeta(city.slug, city.name);
-  const nearbyCities = getNearbyCities(city.slug, city.lat, city.lon, 6);
+  const cityMetaBase = getCityMeta(city.slug, city.name);
+  const cityHeroImage =
+    (await getCityHeroImage({
+      slug: city.slug,
+      name: city.name,
+      prefecture: city.prefecture,
+      japaneseName: city.japaneseName,
+    })) ?? cityMetaBase.heroImage;
+  const cityMeta = {
+    ...cityMetaBase,
+    heroImage: cityHeroImage ?? undefined,
+  };
+  const nearbyCities = await Promise.all(
+    getNearbyCities(city.slug, city.lat, city.lon, 6).map(async (nearby) => ({
+      ...nearby,
+      heroImage:
+        nearby.heroImage ??
+        (
+          (await getCityHeroImage({
+            slug: nearby.slug,
+            name: nearby.name,
+            prefecture: nearby.prefecture,
+            japaneseName: nearby.japaneseName,
+          })) ?? undefined
+        ),
+    })),
+  );
   const recommendations = getRecommendationSets(city.name, city.prefecture, config?.recommendations ?? []);
 
   return (
