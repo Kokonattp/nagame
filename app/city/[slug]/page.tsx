@@ -1,17 +1,9 @@
 import { notFound, redirect } from "next/navigation";
-import { AqiBento } from "@/components/bento/aqi-bento";
-import { AiInsightBento } from "@/components/bento/ai-insight-bento";
-import { CrowdBento } from "@/components/bento/crowd-bento";
-import { LivecamBento } from "@/components/bento/livecam-bento";
-import { RainBento } from "@/components/bento/rain-bento";
-import { WeatherBento } from "@/components/bento/weather-bento";
-import { WindBento } from "@/components/bento/wind-bento";
-import { BottomNav } from "@/components/bottom-nav";
-import { MobileShell } from "@/components/mobile-shell";
-import { RecommendationSection } from "@/components/sections/recommendation-section";
+import { TravelDashboard } from "@/components/travel-dashboard";
+import { japanMajorCities } from "@/lib/cities/japan-major-cities";
 import { getCityConfigBySlug } from "@/lib/cities/city-configs";
+import { getCityMeta, getNearbyCities, getRecommendationSets } from "@/lib/cities/travel-meta";
 import { getAqi } from "@/lib/services/aqi";
-import { getAiSummary } from "@/lib/services/ai-summary";
 import { getEvents } from "@/lib/services/events";
 import { resolveCity } from "@/lib/services/geocode";
 import { getWebcams } from "@/lib/services/webcams";
@@ -21,13 +13,13 @@ export const revalidate = 1800;
 
 export default async function CityPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  if (slug !== "fukuoka") {
-    redirect("/city/fukuoka");
-  }
-
   const city = await resolveCity(slug);
 
   if (!city) notFound();
+
+  if (city.slug !== slug) {
+    redirect(`/city/${city.slug}`);
+  }
 
   const config = getCityConfigBySlug(city.slug);
   const [weather, aqi, webcam, events] = await Promise.all([
@@ -37,70 +29,21 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
     getEvents(config),
   ]);
 
-  const summary = await getAiSummary({
-    cityName: city.name,
-    cityConfig: config,
-    weather,
-    aqi,
-    webcam,
-    events,
-  });
-
-  const crowdScore = buildCrowdScore(config?.crowdBaseline, weather.rainChance);
-  const hasVerifiedLocalRecommendations = city.slug === "fukuoka";
-  const recommendations = hasVerifiedLocalRecommendations ? (config?.recommendations ?? []) : [];
+  const cityMeta = getCityMeta(city.slug, city.name);
+  const nearbyCities = getNearbyCities(city.slug, city.lat, city.lon, 6);
+  const recommendations = getRecommendationSets(city.name, city.prefecture, config?.recommendations ?? []);
 
   return (
-    <MobileShell>
-      <div id="top" className="space-y-5">
-        <div>
-          <WeatherBento
-            cityName={city.name}
-            japaneseName={config?.japaneseName ?? city.japaneseName}
-            weather={weather}
-            heroTone={config?.heroTone ?? "from-sky-500 via-cyan-200 to-amber-100"}
-          />
-        </div>
-
-        <div className="space-y-5">
-          <section id="signals" className="relative z-20 -mt-16 grid grid-cols-4 gap-2 px-4">
-            <RainBento rainChance={weather.rainChance} />
-            <AqiBento aqi={aqi} />
-            <CrowdBento score={crowdScore} />
-            <WindBento windSpeed={weather.windSpeed} />
-          </section>
-
-          <section id="livecam" className="grid grid-cols-2 gap-3 px-4">
-            <LivecamBento webcam={webcam} cityName={city.name} />
-            <AiInsightBento summary={summary} />
-          </section>
-
-          {events.available ? (
-            <section id="events" className="mx-4 rounded-3xl border border-white/70 bg-white p-4 shadow-lg shadow-sky-950/5">
-              <p className="text-sm font-bold text-zinc-500">Events</p>
-              <div className="mt-3 grid gap-2">
-                {events.items.map((item) => (
-                  <a key={item.url} href={item.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-zinc-950 underline-offset-4 hover:underline">
-                    {item.title}
-                  </a>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          <div id="local" className="space-y-7 pt-1">
-            <RecommendationSection kind="see" configured={hasVerifiedLocalRecommendations} items={recommendations.filter((item) => item.kind === "see")} />
-            <RecommendationSection kind="eat" configured={hasVerifiedLocalRecommendations} items={recommendations.filter((item) => item.kind === "eat")} />
-            <RecommendationSection kind="sleep" configured={hasVerifiedLocalRecommendations} items={recommendations.filter((item) => item.kind === "sleep")} />
-          </div>
-        </div>
-      </div>
-      <BottomNav />
-    </MobileShell>
+    <TravelDashboard
+      city={city}
+      cityMeta={cityMeta}
+      weather={weather}
+      aqi={aqi}
+      webcam={webcam}
+      events={events}
+      nearbyCities={nearbyCities}
+      recommendations={recommendations}
+      seeds={japanMajorCities}
+    />
   );
-}
-
-function buildCrowdScore(baseline = 46, rainChance: number | null) {
-  const rainAdjustment = typeof rainChance === "number" ? (rainChance >= 70 ? -14 : rainChance >= 40 ? -6 : 4) : 0;
-  return Math.max(18, Math.min(92, baseline + rainAdjustment));
 }

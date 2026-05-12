@@ -1,38 +1,44 @@
-@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800;900&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Shippori+Mincho:wght@500;600;700;800&display=swap");
 @import "tailwindcss";
 
 :root {
-  --background: #f8fbff;
-  --foreground: #111827;
+  --background: #f5f0e7;
+  --foreground: #1f2430;
+  --surface: rgba(255, 252, 247, 0.88);
+  --surface-strong: #fffdfa;
+  --surface-soft: #efe8dd;
+  --line: rgba(74, 58, 39, 0.14);
+  --line-strong: rgba(47, 40, 31, 0.22);
+  --ink-muted: #6d645a;
+  --accent: #243447;
+  --accent-soft: #d8c4ab;
+  --accent-warm: #8b5a3c;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Zen Kaku Gothic New", "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Shippori Mincho", "IBM Plex Sans Thai", ui-serif, serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at top left, rgba(221, 201, 173, 0.28), transparent 18%),
+    radial-gradient(circle at top right, rgba(198, 208, 219, 0.22), transparent 18%),
+    linear-gradient(180deg, #f5f0e7 0%, #f7f4ee 100%);
   color: var(--foreground);
-  font-family:
-    "Zen Kaku Gothic New",
-    "Noto Sans Thai",
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
   font-feature-settings: "liga" 1, "kern" 1;
   overflow-x: hidden;
-  text-rendering: geometricPrecision;
+  text-rendering: optimizeLegibility;
 }
 
 button,
@@ -43,6 +49,10 @@ textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
+iframe {
+  border: 0;
+}
+
 ::selection {
-  background: rgba(14, 165, 233, 0.24);
+  background: rgba(139, 90, 60, 0.18);
 }

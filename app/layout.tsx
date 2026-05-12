@@ -2,24 +2,17 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Nagame 眺め",
-  description: "Live travel signals for Japan cities.",
-  manifest: "/manifest.webmanifest",
-  appleWebApp: {
-    capable: true,
-    title: "Nagame",
-    statusBarStyle: "black-translucent",
-  },
+  title: "Nagame Travel Companion",
+  description: "Responsive travel web app for Japan cities with live weather, nearby cities, events, webcam, and AI trip planning.",
   icons: {
     icon: "/icon.svg",
-    apple: "/icon.svg",
   },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#080b18",
+  themeColor: "#f8f5ef",
 };
 
 export default function RootLayout({
@@ -28,11 +21,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="th"
-      className="h-full antialiased"
-    >
-      <body className="flex min-h-full flex-col">{children}</body>
+    <html lang="th" className="h-full antialiased">
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }
