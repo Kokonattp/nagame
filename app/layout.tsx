@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://nagame.vercel.app"),
   title: "Nagame Travel Companion",
   description: "Responsive travel web app for Japan cities with live weather, nearby cities, events, webcam, and AI trip planning.",
   icons: {
