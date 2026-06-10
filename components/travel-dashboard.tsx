@@ -244,7 +244,7 @@ export function TravelDashboard({
           <div className="grid gap-6">
             <PaperCard
               eyebrow="Live webcam"
-              title={webcam.title ?? `ดูบรรยากาศ ${city.name}`}
+              title={activeWebcam?.title ?? `ดูบรรยากาศ ${city.name}`}
               icon={Tv}
               description={
                 webcam.available
@@ -258,10 +258,10 @@ export function TravelDashboard({
                 className="mt-4 block w-full overflow-hidden rounded-[28px] border border-[var(--line)] bg-[var(--surface-soft)] text-left transition hover:border-[var(--line-strong)]"
               >
                 <div className="relative aspect-[16/10] overflow-hidden">
-                  {webcam.previewImage ? (
+                  {activeWebcam?.previewImage ? (
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={webcam.previewImage} alt={webcam.title ?? "Webcam preview"} className="h-full w-full object-cover" />
+                      <img src={activeWebcam.previewImage} alt={activeWebcam.title ?? "Webcam preview"} className="h-full w-full object-cover" />
                       <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(31,36,48,0.48))]" />
                     </>
                   ) : (
@@ -273,6 +273,33 @@ export function TravelDashboard({
                   </div>
                 </div>
               </button>
+
+              {webcamOptions.length > 1 ? (
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                  {webcamOptions.map((option, index) => (
+                    <button
+                      key={`${option.title}-${index}`}
+                      type="button"
+                      onClick={() => setSelectedWebcamIndex(index)}
+                      title={option.title}
+                      className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-[14px] border-2 transition ${
+                        index === selectedWebcamIndex
+                          ? "border-[var(--accent)]"
+                          : "border-transparent opacity-75 hover:opacity-100"
+                      }`}
+                    >
+                      {option.previewImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={option.previewImage} alt={option.title} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(180deg,#e9e2d8,#d7dde3)] text-[10px] text-[var(--ink-muted)]">
+                          view {index + 1}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </PaperCard>
 
             <PaperCard
@@ -455,7 +482,7 @@ export function TravelDashboard({
             <div className="flex items-center justify-between gap-4 border-b border-white/8 px-5 py-4">
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#cda47f]">Live webcam viewer</p>
-                <h3 className="mt-1 font-serif text-2xl">{webcam.title ?? `ดูบรรยากาศ ${city.name}`}</h3>
+                <h3 className="mt-1 font-serif text-2xl">{activeWebcam?.title ?? `ดูบรรยากาศ ${city.name}`}</h3>
               </div>
               <button
                 type="button"
@@ -467,11 +494,17 @@ export function TravelDashboard({
             </div>
             <div className="grid gap-0 lg:grid-cols-[1.35fr_0.65fr]">
               <div className="min-h-[320px] bg-[#111317]">
-                {webcam.url && canEmbedWebcam ? (
-                  <iframe src={webcam.url} title={webcam.title ?? "Live webcam"} className="h-[60vh] min-h-[320px] w-full" allow="autoplay; fullscreen" />
-                ) : webcam.previewImage ? (
+                {activeWebcam?.url && canEmbedWebcam ? (
+                  <iframe
+                    key={activeWebcam.url}
+                    src={activeWebcam.url}
+                    title={activeWebcam.title ?? "Live webcam"}
+                    className="h-[60vh] min-h-[320px] w-full"
+                    allow="autoplay; fullscreen"
+                  />
+                ) : activeWebcam?.previewImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={webcam.previewImage} alt={webcam.title ?? "Webcam preview"} className="h-[60vh] min-h-[320px] w-full object-cover" />
+                  <img src={activeWebcam.previewImage} alt={activeWebcam.title ?? "Webcam preview"} className="h-[60vh] min-h-[320px] w-full object-cover" />
                 ) : (
                   <div className="flex h-[60vh] min-h-[320px] items-center justify-center px-6 text-center text-sm text-[#d2ccc3]">
                     ยังไม่มีภาพ webcam พร้อมใช้งานในตอนนี้
@@ -484,13 +517,44 @@ export function TravelDashboard({
                     ? "viewer นี้เปิดจากในแอปก่อน เพื่อให้เช็กบรรยากาศจริงแบบเร็วและไม่หลุด flow ของการวางแผน"
                     : "แหล่ง webcam นี้ไม่รองรับการฝังในแอปโดยตรง ตอนนี้จึงแสดงภาพล่าสุดแทน และยังเปิดต้นทางต่อได้ทันที"}
                 </p>
+
+                {webcamOptions.length > 1 ? (
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#cda47f]">เลือกวิวอื่น</p>
+                    <div className="grid max-h-[34vh] gap-2 overflow-y-auto pr-1">
+                      {webcamOptions.map((option, index) => (
+                        <button
+                          key={`${option.title}-${index}`}
+                          type="button"
+                          onClick={() => setSelectedWebcamIndex(index)}
+                          className={`flex items-center gap-3 rounded-[18px] border p-2 text-left transition ${
+                            index === selectedWebcamIndex
+                              ? "border-[#cda47f] bg-white/8"
+                              : "border-white/10 hover:border-white/25"
+                          }`}
+                        >
+                          {option.previewImage ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={option.previewImage} alt={option.title} className="h-12 w-20 shrink-0 rounded-[12px] object-cover" />
+                          ) : (
+                            <div className="flex h-12 w-20 shrink-0 items-center justify-center rounded-[12px] bg-white/8 text-[10px] text-[#d2ccc3]">
+                              view {index + 1}
+                            </div>
+                          )}
+                          <span className="line-clamp-2 text-xs leading-5 text-[#e6ddd1]">{option.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="rounded-[22px] border border-white/10 bg-white/4 p-4 text-sm leading-7 text-[#e6ddd1]">
-                  <p>Source: {webcam.source}</p>
+                  <p>Source: {activeWebcam?.source ?? webcam.source}</p>
                   <p>เมือง: {city.name}</p>
                 </div>
-                {webcam.url ? (
+                {activeWebcam?.url ? (
                   <a
-                    href={webcam.url}
+                    href={activeWebcam.url}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 rounded-full bg-[#efe2d0] px-4 py-3 text-sm font-medium text-[#232830]"
@@ -677,6 +741,9 @@ function formatPublishedAt(value: string) {
 
 function canEmbedInIframe(webcam: WebcamOption) {
   if (!webcam.url) return false;
+
+  // Windy embed player ออกแบบมาให้ฝัง iframe ได้ (ไม่ส่ง X-Frame-Options)
+  if (/webcams\.windy\.com\/.*\/embed\//i.test(webcam.url)) return true;
 
   return !/windy|webcams\.travel|kbc\.co\.jp/i.test(`${webcam.source} ${webcam.url}`);
 }

@@ -86,7 +86,7 @@ async function getWindyWebcam(lat: number, lon: number): Promise<WebcamSignal> {
     const url = new URL("https://api.windy.com/webcams/api/v3/webcams");
     url.searchParams.set("nearby", `${lat},${lon},50`);
     url.searchParams.set("include", "images,player,urls");
-    url.searchParams.set("limit", "6");
+    url.searchParams.set("limit", "8");
 
     const response = await fetch(url, {
       headers: {
