@@ -81,12 +81,13 @@ export function getRecommendationSets(
   prefecture: string | undefined,
   recommendations: Recommendation[],
 ) {
+  const enriched = cityName.toLowerCase() === "fukuoka" ? [...recommendations, ...fukuokaExpandedRecommendations()] : recommendations;
   const fallback = buildFallbackRecommendations(cityName, prefecture);
 
   return {
-    see: mergeRecommendations(recommendations, fallback, "see"),
-    eat: mergeRecommendations(recommendations, fallback, "eat"),
-    sleep: mergeRecommendations(recommendations, fallback, "sleep"),
+    see: mergeRecommendations(enriched, fallback, "see", 6),
+    eat: mergeRecommendations(enriched, fallback, "eat", 8),
+    sleep: mergeRecommendations(enriched, fallback, "sleep", 8),
   };
 }
 
@@ -210,4 +211,23 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
     Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLon / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Math.round(earthRadiusKm * c);
+}
+
+function fukuokaExpandedRecommendations(): Recommendation[] {
+  return [
+    { kind: "see", title: "Momochi Seaside Park", area: "Sawara", note: "เหมาะวันฟ้าเปิด และอยากได้บรรยากาศริมทะเล", signal: "sea view" },
+    { kind: "see", title: "Kushida Shrine", area: "Hakata", note: "จุดประวัติศาสตร์ที่แทรกได้ง่ายในวันเดินเมือง", signal: "heritage stop" },
+    { kind: "eat", title: "Hakata Ramen Shin-Shin Tenjin", area: "Tenjin", note: "ราเม็นขึ้นชื่อในย่านที่เดินต่อคาเฟ่และช็อปได้ง่าย", signal: "local favorite" },
+    { kind: "eat", title: "Nagahama No.1 Gion Branch", area: "Gion", note: "กินง่ายก่อนหรือหลังเดินย่าน Hakata เพราะใกล้สถานี Gion", signal: "2 min from station" },
+    { kind: "eat", title: "Ichiran Main Shop Nakasu", area: "Nakasu", note: "เหมาะกับมื้อดึกหรือหลังย้ายเมือง เพราะเดินต่อ nightlife ได้", signal: "late-night ramen" },
+    { kind: "eat", title: "Motsunabe Ooyama Hakata", area: "Hakata", note: "มื้อเย็นแบบ local classic สำหรับคนที่อยากลอง motsunabe จริงจัง", signal: "local specialty" },
+    { kind: "eat", title: "Ramen Stadium at Canal City", area: "Hakata", note: "เลือกได้หลายร้านในจุดเดียว เหมาะเมื่ออยากลองหลายแบบ", signal: "many choices" },
+    { kind: "sleep", title: "Oriental Hotel Fukuoka Hakata Station", area: "Hakata", note: "ติดสถานี Hakata จริง เหมาะกับคนที่เน้นลากกระเป๋าและต่อรถง่าย", signal: "station-connected" },
+    { kind: "sleep", title: "Hotel Forza Hakataeki Hakataguchi", area: "Hakata", note: "เดินจากทางออก Hakata ไม่นาน เหมาะกับทริปที่กลับดึกแต่ยังคุม route ง่าย", signal: "3 min walk" },
+    { kind: "sleep", title: "THE BASICS FUKUOKA", area: "Hakata", note: "โรงแรมโทนดีไซน์ชัดกว่า เหมาะกับคนที่อยากพักสบายขึ้นแต่ยังคล่องตัว", signal: "design stay" },
+    { kind: "sleep", title: "Yaoji Hakata Hotel", area: "Hakata", note: "เหมาะถ้าอยากได้ออนเซ็นแบบง่าย ๆ ในเมืองพร้อมกลับสถานีไม่ยาก", signal: "onsen option" },
+    { kind: "sleep", title: "Henn na Hotel Fukuoka Hakata", area: "Nakasu / Hakata", note: "ใกล้ Nakasu-Kawabata เหมาะกับคนที่อยากตั้งฐานกลางระหว่าง Hakata และ Tenjin", signal: "walkable nightlife" },
+    { kind: "sleep", title: "Cross Life Hakata Tenjin", area: "Haruyoshi / Tenjin", note: "ฐานพักสายเดินกินค่ำ ใกล้ Tenjin-Minami จึงไปต่อได้ง่าย", signal: "tenjin access" },
+    { kind: "sleep", title: "ANA Crowne Plaza Fukuoka", area: "Hakata", note: "ตัวเลือกที่สงบและดูพรีเมียมขึ้น แต่ยังเดินถึง Hakata ได้ไม่ไกล", signal: "premium option" },
+  ];
 }

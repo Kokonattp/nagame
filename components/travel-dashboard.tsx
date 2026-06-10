@@ -23,7 +23,7 @@ import type { Recommendation } from "@/lib/cities/city-configs";
 import type { JapanCitySeed } from "@/lib/cities/japan-major-cities";
 import type { AqiSignal } from "@/lib/services/aqi";
 import type { EventSignal } from "@/lib/services/events";
-import type { WebcamSignal } from "@/lib/services/webcams";
+import type { WebcamOption, WebcamSignal } from "@/lib/services/webcams";
 import type { WeatherSignal } from "@/lib/services/weather";
 
 type DashboardProps = {
@@ -53,11 +53,15 @@ type DashboardProps = {
     heroImage?: string;
   }[];
   recommendations: {
-    see: Recommendation[];
-    eat: Recommendation[];
-    sleep: Recommendation[];
+    see: RecommendationWithImage[];
+    eat: RecommendationWithImage[];
+    sleep: RecommendationWithImage[];
   };
   seeds: JapanCitySeed[];
+};
+
+type RecommendationWithImage = Recommendation & {
+  image?: string | null;
 };
 
 type ChatMessage = {
@@ -93,7 +97,12 @@ export function TravelDashboard({
   const [chatError, setChatError] = useState("");
   const [webcamOpen, setWebcamOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
-  const canEmbedWebcam = canEmbedInIframe(webcam);
+  const [selectedWebcamIndex, setSelectedWebcamIndex] = useState(0);
+  const webcamOptions = webcam.options?.length
+    ? webcam.options
+    : [{ title: webcam.title ?? "Live camera", url: webcam.url, previewImage: webcam.previewImage, source: webcam.source }];
+  const activeWebcam = webcamOptions[Math.min(selectedWebcamIndex, webcamOptions.length - 1)] ?? webcamOptions[0];
+  const canEmbedWebcam = canEmbedInIframe(activeWebcam);
 
   const weatherTone = useMemo(() => {
     if ((weather.rainChance ?? 0) >= 70) return "ควรมีแผน indoor สำรอง";
@@ -420,6 +429,7 @@ export function TravelDashboard({
                   value={chatInput}
                   onChange={(event) => setChatInput(event.target.value)}
                   placeholder="ถาม เช่น ถ้าฝน 70% ควรสลับไปย่านไหนก่อน"
+                  maxLength={300}
                   rows={3}
                   className="w-full rounded-[22px] border border-white/10 bg-[#1a1f27] px-4 py-3 text-sm text-white outline-none placeholder:text-[#9d978f]"
                 />
@@ -590,7 +600,7 @@ function IdeaColumn({
   title: string;
   eyebrow: string;
   icon: typeof Compass;
-  items: Recommendation[];
+  items: RecommendationWithImage[];
   cityName: string;
 }) {
   return (
@@ -614,21 +624,35 @@ function IdeaColumn({
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.title} ${item.area} ${cityName} Japan`)}`}
             target="_blank"
             rel="noreferrer"
-            className="block rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.88)] p-4 transition hover:border-[var(--line-strong)]"
+            className="group block overflow-hidden rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.88)] transition hover:border-[var(--line-strong)] hover:shadow-[0_16px_44px_rgba(31,36,48,0.08)]"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-medium text-[var(--foreground)]">{item.title}</h3>
-                <div className="mt-2 flex items-center gap-2 text-xs text-[var(--ink-muted)]">
-                  <MapPin className="h-3.5 w-3.5" aria-hidden />
-                  <span>{item.area}</span>
-                </div>
+            {item.image ? (
+              <div className="relative h-36 overflow-hidden bg-[linear-gradient(180deg,#e7ded1,#d7dde3)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={item.image}
+                  alt={item.title}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(31,36,48,0.28))]" />
               </div>
-              <span className="rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] font-medium text-[var(--ink-muted)]">
-                {item.signal}
-              </span>
+            ) : null}
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-medium text-[var(--foreground)]">{item.title}</h3>
+                  <div className="mt-2 flex items-center gap-2 text-xs text-[var(--ink-muted)]">
+                    <MapPin className="h-3.5 w-3.5" aria-hidden />
+                    <span>{item.area}</span>
+                  </div>
+                </div>
+                <span className="rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] font-medium text-[var(--ink-muted)]">
+                  {item.signal}
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-7 text-[var(--ink-muted)]">{item.note}</p>
             </div>
-            <p className="mt-3 text-sm leading-7 text-[var(--ink-muted)]">{item.note}</p>
           </a>
         ))}
       </div>
@@ -651,7 +675,7 @@ function formatPublishedAt(value: string) {
   }
 }
 
-function canEmbedInIframe(webcam: WebcamSignal) {
+function canEmbedInIframe(webcam: WebcamOption) {
   if (!webcam.url) return false;
 
   return !/windy|webcams\.travel|kbc\.co\.jp/i.test(`${webcam.source} ${webcam.url}`);

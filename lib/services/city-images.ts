@@ -1,5 +1,3 @@
-import { cached } from "@/lib/utils/cache";
-
 type CityImageInput = {
   slug: string;
   name: string;
@@ -7,64 +5,250 @@ type CityImageInput = {
   japaneseName?: string;
 };
 
+type PlaceImageInput = {
+  title: string;
+  area?: string;
+};
+
+type WikipediaPage = {
+  title?: string;
+  index?: number;
+  thumbnail?: { source?: string };
+};
+
 type WikipediaImageResponse = {
   query?: {
-    pages?: Record<
-      string,
-      {
-        original?: { source?: string };
-        thumbnail?: { source?: string };
-      }
-    >;
+    normalized?: { from: string; to: string }[];
+    redirects?: { from: string; to: string }[];
+    pages?: Record<string, WikipediaPage>;
   };
 };
 
-export async function getCityHeroImage(input: CityImageInput) {
-  return cached(`city-image:${input.slug}`, 60 * 60 * 24, async () => {
-    for (const title of buildCandidateTitles(input)) {
-      const image = await fetchWikipediaImage(title);
-      if (image) return image;
+const DAY_SECONDS = 60 * 60 * 24;
+const SEARCH_FALLBACK_LIMIT = 10;
+
+// Cache ของผลรูป (รวมค่า null = "หาแล้วไม่มี") — ความล้มเหลวชั่วคราว เช่น 429 จะไม่ถูกเขียนลง cache
+const imageCache = new Map<string, { value: string | null; expiresAt: number }>();
+
+function readImageCache(key: string): string | null | undefined {
+  const hit = imageCache.get(key);
+  if (!hit) return undefined;
+  if (hit.expiresAt < Date.now()) {
+    imageCache.delete(key);
+    return undefined;
+  }
+  return hit.value;
+}
+
+function writeImageCache(key: string, value: string | null, ttlSeconds = DAY_SECONDS) {
+  imageCache.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const WIKI_MIN_GAP_MS = 300;
+const WIKI_RETRY_DELAY_MS = 2000;
+
+let wikiQueue: Promise<unknown> = Promise.resolve();
+let lastWikiCallAt = 0;
+
+async function rawWikipediaCall(params: Record<string, string>): Promise<WikipediaImageResponse> {
+  const url = new URL("https://en.wikipedia.org/w/api.php");
+  url.searchParams.set("action", "query");
+  url.searchParams.set("format", "json");
+  url.searchParams.set("prop", "pageimages");
+  url.searchParams.set("piprop", "thumbnail");
+  url.searchParams.set("pithumbsize", "900");
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "Nagame/1.0 travel companion",
+    },
+    next: { revalidate: 86400 },
+  });
+
+  if (!response.ok) throw new Error(`Wikipedia ${response.status}`);
+  return (await response.json()) as WikipediaImageResponse;
+}
+
+// คำขอทั้งหมดเข้าคิวเดียว เว้นจังหวะขั้นต่ำ และ retry หนึ่งครั้งเมื่อเจอ 429
+function callWikipedia(params: Record<string, string>): Promise<WikipediaImageResponse> {
+  const run = async () => {
+    const wait = lastWikiCallAt + WIKI_MIN_GAP_MS - Date.now();
+    if (wait > 0) await sleep(wait);
+
+    try {
+      return await rawWikipediaCall(params);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("429")) {
+        await sleep(WIKI_RETRY_DELAY_MS);
+        return await rawWikipediaCall(params);
+      }
+      throw error;
+    } finally {
+      lastWikiCallAt = Date.now();
+    }
+  };
+
+  const next = wikiQueue.then(run, run);
+  wikiQueue = next.catch(() => undefined);
+  return next;
+}
+
+// ขอรูปจากหลาย title ในคำขอเดียว (สูงสุด 50 title) เพื่อเลี่ยง rate limit รายคำขอ
+async function fetchImagesByExactTitles(titles: string[]): Promise<Map<string, string | null>> {
+  const result = new Map<string, string | null>(titles.map((title) => [title, null]));
+  if (!titles.length) return result;
+
+  const data = await callWikipedia({
+    redirects: "1",
+    titles: titles.join("|"),
+  });
+
+  const hops = new Map<string, string>();
+  [...(data.query?.normalized ?? []), ...(data.query?.redirects ?? [])].forEach((pair) => {
+    hops.set(pair.from, pair.to);
+  });
+  const resolveTitle = (title: string) => {
+    let current = title;
+    for (let i = 0; i < 5; i += 1) {
+      const next = hops.get(current);
+      if (!next) break;
+      current = next;
+    }
+    return current;
+  };
+
+  const imageByTitle = new Map<string, string | null>();
+  Object.values(data.query?.pages ?? {}).forEach((page) => {
+    if (page.title) imageByTitle.set(page.title, page.thumbnail?.source ?? null);
+  });
+
+  titles.forEach((title) => {
+    result.set(title, imageByTitle.get(resolveTitle(title)) ?? null);
+  });
+  return result;
+}
+
+async function searchWikipediaImage(search: string): Promise<string | null> {
+  const data = await callWikipedia({
+    generator: "search",
+    gsrsearch: search,
+    gsrlimit: "3",
+    gsrnamespace: "0",
+  });
+
+  const pages = Object.values(data.query?.pages ?? {}).sort(
+    (a, b) => (a.index ?? 99) - (b.index ?? 99),
+  );
+  return pages.find((page) => page.thumbnail?.source)?.thumbnail?.source ?? null;
+}
+
+export async function getCityHeroImagesBulk(inputs: CityImageInput[]) {
+  const results = new Map<string, string | null>();
+  let pending: CityImageInput[] = [];
+
+  for (const input of inputs) {
+    const hit = readImageCache(`city-image:${input.slug}`);
+    if (hit !== undefined) results.set(input.slug, hit);
+    else pending.push(input);
+  }
+  if (!pending.length) return results;
+
+  const candidateRounds: ((input: CityImageInput) => string)[] = [
+    (input) => input.name,
+    (input) => (input.prefecture ? `${input.name}, ${input.prefecture}` : `${input.name}, Japan`),
+    (input) => `${input.name}, Japan`,
+  ];
+
+  try {
+    for (const round of candidateRounds) {
+      if (!pending.length) break;
+      const titles = [...new Set(pending.map(round))];
+      const found = await fetchImagesByExactTitles(titles);
+      const stillPending: CityImageInput[] = [];
+
+      for (const input of pending) {
+        const image = found.get(round(input)) ?? null;
+        if (image) {
+          results.set(input.slug, image);
+          writeImageCache(`city-image:${input.slug}`, image);
+        } else {
+          stillPending.push(input);
+        }
+      }
+      pending = stillPending;
     }
 
-    return null;
-  });
-}
-
-async function fetchWikipediaImage(title: string) {
-  try {
-    const url = new URL("https://en.wikipedia.org/w/api.php");
-    url.searchParams.set("action", "query");
-    url.searchParams.set("format", "json");
-    url.searchParams.set("prop", "pageimages");
-    url.searchParams.set("piprop", "original|thumbnail");
-    url.searchParams.set("pithumbsize", "1600");
-    url.searchParams.set("redirects", "1");
-    url.searchParams.set("titles", title);
-
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Nagame/1.0 travel companion",
-      },
-      next: { revalidate: 86400 },
+    pending.forEach((input) => {
+      results.set(input.slug, null);
+      writeImageCache(`city-image:${input.slug}`, null);
     });
-
-    if (!response.ok) return null;
-    const data = (await response.json()) as WikipediaImageResponse;
-    const pages = Object.values(data.query?.pages ?? {});
-    const page = pages.find((item) => item.original?.source || item.thumbnail?.source);
-
-    return page?.original?.source ?? page?.thumbnail?.source ?? null;
   } catch {
-    return null;
+    pending.forEach((input) => {
+      if (!results.has(input.slug)) results.set(input.slug, null);
+    });
   }
+
+  return results;
 }
 
-function buildCandidateTitles({ name, prefecture, japaneseName }: CityImageInput) {
-  return [
-    `${name}`,
-    prefecture ? `${name}, ${prefecture}` : null,
-    `${name}, Japan`,
-    prefecture ? `${name} ${prefecture}` : null,
-    japaneseName ? `${name} (${japaneseName})` : null,
-  ].filter((value): value is string => Boolean(value));
+export async function getCityHeroImage(input: CityImageInput) {
+  const results = await getCityHeroImagesBulk([input]);
+  return results.get(input.slug) ?? null;
+}
+
+export async function getPlaceImages(cityName: string, items: PlaceImageInput[]): Promise<(string | null)[]> {
+  const keyOf = (item: PlaceImageInput) => `place-image:${cityName}:${item.title}`.toLowerCase();
+  const results: (string | null)[] = new Array(items.length).fill(null);
+  let pendingIndexes: number[] = [];
+
+  items.forEach((item, index) => {
+    const hit = readImageCache(keyOf(item));
+    if (hit !== undefined) results[index] = hit;
+    else pendingIndexes.push(index);
+  });
+  if (!pendingIndexes.length) return results;
+
+  // รอบแรก: เทียบชื่อสถานที่ตรง ๆ ทั้งชุดในคำขอเดียว
+  try {
+    const titles = [...new Set(pendingIndexes.map((index) => items[index].title))];
+    const found = await fetchImagesByExactTitles(titles);
+    const stillPending: number[] = [];
+
+    for (const index of pendingIndexes) {
+      const image = found.get(items[index].title) ?? null;
+      if (image) {
+        results[index] = image;
+        writeImageCache(keyOf(items[index]), image);
+      } else {
+        stillPending.push(index);
+      }
+    }
+    pendingIndexes = stillPending;
+  } catch {
+    return results;
+  }
+
+  // รอบสอง: ค้นหาแบบ fuzzy ทีละรายการ เว้นจังหวะกัน rate limit และหยุดทันทีเมื่อถูกปฏิเสธ
+  for (const index of pendingIndexes.slice(0, SEARCH_FALLBACK_LIMIT)) {
+    try {
+      const item = items[index];
+      const image =
+        (await searchWikipediaImage(`${item.title} ${cityName}`)) ??
+        (item.area && item.area !== item.title
+          ? await searchWikipediaImage(`${item.area} ${cityName} Japan`)
+          : null);
+
+      results[index] = image;
+      writeImageCache(keyOf(item), image);
+    } catch {
+      break;
+    }
+  }
+
+  return results;
 }

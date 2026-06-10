@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cacheHeaders } from "@/lib/utils/cache";
+import { cached, cacheHeaders } from "@/lib/utils/cache";
 
 type AssistantRequest = {
   cityName: string;
@@ -25,6 +25,16 @@ type AssistantRequest = {
   };
 };
 
+// เกราะกันคอสต์: จำกัดความยาวคำถาม, จำกัดจำนวนครั้งที่ยิงโมเดลต่อ IP,
+// cache คำตอบของคำถามซ้ำ และตัด context ให้เล็กก่อนส่งเข้าโมเดล
+const MAX_PROMPT_CHARS = 300;
+const AI_RATE_WINDOW_MS = 60_000;
+const AI_RATE_MAX_CALLS = 6;
+const AI_REPLY_CACHE_SECONDS = 60 * 15;
+const MAX_OUTPUT_TOKENS = 220;
+
+const rateBuckets = new Map<string, number[]>();
+
 export async function POST(request: NextRequest) {
   const body = (await request.json()) as AssistantRequest;
   const prompt = body.prompt?.trim();
@@ -36,13 +46,99 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const aiReply = process.env.AI_API_KEY ? await requestOpenAiReply(body) : null;
-  const reply = aiReply ?? buildFallbackReply(body);
+  if (prompt.length > MAX_PROMPT_CHARS) {
+    return NextResponse.json(
+      { error: `คำถามยาวเกินไป (จำกัด ${MAX_PROMPT_CHARS} ตัวอักษร)`, reply: null },
+      { status: 400, headers: cacheHeaders(0) },
+    );
+  }
+
+  const hasAiKey = Boolean(process.env.AI_API_KEY || process.env.GEMINI_API_KEY);
+  let reply: string | null = null;
+
+  if (hasAiKey && takeAiBudget(getClientIp(request))) {
+    reply = await getCachedAiReply(body, prompt);
+  }
+
+  reply ??= buildFallbackReply(body);
 
   return NextResponse.json({ reply }, { headers: cacheHeaders(0) });
 }
 
-async function requestOpenAiReply(body: AssistantRequest) {
+function getClientIp(request: NextRequest) {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
+
+function takeAiBudget(ip: string) {
+  if (rateBuckets.size > 5000) rateBuckets.clear();
+
+  const now = Date.now();
+  const bucket = (rateBuckets.get(ip) ?? []).filter((time) => now - time < AI_RATE_WINDOW_MS);
+
+  if (bucket.length >= AI_RATE_MAX_CALLS) {
+    rateBuckets.set(ip, bucket);
+    return false;
+  }
+
+  bucket.push(now);
+  rateBuckets.set(ip, bucket);
+  return true;
+}
+
+async function getCachedAiReply(body: AssistantRequest, prompt: string) {
+  const rainBucket = typeof body.weather?.rainChance === "number" ? Math.round(body.weather.rainChance / 20) : "na";
+  const cacheKey = `assistant:${body.cityName}:${rainBucket}:${prompt.toLowerCase()}`;
+
+  try {
+    // loader โยน error เมื่อโมเดลตอบไม่สำเร็จ เพื่อไม่ให้ cache ค่า null ค้างไว้
+    return await cached(cacheKey, AI_REPLY_CACHE_SECONDS, async () => {
+      const reply = await requestAiReply(body, prompt);
+      if (!reply) throw new Error("AI reply unavailable");
+      return reply;
+    });
+  } catch {
+    return null;
+  }
+}
+
+function buildCompactContext(body: AssistantRequest) {
+  const compactItems = (items?: { title: string; note: string }[]) =>
+    items?.slice(0, 4).map((item) => ({ title: item.title, note: item.note.slice(0, 120) })) ?? [];
+
+  return {
+    city: body.cityName,
+    prefecture: body.prefecture,
+    weather: body.weather ?? null,
+    aqi: body.aqi ?? null,
+    events: body.events?.slice(0, 3).map((item) => item.title) ?? [],
+    recommendations: {
+      see: compactItems(body.recommendations?.see),
+      eat: compactItems(body.recommendations?.eat),
+      sleep: compactItems(body.recommendations?.sleep),
+    },
+  };
+}
+
+const SYSTEM_PROMPT =
+  "You are a concise Thai travel assistant for Japan. Use only the provided context. Never invent current facts, timings, prices, or operating hours. Answer in Thai within 120 words.";
+
+async function requestAiReply(body: AssistantRequest, prompt: string) {
+  const userContent = JSON.stringify({ question: prompt, context: buildCompactContext(body) });
+
+  if (process.env.AI_API_KEY) {
+    const reply = await requestOpenAiReply(userContent);
+    if (reply) return reply;
+  }
+
+  if (process.env.GEMINI_API_KEY) {
+    const reply = await requestGeminiReply(userContent);
+    if (reply) return reply;
+  }
+
+  return null;
+}
+
+async function requestOpenAiReply(userContent: string) {
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -53,17 +149,10 @@ async function requestOpenAiReply(body: AssistantRequest) {
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          {
-            role: "system",
-            content:
-              "You are a concise Thai travel assistant for Japan. Use only the provided context. Never invent current facts, timings, prices, or operating hours.",
-          },
-          {
-            role: "user",
-            content: JSON.stringify(body),
-          },
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userContent },
         ],
-        max_tokens: 220,
+        max_tokens: MAX_OUTPUT_TOKENS,
         temperature: 0.3,
       }),
     });
@@ -74,6 +163,48 @@ async function requestOpenAiReply(body: AssistantRequest) {
     };
 
     return data.choices?.[0]?.message?.content?.trim() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function requestGeminiReply(userContent: string) {
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: SYSTEM_PROMPT }],
+          },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: userContent }],
+            },
+          ],
+          generationConfig: {
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
+            temperature: 0.3,
+          },
+        }),
+      },
+    );
+
+    if (!response.ok) return null;
+    const data = (await response.json()) as {
+      candidates?: {
+        content?: {
+          parts?: { text?: string }[];
+        };
+      }[];
+    };
+
+    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null;
   } catch {
     return null;
   }

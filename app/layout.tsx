@@ -7,6 +7,18 @@ export const metadata: Metadata = {
   icons: {
     icon: "/icon.svg",
   },
+  openGraph: {
+    title: "Nagame Travel Companion",
+    description: "เช็คอากาศ ฝุ่น กล้องสด อีเวนต์ และวางแผนเที่ยวญี่ปุ่นด้วย AI ครบในหน้าเดียว",
+    siteName: "Nagame",
+    type: "website",
+    locale: "th_TH",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Nagame Travel Companion",
+    description: "เช็คอากาศ ฝุ่น กล้องสด อีเวนต์ และวางแผนเที่ยวญี่ปุ่นด้วย AI ครบในหน้าเดียว",
+  },
 };
 
 export const viewport: Viewport = {
