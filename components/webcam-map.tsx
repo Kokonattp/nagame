@@ -37,17 +37,9 @@ export function WebcamMap({
         scrollWheelZoom: false,
       }).setView([cityLat, cityLon], 12);
 
-      const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-      if (mapboxToken) {
-        L.tileLayer(
-          `https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/512/{z}/{x}/{y}@2x?access_token=${mapboxToken}`,
-          { maxZoom: 18, tileSize: 512, zoomOffset: -1 },
-        ).addTo(map);
-      } else {
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 18,
-        }).addTo(map);
-      }
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+      }).addTo(map);
 
       const located = options
         .map((option, index) => ({ option, index }))
