@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import {
   Bot,
@@ -26,12 +27,21 @@ import type { EventSignal } from "@/lib/services/events";
 import type { WebcamOption, WebcamSignal } from "@/lib/services/webcams";
 import type { WeatherSignal } from "@/lib/services/weather";
 
+const WebcamMap = dynamic(() => import("@/components/webcam-map").then((mod) => mod.WebcamMap), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full w-full items-center justify-center bg-white/4 text-xs text-[#d2ccc3]">กำลังโหลดแผนที่...</div>
+  ),
+});
+
 type DashboardProps = {
   city: {
     name: string;
     slug: string;
     japaneseName?: string;
     prefecture?: string;
+    lat: number;
+    lon: number;
   };
   cityMeta: {
     intro: string;
@@ -477,51 +487,60 @@ export function TravelDashboard({
       </div>
 
       {webcamOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(23,24,27,0.72)] p-4 backdrop-blur-sm">
-          <div className="w-full max-w-5xl overflow-hidden rounded-[30px] border border-[rgba(255,248,240,0.14)] bg-[#20242b] text-[#f8f3eb] shadow-[0_30px_110px_rgba(20,22,25,0.56)]">
-            <div className="flex items-center justify-between gap-4 border-b border-white/8 px-5 py-4">
-              <div>
+        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-[rgba(23,24,27,0.72)] backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="flex h-full w-full flex-col overflow-hidden border border-[rgba(255,248,240,0.14)] bg-[#20242b] text-[#f8f3eb] shadow-[0_30px_110px_rgba(20,22,25,0.56)] sm:h-auto sm:max-h-[94vh] sm:max-w-5xl sm:rounded-[30px]">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/8 px-4 py-3 sm:px-5 sm:py-4">
+              <div className="min-w-0">
                 <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#cda47f]">Live webcam viewer</p>
-                <h3 className="mt-1 font-serif text-2xl">{activeWebcam?.title ?? `ดูบรรยากาศ ${city.name}`}</h3>
+                <h3 className="mt-1 truncate font-serif text-lg sm:text-2xl">{activeWebcam?.title ?? `ดูบรรยากาศ ${city.name}`}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setWebcamOpen(false)}
-                className="rounded-full border border-white/12 px-4 py-2 text-sm text-[#f4ede6] transition hover:bg-white/8"
+                className="shrink-0 rounded-full border border-white/12 px-4 py-2 text-sm text-[#f4ede6] transition hover:bg-white/8"
               >
                 ปิด
               </button>
             </div>
-            <div className="grid gap-0 lg:grid-cols-[1.35fr_0.65fr]">
-              <div className="min-h-[320px] bg-[#111317]">
+            <div className="grid min-h-0 flex-1 gap-0 overflow-y-auto lg:grid-cols-[1.35fr_0.65fr] lg:overflow-y-visible">
+              <div className="shrink-0 bg-[#111317]">
                 {activeWebcam?.url && canEmbedWebcam ? (
                   <iframe
                     key={activeWebcam.url}
                     src={activeWebcam.url}
                     title={activeWebcam.title ?? "Live webcam"}
-                    className="h-[60vh] min-h-[320px] w-full"
+                    className="h-[38vh] min-h-[220px] w-full sm:h-[48vh] lg:h-[60vh] lg:min-h-[320px]"
                     allow="autoplay; fullscreen"
                   />
                 ) : activeWebcam?.previewImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={activeWebcam.previewImage} alt={activeWebcam.title ?? "Webcam preview"} className="h-[60vh] min-h-[320px] w-full object-cover" />
+                  <img src={activeWebcam.previewImage} alt={activeWebcam.title ?? "Webcam preview"} className="h-[38vh] min-h-[220px] w-full object-cover sm:h-[48vh] lg:h-[60vh] lg:min-h-[320px]" />
                 ) : (
-                  <div className="flex h-[60vh] min-h-[320px] items-center justify-center px-6 text-center text-sm text-[#d2ccc3]">
+                  <div className="flex h-[38vh] min-h-[220px] items-center justify-center px-6 text-center text-sm text-[#d2ccc3] sm:h-[48vh] lg:h-[60vh] lg:min-h-[320px]">
                     ยังไม่มีภาพ webcam พร้อมใช้งานในตอนนี้
                   </div>
                 )}
               </div>
-              <div className="space-y-4 p-5">
-                <p className="text-sm leading-7 text-[#ddd5cb]">
-                  {canEmbedWebcam
-                    ? "viewer นี้เปิดจากในแอปก่อน เพื่อให้เช็กบรรยากาศจริงแบบเร็วและไม่หลุด flow ของการวางแผน"
-                    : "แหล่ง webcam นี้ไม่รองรับการฝังในแอปโดยตรง ตอนนี้จึงแสดงภาพล่าสุดแทน และยังเปิดต้นทางต่อได้ทันที"}
-                </p>
+              <div className="space-y-4 p-4 sm:p-5 lg:max-h-[60vh] lg:overflow-y-auto">
+                {webcamOptions.some((option) => typeof option.lat === "number") ? (
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#cda47f]">เลือกจากแผนที่</p>
+                    <div className="h-44 overflow-hidden rounded-[18px] border border-white/10 sm:h-52">
+                      <WebcamMap
+                        options={webcamOptions}
+                        selectedIndex={selectedWebcamIndex}
+                        onSelect={setSelectedWebcamIndex}
+                        cityLat={city.lat}
+                        cityLon={city.lon}
+                      />
+                    </div>
+                  </div>
+                ) : null}
 
                 {webcamOptions.length > 1 ? (
                   <div className="space-y-2">
                     <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#cda47f]">เลือกวิวอื่น</p>
-                    <div className="grid max-h-[34vh] gap-2 overflow-y-auto pr-1">
+                    <div className="grid gap-2 pr-1 lg:max-h-[26vh] lg:overflow-y-auto">
                       {webcamOptions.map((option, index) => (
                         <button
                           key={`${option.title}-${index}`}

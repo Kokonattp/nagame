@@ -6,6 +6,8 @@ export type WebcamOption = {
   url: string | null;
   previewImage: string | null;
   source: string;
+  lat?: number;
+  lon?: number;
 };
 
 export type WebcamSignal = {
@@ -21,6 +23,10 @@ export type WebcamSignal = {
 
 type WindyWebcam = {
   title?: string;
+  location?: {
+    latitude?: number;
+    longitude?: number;
+  };
   images?: {
     current?: {
       preview?: string;
@@ -85,8 +91,8 @@ async function getWindyWebcam(lat: number, lon: number): Promise<WebcamSignal> {
   try {
     const url = new URL("https://api.windy.com/webcams/api/v3/webcams");
     url.searchParams.set("nearby", `${lat},${lon},50`);
-    url.searchParams.set("include", "images,player,urls");
-    url.searchParams.set("limit", "8");
+    url.searchParams.set("include", "images,player,urls,location");
+    url.searchParams.set("limit", "12");
 
     const response = await fetch(url, {
       headers: {
@@ -103,6 +109,8 @@ async function getWindyWebcam(lat: number, lon: number): Promise<WebcamSignal> {
         url: item.player?.live ?? item.player?.day ?? item.urls?.detail ?? null,
         previewImage: item.images?.current?.preview ?? item.images?.current?.thumbnail ?? null,
         source: "Windy Webcams",
+        lat: item.location?.latitude,
+        lon: item.location?.longitude,
       }))
       .filter((item) => item.previewImage || item.url);
 
