@@ -237,9 +237,9 @@ export function TravelDashboard({
                     <span className="inline-flex rounded-full border border-white/25 bg-white/12 px-3 py-1 text-xs font-medium uppercase tracking-[0.22em] text-white/86">
                       {cityMeta.mood}
                     </span>
-                    <div className="rounded-[28px] border border-white/15 bg-[rgba(255,255,255,0.10)] px-5 py-4 text-right text-white backdrop-blur-md">
-                      <p className="text-[11px] uppercase tracking-[0.24em] text-white/68">Latest weather</p>
-                      <p className="mt-2 font-serif text-6xl">{weather.temperature ?? "--"}°</p>
+                    <div className="ml-auto max-w-full rounded-[22px] border border-white/15 bg-[rgba(255,255,255,0.10)] px-4 py-3 text-right text-white backdrop-blur-md md:rounded-[28px] md:px-5 md:py-4">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-white/68 md:text-[11px] md:tracking-[0.24em]">Latest weather</p>
+                      <p className="mt-1 font-serif text-4xl md:mt-2 md:text-6xl">{weather.temperature ?? "--"}°</p>
                       <p className="mt-1 text-sm text-white/80">{weather.condition}</p>
                     </div>
                   </div>
@@ -256,7 +256,7 @@ export function TravelDashboard({
                   </div>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3">
                   <MetricCard icon={Thermometer} label="Feels like" value={formatValue(weather.feelsLike, "°C")} detail={weatherTone} />
                   <MetricCard icon={CloudRain} label="Rain chance" value={formatValue(weather.rainChance, "%")} detail="ใช้เลือกทางเดินเมืองหรือแผนหลบฝน" />
                   <MetricCard icon={Wind} label="Wind" value={formatValue(weather.windSpeed, " km/h")} detail="ช่วยตัดสินใจจุดวิว ริมน้ำ และ rooftop" />
@@ -820,15 +820,15 @@ function IdeaColumn({
               </div>
             ) : null}
             <div className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
                   <h3 className="text-lg font-medium text-[var(--foreground)]">{item.title}</h3>
                   <div className="mt-2 flex items-center gap-2 text-xs text-[var(--ink-muted)]">
-                    <MapPin className="h-3.5 w-3.5" aria-hidden />
+                    <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     <span>{item.area}</span>
                   </div>
                 </div>
-                <span className="rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] font-medium text-[var(--ink-muted)]">
+                <span className="max-w-full shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] font-medium text-[var(--ink-muted)]">
                   {item.signal}
                 </span>
               </div>
