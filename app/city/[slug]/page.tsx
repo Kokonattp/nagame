@@ -8,6 +8,8 @@ import type { Recommendation } from "@/lib/cities/city-configs";
 import { getAqi } from "@/lib/services/aqi";
 import { getCityHeroImagesBulk, getPlaceImages } from "@/lib/services/city-images";
 import { getEvents } from "@/lib/services/events";
+import { getFx } from "@/lib/services/fx";
+import { getQuakes } from "@/lib/services/quakes";
 import { resolveCity } from "@/lib/services/geocode";
 import { getWebcams } from "@/lib/services/webcams";
 import { getWeather } from "@/lib/services/weather";
@@ -51,11 +53,13 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
   }
 
   const config = getCityConfigBySlug(city.slug);
-  const [weather, aqi, webcam, events] = await Promise.all([
+  const [weather, aqi, webcam, events, quakes, fx] = await Promise.all([
     getWeather(city.lat, city.lon),
     getAqi(city.lat, city.lon),
     getWebcams(city.lat, city.lon, config),
     getEvents(config),
+    getQuakes(city.lat, city.lon),
+    getFx(),
   ]);
 
   const cityMetaBase = getCityMeta(city.slug, city.name);
@@ -93,6 +97,8 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
       aqi={aqi}
       webcam={webcam}
       events={events}
+      quakes={quakes}
+      fx={fx}
       nearbyCities={nearbyCities}
       recommendations={recommendations}
       seeds={japanMajorCities}

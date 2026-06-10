@@ -4,6 +4,8 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import {
+  Activity,
+  Banknote,
   Bot,
   CloudRain,
   Compass,
@@ -24,6 +26,8 @@ import type { Recommendation } from "@/lib/cities/city-configs";
 import type { JapanCitySeed } from "@/lib/cities/japan-major-cities";
 import type { AqiSignal } from "@/lib/services/aqi";
 import type { EventSignal } from "@/lib/services/events";
+import type { FxSignal } from "@/lib/services/fx";
+import type { QuakeSignal } from "@/lib/services/quakes";
 import type { WebcamOption, WebcamSignal } from "@/lib/services/webcams";
 import type { WeatherSignal } from "@/lib/services/weather";
 
@@ -52,6 +56,8 @@ type DashboardProps = {
   aqi: AqiSignal;
   webcam: WebcamSignal;
   events: EventSignal;
+  quakes: QuakeSignal;
+  fx: FxSignal;
   nearbyCities: {
     slug: string;
     name: string;
@@ -93,6 +99,8 @@ export function TravelDashboard({
   aqi,
   webcam,
   events,
+  quakes,
+  fx,
   nearbyCities,
   recommendations,
   seeds,
@@ -372,6 +380,83 @@ export function TravelDashboard({
           <IdeaColumn title="ไปไหนดี" eyebrow="Where to go" icon={Compass} items={recommendations.see} cityName={city.name} />
           <IdeaColumn title="กินอะไรดี" eyebrow="What to eat" icon={UtensilsCrossed} items={recommendations.eat} cityName={city.name} />
           <IdeaColumn title="นอนไหนดี" eyebrow="Where to stay" icon={Mountain} items={recommendations.sleep} cityName={city.name} />
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-2">
+          <PaperCard
+            eyebrow="Earthquake watch"
+            title="แผ่นดินไหวรอบ 72 ชม."
+            icon={Activity}
+            description={`เฝ้าดูแผ่นดินไหวใกล้ ${city.name} (รัศมี ~350 กม.) และเหตุรุนแรงทั่วญี่ปุ่น จากข้อมูล JMA`}
+          >
+            <div className="mt-4 space-y-3">
+              {quakes.available && quakes.items.length ? (
+                quakes.items.map((item) => (
+                  <div
+                    key={`${item.time}-${item.place}`}
+                    className="rounded-[22px] border border-[var(--line)] bg-[rgba(255,253,249,0.84)] px-4 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-medium text-[var(--foreground)]">
+                        {item.place}
+                        {item.tsunami ? <span className="ml-2 rounded-full bg-[#9c3d31] px-2 py-0.5 text-[10px] font-semibold text-white">เฝ้าระวังสึนามิ</span> : null}
+                      </p>
+                      <p className="shrink-0 text-sm font-semibold text-[var(--accent)]">
+                        {typeof item.magnitude === "number" ? `M${item.magnitude}` : "M–"}
+                      </p>
+                    </div>
+                    <p className="mt-1 text-xs leading-6 text-[var(--ink-muted)]">
+                      {[
+                        item.shindo ? `แรงสั่นสูงสุดระดับ ${item.shindo}` : null,
+                        item.distanceKm !== null ? `ห่างประมาณ ${item.distanceKm} กม.` : null,
+                        `${item.time} JST`,
+                      ]
+                        .filter(Boolean)
+                        .join(" • ")}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[22px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,253,249,0.8)] px-4 py-4 text-sm leading-7 text-[var(--ink-muted)]">
+                  {quakes.available
+                    ? `ไม่มีแผ่นดินไหวที่น่ากังวลใกล้ ${city.name} ในช่วง 72 ชั่วโมงที่ผ่านมา`
+                    : quakes.message ?? "ยังเชื่อมต่อข้อมูลแผ่นดินไหวไม่ได้ในตอนนี้"}
+                </div>
+              )}
+            </div>
+          </PaperCard>
+
+          <PaperCard
+            eyebrow="Money"
+            title="เรทเงินสำหรับทริป"
+            icon={Banknote}
+            description="อัตราแลกเปลี่ยนกลางเยน-บาท อัปเดตทุก 6 ชั่วโมง ใช้กะงบหน้างานได้เลย"
+          >
+            <div className="mt-4 space-y-3">
+              {fx.available && fx.thbPer100Jpy !== null ? (
+                <>
+                  <SignalRow label="100 เยน" value={`≈ ${fx.thbPer100Jpy.toFixed(2)} บาท`} note="ค่าน้ำ ขนม ของจุกจิก" />
+                  <SignalRow
+                    label="1,000 เยน"
+                    value={`≈ ${(fx.thbPer100Jpy * 10).toFixed(0)} บาท`}
+                    note="ราเมงหนึ่งชาม / ตั๋วรถไฟในเมือง"
+                  />
+                  <SignalRow
+                    label="10,000 เยน"
+                    value={`≈ ${(fx.thbPer100Jpy * 100).toFixed(0)} บาท`}
+                    note="งบกินเที่ยวสบาย ๆ หนึ่งวัน"
+                  />
+                  {fx.jpyPer100Thb !== null ? (
+                    <p className="px-1 text-xs text-[var(--ink-muted)]">กลับด้าน: 100 บาท ≈ {fx.jpyPer100Thb.toFixed(0)} เยน</p>
+                  ) : null}
+                </>
+              ) : (
+                <div className="rounded-[22px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,253,249,0.8)] px-4 py-4 text-sm leading-7 text-[var(--ink-muted)]">
+                  ยังดึงอัตราแลกเปลี่ยนไม่ได้ในตอนนี้ ลองรีเฟรชอีกครั้ง
+                </div>
+              )}
+            </div>
+          </PaperCard>
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.02fr_0.98fr]">

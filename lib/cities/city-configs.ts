@@ -10,6 +10,14 @@ export type Recommendation = {
   kind: RecommendationKind;
 };
 
+export type CityLivecam = {
+  title: string;
+  source: string;
+  youtubeId: string;
+  lat?: number;
+  lon?: number;
+};
+
 export type CityConfig = {
   name: string;
   slug: string;
@@ -20,6 +28,7 @@ export type CityConfig = {
   heroTone: string;
   crowdBaseline: number;
   imageCredit?: string;
+  livecams?: CityLivecam[];
   livecam?: {
     title: string;
     source: string;
@@ -72,6 +81,9 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
     lon: 130.4017,
     heroTone: "from-sky-500 via-cyan-300 to-amber-200",
     crowdBaseline: 58,
+    livecams: [
+      { title: "Hakata Station ライブカメラ", source: "Asahi Shimbun LIVE", youtubeId: "yETDDgrE2E4", lat: 33.5897, lon: 130.4207 },
+    ],
     livecam: {
       title: "Fukuoka city live camera",
       source: "KBC / local livecam directory",
@@ -95,7 +107,11 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
     lon: 139.65,
     heroTone: "from-indigo-500 via-sky-300 to-rose-200",
     crowdBaseline: 82,
-    livecam: { title: "Tokyo live camera directory", source: "Tokyo livecam listings", url: "https://www.youtube.com/results?search_query=tokyo+live+camera" },
+    livecams: [
+      { title: "Shibuya Scramble Crossing", source: "ANN News", youtubeId: "8H3nRCFVR6Y", lat: 35.6595, lon: 139.7005 },
+      { title: "Shinjuku Kabukicho 24h", source: "Kabukicho Live Channel", youtubeId: "DjdUEyjx8GM", lat: 35.6948, lon: 139.7029 },
+      { title: "Shinjuku JR / Omoide Yokocho", source: "Tokyo Shinjuku Live", youtubeId: "GLQhbRGv5qU", lat: 35.6896, lon: 139.7006 },
+    ],
     recommendations: [
       { kind: "see", title: "Meiji Jingu", area: "Harajuku", note: "พักจากเมืองใหญ่และเดินใต้ร่มไม้", signal: "เหมาะวันอากาศดี" },
       { kind: "see", title: "Tokyo Station area", area: "Marunouchi", note: "เดินต่อเนื่องได้ทั้งในร่มและกลางแจ้ง", signal: "ดีเมื่ออากาศไม่นิ่ง" },
@@ -113,7 +129,11 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
     lon: 135.5023,
     heroTone: "from-violet-500 via-fuchsia-300 to-orange-200",
     crowdBaseline: 76,
-    livecam: { title: "Dotonbori live camera search", source: "Public livecam listings", url: "https://www.youtube.com/results?search_query=dotonbori+live+camera" },
+    livecams: [
+      { title: "Dotonbori หน้าป้าย Glico", source: "MBS News", youtubeId: "GiZq9R_djaM", lat: 34.6687, lon: 135.5013 },
+      { title: "Dotonbori canal view", source: "RVJ Live", youtubeId: "i2PpmC1IeKk", lat: 34.6688, lon: 135.5023 },
+      { title: "Shinsaibashi shopping street", source: "F.S.T. NET", youtubeId: "YZMZSqz9fx8", lat: 34.6724, lon: 135.501 },
+    ],
     recommendations: [
       { kind: "see", title: "Osaka Castle Park", area: "Chuo", note: "เหมาะเดินช่วงเช้าหรือเย็น", signal: "พื้นที่เปิด" },
       { kind: "see", title: "Nakanoshima", area: "Kita", note: "ริมน้ำ เดินง่ายเมื่ออากาศปลอดโปร่ง", signal: "วิวเมือง" },
@@ -131,7 +151,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
     lon: 135.7681,
     heroTone: "from-emerald-500 via-teal-200 to-amber-100",
     crowdBaseline: 79,
-    livecam: { title: "Kyoto live camera search", source: "Public livecam listings", url: "https://www.youtube.com/results?search_query=kyoto+live+camera" },
+    livecams: [
+      { title: "Kyoto Station bus terminal", source: "Kyoto City Tourism (official)", youtubeId: "v9rQqa_VTEY", lat: 34.9858, lon: 135.7585 },
+      { title: "Philosopher's Path", source: "Kyoto City Tourism (official)", youtubeId: "S6IkZhhwG4A", lat: 35.027, lon: 135.7944 },
+    ],
     recommendations: [
       { kind: "see", title: "Philosopher's Path", area: "Sakyo", note: "ดีที่สุดเมื่อฝนน้อยและอากาศเย็น", signal: "เดินยาว" },
       { kind: "see", title: "Nijo Castle", area: "Nakagyo", note: "จัดการเวลาได้ง่ายในเมือง", signal: "ประวัติศาสตร์" },
@@ -149,6 +172,9 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
     lon: 141.3545,
     heroTone: "from-blue-600 via-sky-300 to-slate-100",
     crowdBaseline: 52,
+    livecams: [
+      { title: "Tanukikoji shopping street", source: "Tanukiya LIVE", youtubeId: "yM6M8J-BZ1U", lat: 43.0566, lon: 141.3522 },
+    ],
     recommendations: [
       { kind: "see", title: "Odori Park", area: "Odori", note: "เช็คอุณหภูมิและลมก่อนเดินยาว", signal: "พื้นที่เปิด" },
       { kind: "see", title: "Moerenuma Park", area: "Higashi", note: "เหมาะวันที่ท้องฟ้าเปิด", signal: "กลางแจ้ง" },
@@ -166,6 +192,9 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
     lon: 136.9066,
     heroTone: "from-cyan-600 via-blue-200 to-lime-100",
     crowdBaseline: 61,
+    livecams: [
+      { title: "Nagoya Station", source: "Starcat (official)", youtubeId: "X304dz1zrfU", lat: 35.1709, lon: 136.8815 },
+    ],
     recommendations: [
       { kind: "see", title: "Nagoya Castle", area: "Naka", note: "เหมาะช่วงแดดไม่แรง", signal: "แลนด์มาร์ก" },
       { kind: "see", title: "Sakae", area: "Sakae", note: "เดินเมืองและช้อปได้แม้ฝนมา", signal: "เมือง" },
@@ -183,6 +212,9 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
     lon: 139.638,
     heroTone: "from-sky-700 via-cyan-300 to-pink-200",
     crowdBaseline: 64,
+    livecams: [
+      { title: "Minato Mirai & railway view", source: "Japan Live Camera", youtubeId: "v6QP-oLXPbs", lat: 35.4661, lon: 139.6223 },
+    ],
     recommendations: [
       { kind: "see", title: "Minato Mirai", area: "Bay area", note: "เช็คลมก่อนเดินริมน้ำ", signal: "วิวอ่าว" },
       { kind: "see", title: "Sankeien Garden", area: "Honmoku", note: "เหมาะวันฟ้าเปิด", signal: "สวน" },
@@ -217,6 +249,9 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
     lon: 135.1955,
     heroTone: "from-cyan-700 via-sky-300 to-rose-100",
     crowdBaseline: 57,
+    livecams: [
+      { title: "Kobe Waterfront / Meriken Park", source: "Kobe Waterfront (official)", youtubeId: "AU_2zfM4m68", lat: 34.6824, lon: 135.1875 },
+    ],
     recommendations: [
       { kind: "see", title: "Harborland", area: "Bay", note: "เหมาะเย็นที่ลมไม่แรง", signal: "ริมน้ำ" },
       { kind: "see", title: "Kitano", area: "Kita ward", note: "เดินเนิน ควรเช็คฝนและความร้อน", signal: "เดินเมือง" },
@@ -234,6 +269,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
     lon: 132.4553,
     heroTone: "from-sky-600 via-teal-200 to-orange-100",
     crowdBaseline: 55,
+    livecams: [
+      { title: "Hondori crossing", source: "HOME Hiroshima News", youtubeId: "oW2Gb8YoGAg", lat: 34.3934, lon: 132.4571 },
+      { title: "Hiroshima Station south exit", source: "RCC News", youtubeId: "RurBEBN0Yq8", lat: 34.3978, lon: 132.4754 },
+    ],
     recommendations: [
       { kind: "see", title: "Peace Memorial Park", area: "Naka", note: "เดินกลางแจ้ง ควรเช็คฝน", signal: "แลนด์มาร์ก" },
       { kind: "see", title: "Miyajima day trip", area: "Miyajima", note: "เช็คลมและฝนก่อนขึ้นเรือ", signal: "day trip" },
@@ -251,6 +290,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
     lon: 136.6562,
     heroTone: "from-emerald-700 via-cyan-200 to-stone-100",
     crowdBaseline: 49,
+    livecams: [
+      { title: "Kenrokuen Garden", source: "TV Kanazawa News", youtubeId: "ZpzNv_hNxPE", lat: 36.5621, lon: 136.6625 },
+      { title: "Kanazawa Station (Shinkansen)", source: "Hokuriku Asahi Broadcasting", youtubeId: "JY0VPKVjmRs", lat: 36.578, lon: 136.648 },
+    ],
     recommendations: [
       { kind: "see", title: "Kenrokuen", area: "Central", note: "สวนเด่นมากเมื่อฝนน้อย", signal: "สวน" },
       { kind: "see", title: "Higashi Chaya", area: "Higashiyama", note: "เดินถ่ายรูปสั้น ๆ ได้ดี", signal: "ย่านเก่า" },
@@ -285,7 +328,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
     lon: 138.7518,
     heroTone: "from-blue-700 via-sky-300 to-lime-100",
     crowdBaseline: 63,
-    livecam: { title: "Mt. Fuji live camera search", source: "Public Fuji livecam listings", url: "https://www.youtube.com/results?search_query=kawaguchiko+mt+fuji+live+camera" },
+    livecams: [
+      { title: "Mt. Fuji จาก Oishi Park", source: "KTV Kawaguchiko Cable TV", youtubeId: "bdUbACCWmoY", lat: 35.5396, lon: 138.7456 },
+      { title: "Mt. Fuji หน้าสถานี Kawaguchiko", source: "fuji-net", youtubeId: "6YP6EYc0vhc", lat: 35.4983, lon: 138.7647 },
+    ],
     recommendations: [
       { kind: "see", title: "Lake Kawaguchi north shore", area: "North shore", note: "ดีที่สุดเมื่อเมฆน้อยและลมไม่แรง", signal: "วิว Fuji" },
       { kind: "see", title: "Oishi Park", area: "North shore", note: "เช็คกล้องก่อนออกไปดู Fuji", signal: "photo spot" },
@@ -320,6 +366,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
     lon: 127.6792,
     heroTone: "from-cyan-500 via-teal-200 to-orange-100",
     crowdBaseline: 54,
+    livecams: [
+      { title: "Naha city / Yui Rail view", source: "Asahi Shimbun LIVE", youtubeId: "6HYjCFkmDPA", lat: 26.2138, lon: 127.6792 },
+      { title: "Naha Airport", source: "RBC News", youtubeId: "Yzl9offu5g8", lat: 26.2069, lon: 127.6519 },
+    ],
     recommendations: [
       { kind: "see", title: "Kokusai Dori", area: "Central", note: "เดินง่ายและหลบฝนได้บางช่วง", signal: "เมือง" },
       { kind: "see", title: "Shurijo area", area: "Shuri", note: "เช็คความร้อนและฝนก่อนขึ้นเนิน", signal: "ประวัติศาสตร์" },

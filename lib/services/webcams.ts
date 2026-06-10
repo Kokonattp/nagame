@@ -50,9 +50,33 @@ export async function getWebcams(lat: number, lon: number, cityConfig?: CityConf
   const ttlSeconds = process.env.WINDY_WEBCAMS_API_KEY ? 60 * 9 : 60 * 30;
 
   return cached(`webcam:${lat.toFixed(3)}:${lon.toFixed(3)}`, ttlSeconds, async () => {
+    // กล้อง YouTube ที่คัดมือมาก่อนเสมอ เพราะมุมสวยกว่ากล้องเฝ้าระดับน้ำของ Windy
+    const curated: WebcamOption[] = (cityConfig?.livecams ?? []).map((cam) => ({
+      title: cam.title,
+      url: `https://www.youtube.com/embed/${cam.youtubeId}?autoplay=1&mute=1`,
+      previewImage: `https://i.ytimg.com/vi/${cam.youtubeId}/hqdefault.jpg`,
+      source: cam.source,
+      lat: cam.lat,
+      lon: cam.lon,
+    }));
+
+    let options = [...curated];
     if (process.env.WINDY_WEBCAMS_API_KEY) {
       const windy = await getWindyWebcam(lat, lon);
-      if (windy.available) return windy;
+      if (windy.available) options = [...curated, ...windy.options];
+    }
+
+    const primary = options[0];
+    if (primary) {
+      return {
+        available: true,
+        source: primary.source,
+        title: primary.title,
+        url: primary.url,
+        previewImage: primary.previewImage,
+        options,
+        updatedAt: new Date().toISOString(),
+      };
     }
 
     if (cityConfig?.livecam) {
