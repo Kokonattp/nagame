@@ -3,13 +3,22 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nagame.vercel.app"),
-  title: "Nagame Travel Companion",
-  description: "Responsive travel web app for Japan cities with live weather, nearby cities, events, webcam, and AI trip planning.",
+  title: "Nagame 眺め — Japan Travel Companion",
+  description: "เช็คอากาศ ฝุ่น กล้องสด อีเวนต์ แผ่นดินไหว และวางแผนเที่ยวญี่ปุ่นด้วย AI ครบในหน้าเดียว",
   icons: {
-    icon: "/icon.svg",
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Nagame",
+    statusBarStyle: "default",
   },
   openGraph: {
-    title: "Nagame Travel Companion",
+    title: "Nagame 眺め — Japan Travel Companion",
     description: "เช็คอากาศ ฝุ่น กล้องสด อีเวนต์ และวางแผนเที่ยวญี่ปุ่นด้วย AI ครบในหน้าเดียว",
     siteName: "Nagame",
     type: "website",
@@ -17,7 +26,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Nagame Travel Companion",
+    title: "Nagame 眺め — Japan Travel Companion",
     description: "เช็คอากาศ ฝุ่น กล้องสด อีเวนต์ และวางแผนเที่ยวญี่ปุ่นด้วย AI ครบในหน้าเดียว",
   },
 };

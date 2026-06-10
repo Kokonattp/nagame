@@ -11,6 +11,7 @@ import {
   Compass,
   ExternalLink,
   Gift,
+  Home,
   MapPin,
   MessagesSquare,
   Mountain,
@@ -191,7 +192,12 @@ export function TravelDashboard({
         <header className="z-40 rounded-[30px] border border-[var(--line)] bg-[rgba(255,251,245,0.84)] px-4 py-4 shadow-[0_14px_48px_rgba(31,36,48,0.06)] backdrop-blur-xl md:sticky md:top-3 md:px-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
-              <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[var(--accent-warm)]">Nagame Travel Companion</p>
+              <Link
+                href="/"
+                className="inline-block text-[11px] font-medium uppercase tracking-[0.28em] text-[var(--accent-warm)] transition hover:text-[var(--accent)]"
+              >
+                Nagame Travel Companion
+              </Link>
               <div className="flex flex-wrap items-end gap-3">
                 <h1 className="font-serif text-3xl font-semibold tracking-tight text-[var(--foreground)] md:text-4xl">
                   {city.name}
@@ -207,6 +213,13 @@ export function TravelDashboard({
               </div>
             </div>
             <nav className="flex flex-wrap gap-2 text-sm text-[var(--ink-muted)]">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--accent)] px-4 py-2 text-[#faf7f2] transition hover:bg-[#1b2a39]"
+              >
+                <Home className="h-3.5 w-3.5" aria-hidden />
+                ทุกเมือง
+              </Link>
               <a href="#overview" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">วันนี้</a>
               <a href="#nearby" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">เมืองใกล้เคียง</a>
               <a href="#ideas" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">ไอเดียทริป</a>
