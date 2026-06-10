@@ -49,7 +49,7 @@ export async function getEvents(cityConfig?: CityConfig): Promise<EventSignal> {
 async function getGoogleNewsEvents(cityName: string): Promise<EventSignal | null> {
   try {
     const url = new URL("https://news.google.com/rss/search");
-    url.searchParams.set("q", `${cityName} Japan travel OR event OR festival`);
+    url.searchParams.set("q", `${cityName} Japan travel OR event OR festival when:7d`);
     url.searchParams.set("hl", "en-US");
     url.searchParams.set("gl", "US");
     url.searchParams.set("ceid", "US:en");
@@ -66,7 +66,9 @@ async function getGoogleNewsEvents(cityName: string): Promise<EventSignal | null
     }
 
     const xml = await response.text();
-    const items = parseRssItems(xml).slice(0, 8);
+    const items = parseRssItems(xml)
+      .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""))
+      .slice(0, 8);
 
     return {
       available: items.length > 0,
