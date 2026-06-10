@@ -188,7 +188,7 @@ export function TravelDashboard({
   return (
     <main className="min-h-screen text-[var(--foreground)]">
       <div className="mx-auto flex w-full max-w-[1380px] flex-col gap-8 px-4 pb-12 pt-4 md:px-8 md:pt-6 xl:px-10">
-        <header className="sticky top-3 z-40 rounded-[30px] border border-[var(--line)] bg-[rgba(255,251,245,0.84)] px-4 py-4 shadow-[0_14px_48px_rgba(31,36,48,0.06)] backdrop-blur-xl md:px-6">
+        <header className="z-40 rounded-[30px] border border-[var(--line)] bg-[rgba(255,251,245,0.84)] px-4 py-4 shadow-[0_14px_48px_rgba(31,36,48,0.06)] backdrop-blur-xl md:sticky md:top-3 md:px-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
               <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[var(--accent-warm)]">Nagame Travel Companion</p>
@@ -218,8 +218,8 @@ export function TravelDashboard({
           </div>
         </header>
 
-        <section id="overview" className="grid gap-6 xl:grid-cols-[1.45fr_0.95fr]">
-          <div className="overflow-hidden rounded-[36px] border border-[var(--line)] bg-[var(--surface-strong)] shadow-[0_24px_80px_rgba(31,36,48,0.07)]">
+        <section id="overview" className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.95fr)]">
+          <div className="min-w-0 overflow-hidden rounded-[36px] border border-[var(--line)] bg-[var(--surface-strong)] shadow-[0_24px_80px_rgba(31,36,48,0.07)]">
             <div className="relative min-h-[560px]">
               {cityMeta.heroImage ? (
                 <>
@@ -266,7 +266,7 @@ export function TravelDashboard({
             </div>
           </div>
 
-          <div className="grid gap-6">
+          <div className="grid min-w-0 gap-6">
             <PaperCard
               eyebrow="Live webcam"
               title={activeWebcam?.title ?? `ดูบรรยากาศ ${city.name}`}
@@ -472,7 +472,7 @@ export function TravelDashboard({
           </PaperCard>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.02fr_0.98fr]">
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
           <PaperCard
             eyebrow="RSS / alerts"
             title="เหตุการณ์และข่าวที่ควรรู้"
@@ -600,7 +600,7 @@ export function TravelDashboard({
                 ปิด
               </button>
             </div>
-            <div className="grid min-h-0 flex-1 gap-0 overflow-y-auto lg:grid-cols-[1.35fr_0.65fr] lg:overflow-y-visible">
+            <div className="grid min-h-0 flex-1 gap-0 overflow-y-auto lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)] lg:overflow-y-visible">
               <div className="shrink-0 bg-[#111317]">
                 {activeWebcam?.url && canEmbedWebcam ? (
                   <iframe
