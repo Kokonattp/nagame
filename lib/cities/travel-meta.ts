@@ -21,32 +21,26 @@ const cityMetaBySlug: Record<string, CityMeta> = {
   fukuoka: {
     intro: "เมืองสายกินง่าย เดินง่าย และเหมาะกับทริปที่อยากบาลานซ์ระหว่าง local food, คาเฟ่, waterfront และ day trip รอบคิวชู",
     mood: "food city",
-    heroImage: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Fukuoka_City_from_Fukuoka_Tower.jpg?width=1600",
   },
   tokyo: {
     intro: "เมืองใหญ่ที่เที่ยวได้ทุกสภาพอากาศ เพราะมีทั้งย่านเดินเมือง พิพิธภัณฑ์ ร้านอาหาร และการต่อรถที่ยืดหยุ่นมาก",
     mood: "big city pulse",
-    heroImage: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Tokyo_Montage_2015.jpg?width=1600",
   },
   osaka: {
     intro: "เด่นเรื่องอาหาร บรรยากาศคึกคัก และเหมาะกับคนที่อยากเที่ยวแบบไม่ต้องวางแผนซับซ้อนมาก",
     mood: "street energy",
-    heroImage: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Osaka_Montage_2015.png?width=1600",
   },
   kyoto: {
     intro: "เหมาะกับวันที่อยากเที่ยวช้าลง เน้นวัด สวน ย่านเดิน และจังหวะเมืองที่ละมุนกว่าเมืองใหญ่",
     mood: "heritage calm",
-    heroImage: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Kyoto_Montage.jpg?width=1600",
   },
   sapporo: {
     intro: "เหมาะกับทริปกินจริงจังและอากาศเย็น เดินเมืองง่าย มีทั้งสวนกลางเมืองและย่านกลางคืนชัดเจน",
     mood: "cool climate",
-    heroImage: "https://commons.wikimedia.org/wiki/Special:Redirect/file:Sapporo_City_Montage.jpg?width=1600",
   },
   naha: {
     intro: "เมืองพักผ่อนที่ผสมทะเล อาหารโอกินาวะ และการเดินเที่ยวแบบไม่เร่งรีบได้ดี",
     mood: "island pace",
-    heroImage: "https://commons.wikimedia.org/wiki/Special:Redirect/file:Naha_City_Okinawa_Japan.jpg?width=1600",
   },
 };
 

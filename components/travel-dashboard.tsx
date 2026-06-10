@@ -26,6 +26,7 @@ import {
 import { CitySearch } from "@/components/city-search";
 import type { Recommendation } from "@/lib/cities/city-configs";
 import type { JapanCitySeed } from "@/lib/cities/japan-major-cities";
+import type { SummarySignal } from "@/lib/services/ai-summary";
 import type { AqiSignal } from "@/lib/services/aqi";
 import type { EventSignal } from "@/lib/services/events";
 import type { FxSignal } from "@/lib/services/fx";
@@ -60,6 +61,7 @@ type DashboardProps = {
   events: EventSignal;
   quakes: QuakeSignal;
   fx: FxSignal;
+  summary: SummarySignal;
   nearbyCities: {
     slug: string;
     name: string;
@@ -105,6 +107,7 @@ export function TravelDashboard({
   events,
   quakes,
   fx,
+  summary,
   nearbyCities,
   recommendations,
   seeds,
@@ -331,10 +334,11 @@ export function TravelDashboard({
               description="อ่านแล้วตัดสินใจได้ทันทีว่าควรเดินต่อ หลบฝน หรือปรับจังหวะวัน"
             >
               <div className="mt-4 space-y-3">
-                <SignalRow label="อุณหภูมิ" value={`${weather.temperature ?? "--"}°C`} note={weather.condition} />
+                <p className="rounded-[22px] border border-[var(--line)] bg-[rgba(255,253,249,0.84)] px-4 py-3 text-sm leading-7 text-[var(--foreground)]">
+                  {summary.text}
+                </p>
                 <SignalRow label="สูงสุด / ต่ำสุด" value={`${weather.high ?? "--"}° / ${weather.low ?? "--"}°`} note="ดูช่วงกลางวันเทียบกับเย็น" />
-                <SignalRow label="ฝน" value={formatValue(weather.rainChance, "%")} note="ใช้เลือกย่านเดินหรือจุดในร่ม" />
-                <SignalRow label="AQI" value={typeof aqi.aqi === "number" ? `${aqi.aqi}` : aqi.label} note={`ตอนนี้อากาศระดับ ${aqi.label}`} />
+                <p className="px-1 text-xs text-[var(--ink-muted)]">ที่มา: {summary.source}</p>
               </div>
             </PaperCard>
           </div>

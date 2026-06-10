@@ -5,6 +5,7 @@ import { japanMajorCities } from "@/lib/cities/japan-major-cities";
 import { getCityConfigBySlug } from "@/lib/cities/city-configs";
 import { getCityMeta, getNearbyCities, getRecommendationSets } from "@/lib/cities/travel-meta";
 import type { Recommendation } from "@/lib/cities/city-configs";
+import { getAiSummary } from "@/lib/services/ai-summary";
 import { getAqi } from "@/lib/services/aqi";
 import { getCityHeroImagesBulk, getPlaceImages } from "@/lib/services/city-images";
 import { getEvents } from "@/lib/services/events";
@@ -61,6 +62,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
     getQuakes(city.lat, city.lon),
     getFx(),
   ]);
+  const summary = await getAiSummary({ cityName: city.name, cityConfig: config, weather, aqi, webcam, events });
 
   const cityMetaBase = getCityMeta(city.slug, city.name);
   const nearbyBase = getNearbyCities(city.slug, city.lat, city.lon, 6);
@@ -99,6 +101,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
       events={events}
       quakes={quakes}
       fx={fx}
+      summary={summary}
       nearbyCities={nearbyCities}
       recommendations={recommendations}
       seeds={japanMajorCities}
