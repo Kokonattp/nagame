@@ -186,7 +186,7 @@ export function TravelDashboard({
   }
 
   return (
-    <main className="min-h-screen text-[var(--foreground)]">
+    <main className="min-h-screen overflow-x-clip text-[var(--foreground)]">
       <div className="mx-auto flex w-full max-w-[1380px] flex-col gap-8 px-4 pb-12 pt-4 md:px-8 md:pt-6 xl:px-10">
         <header className="z-40 rounded-[30px] border border-[var(--line)] bg-[rgba(255,251,245,0.84)] px-4 py-4 shadow-[0_14px_48px_rgba(31,36,48,0.06)] backdrop-blur-xl md:sticky md:top-3 md:px-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -300,7 +300,7 @@ export function TravelDashboard({
               </button>
 
               {webcamOptions.length > 1 ? (
-                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                <div className="mt-3 flex w-0 min-w-full gap-2 overflow-x-auto pb-1">
                   {webcamOptions.map((option, index) => (
                     <button
                       key={`${option.title}-${index}`}
