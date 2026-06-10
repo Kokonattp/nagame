@@ -88,6 +88,8 @@ export function getRecommendationSets(
     see: mergeRecommendations(enriched, fallback, "see", 6),
     eat: mergeRecommendations(enriched, fallback, "eat", 8),
     sleep: mergeRecommendations(enriched, fallback, "sleep", 8),
+    shop: mergeRecommendations(enriched, fallback, "shop", 6),
+    do: mergeRecommendations(enriched, fallback, "do", 6),
   };
 }
 
@@ -113,7 +115,8 @@ function mergeRecommendations(
 function buildFallbackRecommendations(cityName: string, prefecture?: string): Recommendation[] {
   const cityArea = prefecture ? `${cityName}, ${prefecture}` : cityName;
 
-  return [
+  // รายการทั้งหมดในชุดนี้เป็นชื่อสมมุติ จึงติดธง generic เพื่อไม่ให้ระบบไปค้นรูป
+  const items: Recommendation[] = [
     {
       kind: "see",
       title: `${cityName} Station area`,
@@ -198,7 +201,51 @@ function buildFallbackRecommendations(cityName: string, prefecture?: string): Re
       signal: "เหมาะคืนพิเศษ",
       note: "ใช้สำหรับคืนที่อยากได้ประสบการณ์พักจริงจังมากขึ้น โดยเฉพาะถ้าเมืองนั้นมี traditional stay เด่น",
     },
+    {
+      kind: "shop",
+      title: `${cityName} station souvenir floor`,
+      area: cityArea,
+      signal: "ซื้อก่อนเดินทาง",
+      note: "สถานีหลักของเมืองมักรวมขนมและของฝากท้องถิ่นไว้ครบ เหมาะเก็บตกก่อนขึ้นรถไฟ",
+    },
+    {
+      kind: "shop",
+      title: `${cityName} local shopping street`,
+      area: cityArea,
+      signal: "ย่านท้องถิ่น",
+      note: "เดินถนนการค้าใกล้ใจกลางเมืองเพื่อหาของฝากที่ไม่ใช่ของแมส และเห็นวิถีคนท้องถิ่นจริง",
+    },
+    {
+      kind: "shop",
+      title: `${cityName} cafe corner`,
+      area: cityArea,
+      signal: "พักขา + ของฝากคาเฟ่",
+      note: "คาเฟ่ท้องถิ่นมักมีเมล็ดกาแฟหรือขนมแพ็กกลับเป็นของฝากแบบไม่ซ้ำใคร",
+    },
+    {
+      kind: "do",
+      title: `${cityName} old town walk`,
+      area: cityArea,
+      signal: "ครึ่งวันสบาย",
+      note: "เดินย่านเก่าหรือถนนประวัติศาสตร์ของเมืองช่วงเช้าที่คนยังน้อยและแสงสวย",
+    },
+    {
+      kind: "do",
+      title: `${cityName} viewpoint or observatory`,
+      area: cityArea,
+      signal: "เหมาะฟ้าเปิด",
+      note: "หาจุดชมวิวมุมสูงของเมือง เช็คเมฆและลมจากหน้านี้ก่อนตัดสินใจขึ้น",
+    },
+    {
+      kind: "do",
+      title: `Day trip around ${cityName}`,
+      area: cityArea,
+      signal: "เผื่อวันว่าง",
+      note: "ใช้การ์ดเมืองใกล้เคียงด้านบนเลือกจุด day trip ที่นั่งรถไม่เกินหนึ่งชั่วโมง",
+    },
   ];
+
+  return items.map((item) => ({ ...item, generic: true }));
 }
 
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {

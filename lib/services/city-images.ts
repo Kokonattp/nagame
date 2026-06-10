@@ -133,7 +133,7 @@ async function fetchImagesByExactTitles(titles: string[]): Promise<Map<string, s
   return result;
 }
 
-async function searchWikipediaImage(search: string): Promise<string | null> {
+async function searchWikipediaImages(search: string): Promise<{ title: string; image: string }[]> {
   const data = await callWikipedia({
     generator: "search",
     gsrsearch: search,
@@ -141,10 +141,44 @@ async function searchWikipediaImage(search: string): Promise<string | null> {
     gsrnamespace: "0",
   });
 
-  const pages = Object.values(data.query?.pages ?? {}).sort(
-    (a, b) => (a.index ?? 99) - (b.index ?? 99),
-  );
-  return pages.find((page) => page.thumbnail?.source)?.thumbnail?.source ?? null;
+  return Object.values(data.query?.pages ?? {})
+    .sort((a, b) => (a.index ?? 99) - (b.index ?? 99))
+    .filter((page): page is WikipediaPage & { title: string } => Boolean(page.title && page.thumbnail?.source))
+    .map((page) => ({ title: page.title, image: page.thumbnail!.source! }));
+}
+
+// ตัดคำห้อยทั่วไปอย่าง "base" / "area" ออกจากชื่อสถานที่ก่อนนำไปค้น
+function cleanPlaceTitle(title: string) {
+  return title
+    .replace(/\s*\(.*?\)\s*/g, " ")
+    .replace(/\s+\b(base|stay|zone|area|corner|floor)\b\s*$/i, "")
+    .trim();
+}
+
+const MATCH_STOP_WORDS = new Set(["the", "and", "for", "near", "around", "from", "with", "ward"]);
+
+function normalizeForMatch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
+function meaningfulTokens(value: string, cityName: string) {
+  const cityTokens = new Set(normalizeForMatch(cityName).split(/[^a-z0-9]+/));
+  return normalizeForMatch(value)
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 3 && !MATCH_STOP_WORDS.has(token) && !cityTokens.has(token));
+}
+
+// รับรูปเฉพาะเมื่อชื่อบทความตรงกับชื่อสถานที่อย่างน้อยครึ่งหนึ่งของคำสำคัญ
+// กันเคสที่คำย่านอย่าง "Hakata" คำเดียวลากรูปคนละสถานที่มา
+function titlesOverlap(pageTitle: string, placeTitle: string, cityName: string) {
+  const placeTokens = [...new Set(meaningfulTokens(placeTitle, cityName))];
+  if (!placeTokens.length) return false;
+  const pageTokens = new Set(meaningfulTokens(pageTitle, cityName));
+  const matches = placeTokens.filter((token) => pageTokens.has(token)).length;
+  return matches * 2 >= placeTokens.length;
 }
 
 export async function getCityHeroImagesBulk(inputs: CityImageInput[]) {
@@ -215,12 +249,12 @@ export async function getPlaceImages(cityName: string, items: PlaceImageInput[])
 
   // รอบแรก: เทียบชื่อสถานที่ตรง ๆ ทั้งชุดในคำขอเดียว
   try {
-    const titles = [...new Set(pendingIndexes.map((index) => items[index].title))];
+    const titles = [...new Set(pendingIndexes.map((index) => cleanPlaceTitle(items[index].title)))];
     const found = await fetchImagesByExactTitles(titles);
     const stillPending: number[] = [];
 
     for (const index of pendingIndexes) {
-      const image = found.get(items[index].title) ?? null;
+      const image = found.get(cleanPlaceTitle(items[index].title)) ?? null;
       if (image) {
         results[index] = image;
         writeImageCache(keyOf(items[index]), image);
@@ -233,15 +267,13 @@ export async function getPlaceImages(cityName: string, items: PlaceImageInput[])
     return results;
   }
 
-  // รอบสอง: ค้นหาแบบ fuzzy ทีละรายการ เว้นจังหวะกัน rate limit และหยุดทันทีเมื่อถูกปฏิเสธ
+  // รอบสอง: ค้นหาแบบ fuzzy ทีละรายการ และรับเฉพาะหน้าที่ชื่อสอดคล้องกับสถานที่จริง
   for (const index of pendingIndexes.slice(0, SEARCH_FALLBACK_LIMIT)) {
     try {
       const item = items[index];
-      const image =
-        (await searchWikipediaImage(`${item.title} ${cityName}`)) ??
-        (item.area && item.area !== item.title
-          ? await searchWikipediaImage(`${item.area} ${cityName} Japan`)
-          : null);
+      const cleaned = cleanPlaceTitle(item.title);
+      const candidates = await searchWikipediaImages(`${cleaned} ${cityName}`);
+      const image = candidates.find((candidate) => titlesOverlap(candidate.title, cleaned, cityName))?.image ?? null;
 
       results[index] = image;
       writeImageCache(keyOf(item), image);

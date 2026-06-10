@@ -107,22 +107,32 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
 }
 
 async function attachPlaceImages(
-  sets: { see: Recommendation[]; eat: Recommendation[]; sleep: Recommendation[] },
+  sets: {
+    see: Recommendation[];
+    eat: Recommendation[];
+    sleep: Recommendation[];
+    shop: Recommendation[];
+    do: Recommendation[];
+  },
   cityName: string,
 ) {
-  const allItems = [...sets.see, ...sets.eat, ...sets.sleep];
+  const kinds = ["see", "eat", "sleep", "shop", "do"] as const;
+  const allItems = kinds.flatMap((kind) => sets[kind]);
+
+  // ค้นรูปเฉพาะสถานที่จริง — รายการ generic เป็นชื่อสมมุติ ค้นไปก็ได้รูปไม่ตรง
+  const lookupItems = allItems.filter((item) => !item.generic);
   const images = await getPlaceImages(
     cityName,
-    allItems.map((item) => ({ title: item.title, area: item.area })),
+    lookupItems.map((item) => ({ title: item.title, area: item.area })),
   );
-  const enriched = allItems.map((item, index) => ({ ...item, image: images[index] }));
+  const imageByItem = new Map(lookupItems.map((item, index) => [item, images[index]]));
+  const enriched = allItems.map((item) => ({ ...item, image: imageByItem.get(item) ?? null }));
 
-  const seeEnd = sets.see.length;
-  const eatEnd = seeEnd + sets.eat.length;
-
-  return {
-    see: enriched.slice(0, seeEnd),
-    eat: enriched.slice(seeEnd, eatEnd),
-    sleep: enriched.slice(eatEnd),
-  };
+  const result = {} as Record<(typeof kinds)[number], (Recommendation & { image: string | null })[]>;
+  let offset = 0;
+  for (const kind of kinds) {
+    result[kind] = enriched.slice(offset, offset + sets[kind].length);
+    offset += sets[kind].length;
+  }
+  return result;
 }

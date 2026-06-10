@@ -1,6 +1,6 @@
 import { slugifyCity } from "@/lib/utils/format";
 
-export type RecommendationKind = "see" | "eat" | "sleep";
+export type RecommendationKind = "see" | "eat" | "sleep" | "shop" | "do";
 
 export type Recommendation = {
   title: string;
@@ -8,6 +8,8 @@ export type Recommendation = {
   note: string;
   signal: string;
   kind: RecommendationKind;
+  // ชื่อสมมุติที่สร้างอัตโนมัติ — ห้ามนำไปค้นรูปเพราะจะได้รูปไม่ตรงสถานที่
+  generic?: boolean;
 };
 
 export type CityLivecam = {
@@ -97,6 +99,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
       { kind: "eat", title: "Hakata ramen near station", area: "Hakata", note: "ทางเลือกเร็วหลังเดินทางถึงเมือง", signal: "ใกล้ transit" },
       { kind: "sleep", title: "Hakata Station base", area: "Hakata", note: "เหมาะกับทริปสั้นและวันย้ายเมือง", signal: "รถไฟ/สนามบินสะดวก" },
       { kind: "sleep", title: "Tenjin base", area: "Tenjin", note: "เหมาะกับช้อป กิน และเดินกลางคืน", signal: "แหล่งเมืองแน่น" },
+      { kind: "shop", title: "Tenjin Underground Mall", area: "Tenjin", note: "ของฝากและแฟชั่นในที่เดียว เดินได้แม้ฝนตก", signal: "ในร่ม" },
+      { kind: "shop", title: "Hakata Station omiyage street", area: "Hakata", note: "ขนม Hakata Torimon และของฝากคิวชูครบก่อนขึ้นรถไฟ", signal: "ซื้อก่อนเดินทาง" },
+      { kind: "do", title: "Ohori Park boat ride", area: "Chuo", note: "พายเรือเล่นกลางเมืองเมื่อฟ้าเปิด ลมไม่แรง", signal: "กลางแจ้ง" },
+      { kind: "do", title: "Uminonakamichi Seaside Park", area: "Higashi", note: "ปั่นจักรยานชมสวนริมทะเล เหมาะครึ่งวัน", signal: "day activity" },
     ],
   },
   {
@@ -119,6 +125,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
       { kind: "eat", title: "Tsukiji outer market", area: "Tsukiji", note: "เหมาะช่วงเช้าเมื่อคนยังไม่แน่นมาก", signal: "เช้าเป็นหลัก" },
       { kind: "sleep", title: "Shinjuku base", area: "Shinjuku", note: "สะดวกสำหรับรถไฟหลายสาย", signal: "hub ใหญ่" },
       { kind: "sleep", title: "Ueno base", area: "Ueno", note: "คุ้มค่าและต่อรถไปสนามบินง่าย", signal: "transit ดี" },
+      { kind: "shop", title: "Nakamise Shopping Street", area: "Asakusa", note: "ของฝากแบบดั้งเดิมตลอดทางเข้าวัด Senso-ji", signal: "ของฝากคลาสสิก" },
+      { kind: "shop", title: "Ameyoko Market", area: "Ueno", note: "ขนม เครื่องสำอาง ของแห้ง ราคาต่อรองได้", signal: "ราคาดี" },
+      { kind: "do", title: "Sumida River cruise", area: "Asakusa", note: "ล่องเรือชมเมืองจาก Asakusa ไป Odaiba เหมาะวันฟ้าเปิด", signal: "วิวแม่น้ำ" },
+      { kind: "do", title: "Shibuya Sky observation deck", area: "Shibuya", note: "จุดชมวิวเมืองยอดนิยม ควรจองรอบเย็นล่วงหน้า", signal: "จองล่วงหน้า" },
     ],
   },
   {
@@ -141,6 +151,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
       { kind: "eat", title: "Kuromon Market", area: "Nipponbashi", note: "ดีช่วงก่อนเที่ยง", signal: "เช้า-กลางวัน" },
       { kind: "sleep", title: "Namba base", area: "Namba", note: "เหมาะสายกินและเดินกลางคืน", signal: "night access" },
       { kind: "sleep", title: "Umeda base", area: "Kita", note: "เหมาะต่อรถไป Kyoto/Kobe", signal: "rail hub" },
+      { kind: "shop", title: "Shinsaibashi-suji Shopping Street", area: "Chuo", note: "ถนนช้อปในร่มยาวต่อเนื่องถึง Dotonbori", signal: "ในร่ม" },
+      { kind: "shop", title: "Don Quijote Dotonbori", area: "Namba", note: "ของฝาก ขนม เครื่องสำอาง เปิดดึก มีชิงช้าสวรรค์หน้าร้าน", signal: "เปิดดึก" },
+      { kind: "do", title: "Tombori River Cruise", area: "Dotonbori", note: "ล่องเรือ 20 นาทีชมป้ายไฟย่าน Dotonbori", signal: "ช่วงเย็นสวย" },
+      { kind: "do", title: "Umeda Sky Building", area: "Kita", note: "จุดชมวิวพระอาทิตย์ตกและเมืองมุมสูง", signal: "วิวเมือง" },
     ],
   },
   {
@@ -162,6 +176,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
       { kind: "eat", title: "Pontocho", area: "Kamo River", note: "เหมาะเย็นที่อากาศไม่ชื้นมาก", signal: "dinner area" },
       { kind: "sleep", title: "Kyoto Station base", area: "Shimogyo", note: "เหมาะทริปสั้นและ day trip", signal: "transit" },
       { kind: "sleep", title: "Kawaramachi base", area: "Central", note: "เดินกินเที่ยวสะดวก", signal: "ใจกลางเมือง" },
+      { kind: "shop", title: "Kiyomizu-zaka souvenir slope", area: "Higashiyama", note: "ของฝากเกียวโตและเครื่องปั้นดินเผาตลอดทางขึ้นวัด Kiyomizu", signal: "เดินขึ้นเนิน" },
+      { kind: "shop", title: "Kyoto Handicraft Center", area: "Sakyo", note: "งานฝีมือญี่ปุ่นแท้ มีใบกำกับ tax-free", signal: "งานคราฟต์" },
+      { kind: "do", title: "Arashiyama Bamboo Grove", area: "Arashiyama", note: "ไปเช้าก่อน 8 โมงจะได้ป่าไผ่แบบคนน้อย", signal: "เช้าดีที่สุด" },
+      { kind: "do", title: "Kimono walk in Higashiyama", area: "Higashiyama", note: "เช่ากิโมโนเดินย่านเมืองเก่า ควรจองร้านล่วงหน้า", signal: "จองล่วงหน้า" },
     ],
   },
   {
@@ -182,6 +200,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
       { kind: "eat", title: "Nijo Market", area: "Chuo", note: "เหมาะช่วงเช้า", signal: "seafood" },
       { kind: "sleep", title: "Sapporo Station base", area: "Kita", note: "เหมาะต่อรถและรับมือหิมะ", signal: "สะดวก" },
       { kind: "sleep", title: "Susukino base", area: "Chuo", note: "เหมาะสายกินกลางคืน", signal: "nightlife" },
+      { kind: "shop", title: "Tanukikoji Shopping Street", area: "Chuo", note: "อาเขตในร่มยาว 7 บล็อก ของฝากฮอกไกโดครบ", signal: "ในร่ม" },
+      { kind: "shop", title: "Shiroi Koibito Park shop", area: "Nishi", note: "คุกกี้ Shiroi Koibito และขนมฮอกไกโดจากโรงงานโดยตรง", signal: "ของฝากดัง" },
+      { kind: "do", title: "Mount Moiwa Ropeway", area: "Minami", note: "วิวกลางคืนซัปโปโรที่ขึ้นชื่อ เช็คเมฆก่อนขึ้น", signal: "night view" },
+      { kind: "do", title: "Sapporo Beer Museum", area: "Higashi", note: "เรียนรู้ประวัติเบียร์ญี่ปุ่น มีชิมเบียร์สด", signal: "indoor" },
     ],
   },
   {
@@ -202,6 +224,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
       { kind: "eat", title: "Miso katsu", area: "Central", note: "หาง่ายและอิ่มเร็ว", signal: "comfort food" },
       { kind: "sleep", title: "Meieki base", area: "Nagoya Station", note: "เหมาะต่อ Shinkansen", signal: "rail hub" },
       { kind: "sleep", title: "Sakae base", area: "Sakae", note: "เหมาะเดินกินช้อป", signal: "central" },
+      { kind: "shop", title: "Osu Shopping District", area: "Naka", note: "ย่านช้อปวินเทจ ของมือสอง และสตรีทฟู้ด", signal: "ย่านฮิป" },
+      { kind: "shop", title: "Nagoya Station Takashimaya", area: "Meieki", note: "ขนมและของฝากนาโกย่าชั้นใต้ดิน ครบจบก่อนขึ้นรถไฟ", signal: "depachika" },
+      { kind: "do", title: "Toyota Commemorative Museum", area: "Nishi", note: "พิพิธภัณฑ์อุตสาหกรรมที่ทำดีมาก เหมาะวันฝน", signal: "indoor" },
+      { kind: "do", title: "Atsuta Shrine walk", area: "Atsuta", note: "ศาลเจ้าใหญ่ในป่ากลางเมือง เดินสงบครึ่งเช้า", signal: "เดินสบาย" },
     ],
   },
   {
@@ -222,6 +248,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
       { kind: "eat", title: "Red Brick Warehouse", area: "Shinko", note: "กินและหลบอากาศได้ง่าย", signal: "indoor/outdoor" },
       { kind: "sleep", title: "Sakuragicho base", area: "Minato Mirai", note: "วิวดีและเดินเล่นสะดวก", signal: "scenic" },
       { kind: "sleep", title: "Yokohama Station base", area: "Nishi", note: "เหมาะต่อรถไป Tokyo", signal: "transit" },
+      { kind: "shop", title: "Red Brick Warehouse shops", area: "Shinko", note: "ของฝากและงานคราฟต์ในโกดังอิฐแดงประวัติศาสตร์", signal: "บรรยากาศดี" },
+      { kind: "shop", title: "Yokohama Chinatown snacks", area: "Motomachi", note: "ซาลาเปา ขนมจีน และของฝากสไตล์จีน-ญี่ปุ่น", signal: "กินไปช้อปไป" },
+      { kind: "do", title: "Cosmo World Ferris wheel", area: "Minato Mirai", note: "ชิงช้าสวรรค์ริมอ่าว วิวสวยช่วงค่ำ", signal: "ช่วงค่ำ" },
+      { kind: "do", title: "Cup Noodles Museum", area: "Minato Mirai", note: "ทำราเม็งถ้วยของตัวเอง สนุกทั้งเด็กผู้ใหญ่", signal: "indoor" },
     ],
   },
   {
@@ -259,6 +289,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
       { kind: "eat", title: "Nankinmachi", area: "Motomachi", note: "กินเล่นและหลบฝนได้บางส่วน", signal: "street food" },
       { kind: "sleep", title: "Sannomiya base", area: "Central", note: "เหมาะต่อรถและกินเที่ยว", signal: "central" },
       { kind: "sleep", title: "Harborland base", area: "Bay", note: "เหมาะวิวกลางคืน", signal: "scenic" },
+      { kind: "shop", title: "Motomachi Shopping Street", area: "Motomachi", note: "ถนนช้อปเก่าแก่ มีร้านขนมโกเบดั้งเดิม", signal: "ย่านเก่า" },
+      { kind: "shop", title: "Kobe sweets shops Sannomiya", area: "Sannomiya", note: "เมืองขนมตะวันตกของญี่ปุ่น ชีสเค้กและพุดดิ้งเด่น", signal: "ของหวาน" },
+      { kind: "do", title: "Shin-Kobe Ropeway herb garden", area: "Chuo", note: "กระเช้าขึ้นสวนสมุนไพรวิวอ่าวโกเบ", signal: "วิวมุมสูง" },
+      { kind: "do", title: "Kobe Bay Cruise", area: "Harborland", note: "ล่องเรือชมอ่าวช่วงพระอาทิตย์ตก", signal: "ช่วงเย็น" },
     ],
   },
   {
@@ -280,6 +314,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
       { kind: "eat", title: "Oyster dishes", area: "Central", note: "เหมาะมื้อเย็นสบาย ๆ", signal: "seafood" },
       { kind: "sleep", title: "Hiroshima Station base", area: "Minami", note: "เหมาะ day trip", signal: "transit" },
       { kind: "sleep", title: "Hondori base", area: "Naka", note: "เดินกินเที่ยวสะดวก", signal: "central" },
+      { kind: "shop", title: "Hondori Shopping Arcade", area: "Naka", note: "อาเขตในร่มใจกลางเมือง ของฝากโมมิจิมันจูครบ", signal: "ในร่ม" },
+      { kind: "shop", title: "ekie Hiroshima Station mall", area: "Minami", note: "ของฝากฮิโรชิม่าและเบนโตะก่อนขึ้น Shinkansen", signal: "ติดสถานี" },
+      { kind: "do", title: "Hiroshima Peace Memorial Museum", area: "Naka", note: "พิพิธภัณฑ์สำคัญ ควรเผื่อเวลาอย่างน้อย 2 ชม.", signal: "ต้องไป" },
+      { kind: "do", title: "Hiroshima Castle walk", area: "Naka", note: "เดินรอบปราสาทและคูเมือง เหมาะช่วงเช้าเย็น", signal: "เดินสบาย" },
     ],
   },
   {
@@ -301,6 +339,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
       { kind: "eat", title: "Kanazawa curry", area: "Station/Central", note: "ทางเลือกอุ่น ๆ วันที่ฝนมา", signal: "comfort" },
       { kind: "sleep", title: "Kanazawa Station base", area: "Station", note: "เหมาะต่อรถและฝากกระเป๋า", signal: "rail" },
       { kind: "sleep", title: "Korinbo base", area: "Central", note: "ใกล้สวนและย่านเก่า", signal: "walkable" },
+      { kind: "shop", title: "Higashi Chaya gold leaf shops", area: "Higashiyama", note: "ทองคำเปลวคานาซาวะ ทั้งของฝากและไอศกรีมทองคำ", signal: "ของฝากเฉพาะถิ่น" },
+      { kind: "shop", title: "Omicho Market shops", area: "Central", note: "อาหารทะเลแห้งและของฝากจากตลาดร้อยปี", signal: "ตลาดเก่า" },
+      { kind: "do", title: "Gold leaf workshop Kanazawa", area: "Higashiyama", note: "เวิร์กช็อปติดทองคำเปลวบนตะเกียบหรือกล่อง", signal: "workshop" },
+      { kind: "do", title: "Kazuemachi riverside walk", area: "Kazuemachi", note: "เดินเลียบแม่น้ำผ่านย่านชาเก่าเงียบ ๆ", signal: "เดินสงบ" },
     ],
   },
   {
@@ -339,6 +381,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
       { kind: "eat", title: "Cafe near lake", area: "Lakefront", note: "เลือกเมื่อวิวเปิด", signal: "วิว" },
       { kind: "sleep", title: "Lake view ryokan", area: "North shore", note: "คุ้มเมื่อพยากรณ์ฟ้าเปิด", signal: "วิว Fuji" },
       { kind: "sleep", title: "Station base", area: "Kawaguchiko Station", note: "เหมาะเดินทางด้วย bus/train", signal: "transit" },
+      { kind: "shop", title: "Gateway Fujiyama shops", area: "Kawaguchiko Station", note: "ของฝากธีมฟูจิและขนมท้องถิ่นหน้าสถานี", signal: "ติดสถานี" },
+      { kind: "shop", title: "Lake Kawaguchiko craft shops", area: "North shore", note: "งานคราฟต์และคาเฟ่วิวทะเลสาบฝั่งเหนือ", signal: "คาเฟ่วิวดี" },
+      { kind: "do", title: "Mt. Fuji Panoramic Ropeway", area: "East shore", note: "กระเช้าขึ้นจุดชมฟูจิ+ทะเลสาบมุมสูง", signal: "เช็คเมฆก่อน" },
+      { kind: "do", title: "Lake Kawaguchi sightseeing boat", area: "Lakefront", note: "ล่องเรือชมฟูจิจากกลางทะเลสาบ ~20 นาที", signal: "ฟ้าเปิดดีสุด" },
     ],
   },
   {
@@ -377,6 +423,10 @@ const rawConfigs: Omit<CityConfig, "slug">[] = [
       { kind: "eat", title: "Makishi Public Market", area: "Makishi", note: "ดีเมื่ออยากหลบแดด", signal: "ในร่ม" },
       { kind: "sleep", title: "Kokusai Dori base", area: "Central", note: "เหมาะกินเที่ยวไม่ต้องขับรถ", signal: "walkable" },
       { kind: "sleep", title: "Omoromachi base", area: "Shintoshin", note: "เหมาะช้อปและต่อ monorail", signal: "monorail" },
+      { kind: "shop", title: "Kokusai Dori souvenir shops", area: "Central", note: "ของฝากโอกินาว่า ทั้งชินสุโกและแก้ว Ryukyu", signal: "ครบจบถนนเดียว" },
+      { kind: "shop", title: "Makishi Public Market", area: "Makishi", note: "ของแห้ง เครื่องปรุง และผลไม้เมืองร้อน", signal: "ตลาดท้องถิ่น" },
+      { kind: "do", title: "Shurijo Castle Park", area: "Shuri", note: "ชมปราสาทมรดก Ryukyu และจุดบูรณะ", signal: "ประวัติศาสตร์" },
+      { kind: "do", title: "Naminoue Beach sunset", area: "Naminoue", note: "หาดในเมืองเดินถึงได้ เหมาะปิดวันดูพระอาทิตย์ตก", signal: "ช่วงเย็น" },
     ],
   },
   {

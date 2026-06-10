@@ -10,11 +10,13 @@ import {
   CloudRain,
   Compass,
   ExternalLink,
+  Gift,
   MapPin,
   MessagesSquare,
   Mountain,
   SearchCheck,
   ShieldAlert,
+  Sparkles,
   Thermometer,
   Tv,
   UtensilsCrossed,
@@ -72,6 +74,8 @@ type DashboardProps = {
     see: RecommendationWithImage[];
     eat: RecommendationWithImage[];
     sleep: RecommendationWithImage[];
+    shop: RecommendationWithImage[];
+    do: RecommendationWithImage[];
   };
   seeds: JapanCitySeed[];
 };
@@ -380,6 +384,11 @@ export function TravelDashboard({
           <IdeaColumn title="ไปไหนดี" eyebrow="Where to go" icon={Compass} items={recommendations.see} cityName={city.name} />
           <IdeaColumn title="กินอะไรดี" eyebrow="What to eat" icon={UtensilsCrossed} items={recommendations.eat} cityName={city.name} />
           <IdeaColumn title="นอนไหนดี" eyebrow="Where to stay" icon={Mountain} items={recommendations.sleep} cityName={city.name} />
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-2">
+          <IdeaColumn title="ของฝาก & คาเฟ่" eyebrow="Souvenirs & cafes" icon={Gift} items={recommendations.shop} cityName={city.name} />
+          <IdeaColumn title="กิจกรรมน่าทำ" eyebrow="Things to do" icon={Sparkles} items={recommendations.do} cityName={city.name} />
         </section>
 
         <section className="grid gap-6 xl:grid-cols-2">
