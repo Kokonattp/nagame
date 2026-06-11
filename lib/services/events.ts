@@ -17,7 +17,7 @@ export type EventSignal = {
 export async function getEvents(cityConfig?: CityConfig): Promise<EventSignal> {
   const key = cityConfig?.slug ?? "unknown";
 
-  return cached(`events:${key}`, 60 * 30, async () => {
+  return cached(`events:${key}`, 60 * 10, async () => {
     const liveFeed = cityConfig ? await getGoogleNewsEvents(cityConfig.name) : null;
     if (liveFeed?.items.length) {
       return liveFeed;
@@ -58,7 +58,7 @@ async function getGoogleNewsEvents(cityName: string): Promise<EventSignal | null
       headers: {
         "User-Agent": "Nagame/1.0 travel companion",
       },
-      next: { revalidate: 1800 },
+      next: { revalidate: 600 },
     });
 
     if (!response.ok) {

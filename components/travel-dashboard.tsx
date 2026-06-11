@@ -7,8 +7,11 @@ import {
   Activity,
   Banknote,
   Bot,
+  Car,
+  Check,
   CloudRain,
   Compass,
+  Copy,
   ExternalLink,
   Gift,
   Home,
@@ -19,6 +22,7 @@ import {
   ShieldAlert,
   Sparkles,
   Thermometer,
+  TrainFront,
   Tv,
   UtensilsCrossed,
   Waves,
@@ -26,12 +30,15 @@ import {
 } from "lucide-react";
 import { CitySearch } from "@/components/city-search";
 import type { Recommendation } from "@/lib/cities/city-configs";
+import type { CityDrive } from "@/lib/cities/drive-spots";
+import type { CityTransit, TransitLineKind } from "@/lib/cities/transit";
 import type { JapanCitySeed } from "@/lib/cities/japan-major-cities";
 import type { SummarySignal } from "@/lib/services/ai-summary";
 import type { AqiSignal } from "@/lib/services/aqi";
 import type { EventSignal } from "@/lib/services/events";
 import type { FxSignal } from "@/lib/services/fx";
 import type { QuakeSignal } from "@/lib/services/quakes";
+import type { WarningSignal } from "@/lib/services/warnings";
 import type { WebcamOption, WebcamSignal } from "@/lib/services/webcams";
 import type { WeatherSignal } from "@/lib/services/weather";
 
@@ -39,6 +46,13 @@ const WebcamMap = dynamic(() => import("@/components/webcam-map").then((mod) => 
   ssr: false,
   loading: () => (
     <div className="flex h-full w-full items-center justify-center bg-white/4 text-xs text-[#d2ccc3]">กำลังโหลดแผนที่...</div>
+  ),
+});
+
+const TransitMap = dynamic(() => import("@/components/transit-map").then((mod) => mod.TransitMap), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full w-full items-center justify-center bg-[var(--surface-soft)] text-xs text-[var(--ink-muted)]">กำลังโหลดแผนที่...</div>
   ),
 });
 
@@ -62,6 +76,9 @@ type DashboardProps = {
   events: EventSignal;
   quakes: QuakeSignal;
   fx: FxSignal;
+  warnings: WarningSignal;
+  transit: CityTransit | null;
+  drive: CityDrive | null;
   summary: SummarySignal;
   nearbyCities: {
     slug: string;
@@ -108,6 +125,9 @@ export function TravelDashboard({
   events,
   quakes,
   fx,
+  warnings,
+  transit,
+  drive,
   summary,
   nearbyCities,
   recommendations,
@@ -124,6 +144,8 @@ export function TravelDashboard({
   const [webcamOpen, setWebcamOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [selectedWebcamIndex, setSelectedWebcamIndex] = useState(0);
+  const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
+  const severeWarnings = warnings.items.filter((item) => item.level !== "advisory");
   const webcamOptions = webcam.options?.length
     ? webcam.options
     : [{ title: webcam.title ?? "Live camera", url: webcam.url, previewImage: webcam.previewImage, source: webcam.source }];
@@ -221,6 +243,12 @@ export function TravelDashboard({
                 ทุกเมือง
               </Link>
               <a href="#overview" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">วันนี้</a>
+              {transit ? (
+                <a href="#transit" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">เดินทาง</a>
+              ) : null}
+              {drive ? (
+                <a href="#drive" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">ขับรถ</a>
+              ) : null}
               <a href="#nearby" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">เมืองใกล้เคียง</a>
               <a href="#ideas" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">ไอเดียทริป</a>
               <a href="#assistant" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">AI Insight</a>
@@ -230,6 +258,17 @@ export function TravelDashboard({
             <CitySearch seeds={seeds} defaultValue={city.name} />
           </div>
         </header>
+
+        {severeWarnings.length ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-[28px] border border-[#c0392b]/35 bg-[#fdf1ee] px-5 py-4 text-[#7a2418]">
+            <ShieldAlert className="h-5 w-5 shrink-0" aria-hidden />
+            <p className="text-sm font-medium leading-6">
+              JMA ประกาศเตือนภัยในพื้นที่นี้:{" "}
+              {severeWarnings.map((item) => item.label).join(" • ")}
+              <span className="ml-2 font-normal text-[#a04f3f]">เช็กรายละเอียดที่การ์ดเตือนภัยด้านล่างก่อนวางแผนออกนอกที่พัก</span>
+            </p>
+          </div>
+        ) : null}
 
         <section id="overview" className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.95fr)]">
           <div className="min-w-0 overflow-hidden rounded-[36px] border border-[var(--line)] bg-[var(--surface-strong)] shadow-[0_24px_80px_rgba(31,36,48,0.07)]">
@@ -408,7 +447,128 @@ export function TravelDashboard({
           <IdeaColumn title="กิจกรรมน่าทำ" eyebrow="Things to do" icon={Sparkles} items={recommendations.do} cityName={city.name} />
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-2">
+        {transit ? (
+          <section id="transit" className="rounded-[36px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_18px_70px_rgba(31,36,48,0.05)] md:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <SectionIntro
+                eyebrow="From the station"
+                title={`ขึ้นอะไรจาก ${transit.station.name}`}
+                description={transit.description}
+              />
+              <div className="hidden rounded-2xl border border-[var(--line)] bg-[rgba(255,253,249,0.76)] p-3 text-[var(--accent)] md:block">
+                <TrainFront className="h-5 w-5" aria-hidden />
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
+              <div className="h-[340px] overflow-hidden rounded-[28px] border border-[var(--line)] md:h-[440px]">
+                <TransitMap
+                  transit={transit}
+                  selectedLineId={selectedLineId}
+                  onSelect={(lineId) => setSelectedLineId((prev) => (prev === lineId ? null : lineId))}
+                />
+              </div>
+
+              <div className="grid content-start gap-2.5 xl:max-h-[440px] xl:overflow-y-auto xl:pr-1">
+                {transit.lines.map((line) => {
+                  const destination = farthestStop(line, transit.station);
+                  const selected = selectedLineId === line.id;
+                  return (
+                    <div
+                      key={line.id}
+                      className={`flex items-stretch gap-2 rounded-[24px] border bg-[rgba(255,253,249,0.9)] p-3 transition ${
+                        selected ? "border-[var(--accent)] shadow-[0_12px_36px_rgba(31,36,48,0.08)]" : "border-[var(--line)] hover:border-[var(--line-strong)]"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setSelectedLineId((prev) => (prev === line.id ? null : line.id))}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: line.color }} aria-hidden />
+                          <span className="text-sm font-medium text-[var(--foreground)]">{line.name}</span>
+                          <span className="rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--ink-muted)]">
+                            {transitKindLabels[line.kind]}
+                          </span>
+                        </div>
+                        <p className="mt-1.5 text-xs font-medium text-[var(--accent-warm)]">→ {line.to}</p>
+                        <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{line.note}</p>
+                        {line.boardAt ? (
+                          <p className="mt-1 text-[11px] leading-5 text-[var(--ink-muted)]">จุดขึ้นรถ: {line.boardAt}</p>
+                        ) : null}
+                      </button>
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&origin=${transit.station.lat},${transit.station.lon}&destination=${destination.lat},${destination.lon}&travelmode=transit`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={`เปิดเส้นทางไป ${destination.name} ใน Google Maps`}
+                        className="flex shrink-0 items-center self-center rounded-full border border-[var(--line)] p-2.5 text-[var(--accent)] transition hover:border-[var(--line-strong)]"
+                      >
+                        <ExternalLink className="h-4 w-4" aria-hidden />
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <p className="mt-4 px-1 text-xs leading-6 text-[var(--ink-muted)]">
+              เส้นทางคัดมือสำหรับนักท่องเที่ยว แสดงเฉพาะป้ายหลัก ตำแหน่งเป็นค่าโดยประมาณ — กดที่สายเพื่อไฮไลต์บนแผนที่ หรือกดไอคอนลิงก์เพื่อดูตารางเวลาจริงใน Google Maps
+            </p>
+          </section>
+        ) : null}
+
+        {drive ? <DriveSection drive={drive} cityName={city.name} /> : null}
+
+        <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+          <PaperCard
+            eyebrow="Weather alerts"
+            title="ประกาศเตือนภัยอากาศ"
+            icon={ShieldAlert}
+            description={`ประกาศเตือนภัย/เฝ้าระวังระดับภูมิภาครอบ ${city.name} จาก JMA อัปเดตทุก 10 นาที`}
+          >
+            <div className="mt-4 space-y-3">
+              {warnings.available && warnings.items.length ? (
+                <>
+                  {warnings.items.map((item) => (
+                    <div
+                      key={item.code}
+                      className="flex items-center justify-between gap-3 rounded-[22px] border border-[var(--line)] bg-[rgba(255,253,249,0.84)] px-4 py-3"
+                    >
+                      <p className="text-sm font-medium text-[var(--foreground)]">{item.label}</p>
+                      <span
+                        className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold ${
+                          item.level === "emergency"
+                            ? "bg-[#9c3d31] text-white"
+                            : item.level === "warning"
+                              ? "bg-[#b9770e] text-white"
+                              : "bg-[var(--surface-soft)] text-[var(--ink-muted)]"
+                        }`}
+                      >
+                        {item.level === "emergency" ? "ขั้นวิกฤต" : item.level === "warning" ? "เตือนภัย" : "เฝ้าระวัง"}
+                      </span>
+                    </div>
+                  ))}
+                  {warnings.headline ? (
+                    <p className="rounded-[22px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,253,249,0.8)] px-4 py-3 text-xs leading-6 text-[var(--ink-muted)]">
+                      ประกาศต้นฉบับ ({warnings.office ?? "JMA"}): {warnings.headline}
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <div className="rounded-[22px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,253,249,0.8)] px-4 py-4 text-sm leading-7 text-[var(--ink-muted)]">
+                  {warnings.available
+                    ? `ไม่มีประกาศเตือนภัยอากาศใกล้ ${city.name} ในตอนนี้`
+                    : warnings.message ?? "ยังเชื่อมต่อประกาศเตือนภัยไม่ได้ในตอนนี้"}
+                </div>
+              )}
+              {warnings.reportedAt ? (
+                <p className="px-1 text-xs text-[var(--ink-muted)]">ประกาศล่าสุด: {formatPublishedAt(warnings.reportedAt)}</p>
+              ) : null}
+            </div>
+          </PaperCard>
+
           <PaperCard
             eyebrow="Earthquake watch"
             title="แผ่นดินไหวรอบ 72 ชม."
@@ -854,8 +1014,106 @@ function IdeaColumn({
   );
 }
 
+function DriveSection({ drive, cityName }: { drive: CityDrive; cityName: string }) {
+  const [copiedSpot, setCopiedSpot] = useState<string | null>(null);
+
+  async function copyMapcode(spotName: string, mapcode: string) {
+    try {
+      await navigator.clipboard.writeText(mapcode);
+      setCopiedSpot(spotName);
+      setTimeout(() => setCopiedSpot((prev) => (prev === spotName ? null : prev)), 2000);
+    } catch {
+      // clipboard ใช้ไม่ได้ (เช่น เปิดผ่าน http) — ผู้ใช้ยังอ่านรหัสจากหน้าจอได้
+    }
+  }
+
+  return (
+    <section id="drive" className="rounded-[36px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_18px_70px_rgba(31,36,48,0.05)] md:p-7">
+      <div className="flex items-start justify-between gap-4">
+        <SectionIntro
+          eyebrow="Drive & mapcode"
+          title={`ขับรถเที่ยวจาก ${cityName}`}
+          description={`${drive.intro} — กด copy แล้วเอา mapcode ไปกดใส่ car navi ของรถเช่าได้เลย`}
+        />
+        <div className="hidden rounded-2xl border border-[var(--line)] bg-[rgba(255,253,249,0.76)] p-3 text-[var(--accent)] md:block">
+          <Car className="h-5 w-5" aria-hidden />
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {drive.spots.map((spot) => (
+          <div
+            key={spot.name}
+            className="flex flex-col rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.9)] p-4"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="text-sm font-medium text-[var(--foreground)]">{spot.name}</h3>
+              <span className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--ink-muted)]">
+                {spot.area}
+              </span>
+            </div>
+            <p className="mt-2 flex-1 text-xs leading-5 text-[var(--ink-muted)]">{spot.note}</p>
+            {spot.mapcode ? (
+              <button
+                type="button"
+                onClick={() => copyMapcode(spot.name, spot.mapcode!)}
+                className="mt-3 inline-flex items-center justify-between gap-2 rounded-[16px] border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2 text-left transition hover:border-[var(--line-strong)]"
+              >
+                <span className="font-mono text-sm font-medium tracking-wide text-[var(--accent)]">{spot.mapcode}</span>
+                {copiedSpot === spot.name ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#2e7d32]">
+                    <Check className="h-3.5 w-3.5" aria-hidden /> คัดลอกแล้ว
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-[var(--ink-muted)]">
+                    <Copy className="h-3.5 w-3.5" aria-hidden /> copy
+                  </span>
+                )}
+              </button>
+            ) : spot.tel ? (
+              <p className="mt-3 rounded-[16px] border border-dashed border-[var(--line-strong)] px-3 py-2 text-xs text-[var(--ink-muted)]">
+                ค้นใน navi ด้วยเบอร์โทร: <span className="font-mono font-medium text-[var(--accent)]">{spot.tel}</span>
+              </p>
+            ) : (
+              <p className="mt-3 rounded-[16px] border border-dashed border-[var(--line-strong)] px-3 py-2 text-xs leading-5 text-[var(--ink-muted)]">
+                ยังไม่มี mapcode ที่ยืนยันได้ — ค้นจาก japanmapcode.com ก่อนเดินทาง
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-4 px-1 text-xs leading-6 text-[var(--ink-muted)]">
+        mapcode ส่วนใหญ่ชี้ไปที่ลานจอดรถของสถานที่ ถ้า navi ถามตัวเลขหลัง * ให้กดใส่ด้วยเพื่อความแม่นยำ • ที่มา: {drive.source}
+      </p>
+    </section>
+  );
+}
+
 function formatValue(value: number | null, suffix: string) {
   return typeof value === "number" ? `${value}${suffix}` : "--";
+}
+
+const transitKindLabels: Record<TransitLineKind, string> = {
+  subway: "ใต้ดิน",
+  jr: "JR",
+  tram: "รถราง",
+  bus: "บัส",
+};
+
+// ปลายทางสำหรับลิงก์ Google Maps — ใช้ป้ายที่ไกลจากสถานีต้นทางที่สุด
+// (สายวนอย่างรถรางมีป้ายแรกซ้ำกับป้ายสุดท้าย เลยใช้ stops[length-1] ตรง ๆ ไม่ได้)
+function farthestStop(line: CityTransit["lines"][number], station: CityTransit["station"]) {
+  let best = line.stops[line.stops.length - 1];
+  let bestDistance = -1;
+  for (const stop of line.stops) {
+    const distance = (stop.lat - station.lat) ** 2 + (stop.lon - station.lon) ** 2;
+    if (distance > bestDistance) {
+      bestDistance = distance;
+      best = stop;
+    }
+  }
+  return best;
 }
 
 function formatPublishedAt(value: string) {

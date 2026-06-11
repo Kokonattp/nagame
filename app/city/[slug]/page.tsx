@@ -12,10 +12,14 @@ import { getEvents } from "@/lib/services/events";
 import { getFx } from "@/lib/services/fx";
 import { getQuakes } from "@/lib/services/quakes";
 import { resolveCity } from "@/lib/services/geocode";
+import { getWarnings } from "@/lib/services/warnings";
 import { getWebcams } from "@/lib/services/webcams";
 import { getWeather } from "@/lib/services/weather";
+import { getCityTransit } from "@/lib/cities/transit";
+import { getCityDrive } from "@/lib/cities/drive-spots";
 
-export const revalidate = 1800;
+// 10 นาที — ให้ประกาศเตือนภัย JMA และข่าวใน feed ตามทันเหตุการณ์
+export const revalidate = 600;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -54,13 +58,14 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
   }
 
   const config = getCityConfigBySlug(city.slug);
-  const [weather, aqi, webcam, events, quakes, fx] = await Promise.all([
+  const [weather, aqi, webcam, events, quakes, fx, warnings] = await Promise.all([
     getWeather(city.lat, city.lon),
     getAqi(city.lat, city.lon),
     getWebcams(city.lat, city.lon, config),
     getEvents(config),
     getQuakes(city.lat, city.lon),
     getFx(),
+    getWarnings({ slug: city.slug, prefecture: city.prefecture }),
   ]);
   const summary = await getAiSummary({ cityName: city.name, cityConfig: config, weather, aqi, webcam, events });
 
@@ -101,6 +106,9 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
       events={events}
       quakes={quakes}
       fx={fx}
+      warnings={warnings}
+      transit={getCityTransit(city.slug)}
+      drive={getCityDrive(city.slug)}
       summary={summary}
       nearbyCities={nearbyCities}
       recommendations={recommendations}

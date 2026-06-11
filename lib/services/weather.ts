@@ -1,5 +1,5 @@
 import { cached } from "@/lib/utils/cache";
-import { round, weatherCodeToText } from "@/lib/utils/format";
+import { openWeatherIdToText, round, weatherCodeToText } from "@/lib/utils/format";
 
 export type WeatherSignal = {
   available: boolean;
@@ -97,7 +97,8 @@ async function getOpenWeather(lat: number, lon: number): Promise<WeatherSignal> 
       feelsLike: round(current.main?.feels_like),
       high: highs.length ? round(Math.max(...highs)) : null,
       low: lows.length ? round(Math.min(...lows)) : null,
-      condition: current.weather?.[0]?.description ?? "ยังไม่มีข้อมูล",
+      // ใช้คำไทยของเราเองแทน description ที่ OpenWeather แปลมา (สำนวนแปลอ่านแล้วงง เช่น "เมฆเต็มท้องฟ้า")
+      condition: openWeatherIdToText(current.weather?.[0]?.id) ?? current.weather?.[0]?.description ?? "ยังไม่มีข้อมูล",
       weatherCode: current.weather?.[0]?.id ?? null,
       rainChance: round(rainChance),
       windSpeed: round((current.wind?.speed ?? 0) * 3.6, 1),
