@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
+  ArrowUp,
   Banknote,
   Bot,
   Calendar,
@@ -153,7 +154,15 @@ export function TravelDashboard({
   const [isPending, setIsPending] = useState(false);
   const [selectedWebcamIndex, setSelectedWebcamIndex] = useState(0);
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const severeWarnings = warnings.items.filter((item) => item.level !== "advisory");
+
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 900);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const seasonItems = useMemo(
     () =>
@@ -901,6 +910,17 @@ export function TravelDashboard({
           </section>
         </section>
       </div>
+
+      {showBackToTop ? (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="กลับขึ้นบนสุด"
+          className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--accent)] text-[#faf7f2] shadow-[0_14px_40px_rgba(31,36,48,0.28)] transition hover:bg-[#1b2a39]"
+        >
+          <ArrowUp className="h-5 w-5" aria-hidden />
+        </button>
+      ) : null}
 
       {webcamOpen ? (
         <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-[rgba(23,24,27,0.72)] backdrop-blur-sm sm:items-center sm:p-4">
