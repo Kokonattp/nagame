@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { TravelDashboard } from "@/components/travel-dashboard";
 import { japanMajorCities } from "@/lib/cities/japan-major-cities";
 import { getCityConfigBySlug } from "@/lib/cities/city-configs";
-import { getCityMeta, getNearbyCities, getRecommendationSets } from "@/lib/cities/travel-meta";
+import { getCityMeta, getRecommendationSets } from "@/lib/cities/travel-meta";
 import type { Recommendation } from "@/lib/cities/city-configs";
 import { getAiSummary } from "@/lib/services/ai-summary";
 import { getAqi } from "@/lib/services/aqi";
@@ -15,7 +15,6 @@ import { resolveCity } from "@/lib/services/geocode";
 import { getWarnings } from "@/lib/services/warnings";
 import { getWebcams } from "@/lib/services/webcams";
 import { getWeather } from "@/lib/services/weather";
-import { getWikiPois } from "@/lib/services/pois";
 import { getCityTransit } from "@/lib/cities/transit";
 import { getCityDrive } from "@/lib/cities/drive-spots";
 
@@ -59,7 +58,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
   }
 
   const config = getCityConfigBySlug(city.slug);
-  const [weather, aqi, webcam, events, quakes, fx, warnings, pois] = await Promise.all([
+  const [weather, aqi, webcam, events, quakes, fx, warnings] = await Promise.all([
     getWeather(city.lat, city.lon),
     getAqi(city.lat, city.lon),
     getWebcams(city.lat, city.lon, config),
@@ -67,33 +66,19 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
     getQuakes(city.lat, city.lon),
     getFx(),
     getWarnings({ slug: city.slug, prefecture: city.prefecture }),
-    getWikiPois(city.lat, city.lon, city.name),
   ]);
   const summary = await getAiSummary({ cityName: city.name, cityConfig: config, weather, aqi, webcam, events });
 
   const cityMetaBase = getCityMeta(city.slug, city.name);
-  const nearbyBase = getNearbyCities(city.slug, city.lat, city.lon, 6);
-  const heroImages = await getCityHeroImagesBulk([
-    ...(cityMetaBase.heroImage
+  const heroImages = await getCityHeroImagesBulk(
+    cityMetaBase.heroImage
       ? []
-      : [{ slug: city.slug, name: city.name, prefecture: city.prefecture, japaneseName: city.japaneseName }]),
-    ...nearbyBase
-      .filter((nearby) => !nearby.heroImage)
-      .map((nearby) => ({
-        slug: nearby.slug,
-        name: nearby.name,
-        prefecture: nearby.prefecture,
-        japaneseName: nearby.japaneseName,
-      })),
-  ]);
+      : [{ slug: city.slug, name: city.name, prefecture: city.prefecture, japaneseName: city.japaneseName }],
+  );
   const cityMeta = {
     ...cityMetaBase,
     heroImage: cityMetaBase.heroImage ?? heroImages.get(city.slug) ?? undefined,
   };
-  const nearbyCities = nearbyBase.map((nearby) => ({
-    ...nearby,
-    heroImage: nearby.heroImage ?? heroImages.get(nearby.slug) ?? undefined,
-  }));
   const recommendationsBase = getRecommendationSets(city.name, city.prefecture, config?.recommendations ?? []);
   const recommendations = await attachPlaceImages(recommendationsBase, city.name);
 
@@ -111,9 +96,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
       warnings={warnings}
       transit={getCityTransit(city.slug)}
       drive={getCityDrive(city.slug)}
-      pois={pois}
       summary={summary}
-      nearbyCities={nearbyCities}
       recommendations={recommendations}
       seeds={japanMajorCities}
     />

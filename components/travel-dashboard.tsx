@@ -16,7 +16,6 @@ import {
   Copy,
   ExternalLink,
   Gift,
-  Globe,
   Home,
   MapPin,
   MessagesSquare,
@@ -43,7 +42,6 @@ import type { SummarySignal } from "@/lib/services/ai-summary";
 import type { AqiSignal } from "@/lib/services/aqi";
 import type { EventSignal } from "@/lib/services/events";
 import type { FxSignal } from "@/lib/services/fx";
-import type { PoiSignal } from "@/lib/services/pois";
 import type { QuakeSignal } from "@/lib/services/quakes";
 import type { WarningSignal } from "@/lib/services/warnings";
 import type { WebcamOption, WebcamSignal } from "@/lib/services/webcams";
@@ -86,18 +84,7 @@ type DashboardProps = {
   warnings: WarningSignal;
   transit: CityTransit | null;
   drive: CityDrive | null;
-  pois: PoiSignal;
   summary: SummarySignal;
-  nearbyCities: {
-    slug: string;
-    name: string;
-    prefecture: string;
-    japaneseName: string;
-    distanceKm: number;
-    intro: string;
-    mood: string;
-    heroImage?: string;
-  }[];
   recommendations: {
     see: RecommendationWithImage[];
     eat: RecommendationWithImage[];
@@ -136,9 +123,7 @@ export function TravelDashboard({
   warnings,
   transit,
   drive,
-  pois,
   summary,
-  nearbyCities,
   recommendations,
   seeds,
 }: DashboardProps) {
@@ -283,8 +268,8 @@ export function TravelDashboard({
               {drive ? (
                 <a href="#drive" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">ขับรถ</a>
               ) : null}
-              <a href="#nearby" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">เมืองใกล้เคียง</a>
               <a href="#ideas" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">ไอเดียทริป</a>
+              <Link href={`/city/${city.slug}/around`} className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">รอบเมือง</Link>
               <a href="#assistant" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">AI Insight</a>
             </nav>
           </div>
@@ -442,83 +427,6 @@ export function TravelDashboard({
           </div>
         </section>
 
-        {seasonItems.length ? (
-          <section className="rounded-[36px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_18px_70px_rgba(31,36,48,0.05)] md:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <SectionIntro
-                eyebrow="Season radar"
-                title={`จังหวะฤดูกาลของ ${city.name}`}
-                description="ช่วงพีคโดยประมาณจากค่าเฉลี่ยหลายปี ใช้วางแผนล่วงหน้าได้ว่าควรมาเดือนไหน"
-              />
-              <div className="hidden rounded-2xl border border-[var(--line)] bg-[rgba(255,253,249,0.76)] p-3 text-[var(--accent)] md:block">
-                <Calendar className="h-5 w-5" aria-hidden />
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {seasonItems.map((item) => (
-                <div key={item.name} className="flex flex-col rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.9)] p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: seasonKindColors[item.kind] }} aria-hidden />
-                      <h3 className="text-sm font-medium text-[var(--foreground)]">{item.name}</h3>
-                    </div>
-                    {item.status.state === "active" ? (
-                      <span className="shrink-0 rounded-full bg-[#2e7d32] px-2.5 py-0.5 text-[10px] font-semibold text-white">กำลังพีค</span>
-                    ) : item.status.state === "upcoming" ? (
-                      <span className="shrink-0 rounded-full bg-[#b9770e] px-2.5 py-0.5 text-[10px] font-semibold text-white">อีก {item.status.daysUntil} วัน</span>
-                    ) : null}
-                  </div>
-                  <p className="mt-1.5 text-xs font-medium text-[var(--accent-warm)]">
-                    {formatMonthDay(item.from)} – {formatMonthDay(item.to)}
-                  </p>
-                  <p className="mt-1.5 text-xs leading-5 text-[var(--ink-muted)]">{item.note}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section id="nearby" className="rounded-[36px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_18px_70px_rgba(31,36,48,0.05)] md:p-7">
-          <SectionIntro
-            eyebrow="Nearby cities"
-            title={`ไปไหนดีใกล้ ${city.name}`}
-            description="เผื่อคุณอยากขยับเป็น day trip หรือเปลี่ยนบรรยากาศโดยยังเดินทางต่อได้จริง"
-          />
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {nearbyCities.map((nearby) => (
-              <Link
-                key={nearby.slug}
-                href={`/city/${nearby.slug}`}
-                className="group overflow-hidden rounded-[30px] border border-[var(--line)] bg-[rgba(255,253,249,0.92)] transition hover:-translate-y-0.5 hover:border-[var(--line-strong)] hover:shadow-[0_20px_60px_rgba(31,36,48,0.08)]"
-              >
-                <div className="relative h-44 overflow-hidden bg-[linear-gradient(180deg,#e7ded1,#d7dde3)]">
-                  {nearby.heroImage ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={nearby.heroImage} alt={nearby.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
-                  ) : null}
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(31,36,48,0.35))]" />
-                  <div className="absolute left-4 top-4 rounded-full border border-white/30 bg-[rgba(255,250,244,0.78)] px-3 py-1 text-xs font-medium text-[var(--accent)] backdrop-blur">
-                    ประมาณ {nearby.distanceKm} กม.
-                  </div>
-                </div>
-                <div className="space-y-3 p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="font-serif text-2xl text-[var(--foreground)]">{nearby.name}</h3>
-                      <p className="text-sm text-[var(--accent-warm)]">{nearby.japaneseName}</p>
-                    </div>
-                    <span className="rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] font-medium text-[var(--ink-muted)]">
-                      {nearby.mood}
-                    </span>
-                  </div>
-                  <p className="text-sm leading-7 text-[var(--ink-muted)]">{nearby.intro}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
         <section id="ideas" className="grid gap-6 xl:grid-cols-3">
           <IdeaColumn title="ไปไหนดี" eyebrow="Where to go" icon={Compass} items={recommendations.see} cityName={city.name} />
           <IdeaColumn title="กินอะไรดี" eyebrow="What to eat" icon={UtensilsCrossed} items={recommendations.eat} cityName={city.name} />
@@ -627,51 +535,40 @@ export function TravelDashboard({
 
         {drive ? <DriveSection drive={drive} cityName={city.name} /> : null}
 
-        {pois.available && pois.items.length ? (
+        {seasonItems.length ? (
           <section className="rounded-[36px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_18px_70px_rgba(31,36,48,0.05)] md:p-7">
             <div className="flex items-start justify-between gap-4">
               <SectionIntro
-                eyebrow="More around the city"
-                title="เผื่ออยากไปต่อ"
-                description={`จุดที่อยู่รอบ ${city.name} ในรัศมี ~10 กม. ดึงอัตโนมัติจาก Wikipedia — กดการ์ดเพื่อเปิดตำแหน่งใน Google Maps`}
+                eyebrow="Season radar"
+                title={`จังหวะฤดูกาลของ ${city.name}`}
+                description="ช่วงพีคโดยประมาณจากค่าเฉลี่ยหลายปี ใช้วางแผนล่วงหน้าได้ว่าควรมาเดือนไหน"
               />
               <div className="hidden rounded-2xl border border-[var(--line)] bg-[rgba(255,253,249,0.76)] p-3 text-[var(--accent)] md:block">
-                <Globe className="h-5 w-5" aria-hidden />
+                <Calendar className="h-5 w-5" aria-hidden />
               </div>
             </div>
 
-            <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {pois.items.map((poi) => (
-                <a
-                  key={poi.title}
-                  href={`https://www.google.com/maps/search/?api=1&query=${poi.lat},${poi.lon}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group flex flex-col overflow-hidden rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.9)] transition hover:border-[var(--line-strong)] hover:shadow-[0_16px_44px_rgba(31,36,48,0.08)]"
-                >
-                  {poi.thumbnail ? (
-                    <div className="relative h-36 overflow-hidden bg-[linear-gradient(180deg,#e7ded1,#d7dde3)]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={poi.thumbnail} alt={poi.title} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
-                      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(31,36,48,0.25))]" />
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {seasonItems.map((item) => (
+                <div key={item.name} className="flex flex-col rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.9)] p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: seasonKindColors[item.kind] }} aria-hidden />
+                      <h3 className="text-sm font-medium text-[var(--foreground)]">{item.name}</h3>
                     </div>
-                  ) : null}
-                  <div className="flex flex-1 flex-col p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-sm font-medium text-[var(--foreground)]">{poi.title}</h3>
-                      <span className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--ink-muted)]">
-                        ~{poi.distanceKm} กม.
-                      </span>
-                    </div>
-                    {poi.extract ? <p className="mt-2 flex-1 text-xs leading-5 text-[var(--ink-muted)]">{poi.extract}</p> : null}
+                    {item.status.state === "active" ? (
+                      <span className="shrink-0 rounded-full bg-[#2e7d32] px-2.5 py-0.5 text-[10px] font-semibold text-white">กำลังพีค</span>
+                    ) : item.status.state === "upcoming" ? (
+                      <span className="shrink-0 rounded-full bg-[#b9770e] px-2.5 py-0.5 text-[10px] font-semibold text-white">อีก {item.status.daysUntil} วัน</span>
+                    ) : null}
                   </div>
-                </a>
+                  <p className="mt-1.5 text-xs font-medium text-[var(--accent-warm)]">
+                    {formatMonthDay(item.from)} – {formatMonthDay(item.to)}
+                  </p>
+                  <p className="mt-1.5 text-xs leading-5 text-[var(--ink-muted)]">{item.note}</p>
+                </div>
               ))}
             </div>
-
-            <p className="mt-4 px-1 text-xs leading-6 text-[var(--ink-muted)]">
-              รายการนี้สร้างอัตโนมัติจาก {pois.source} จึงอาจมีจุดที่ไม่ใช่ที่เที่ยวปนบ้าง — ลิสต์คัดมือของเราอยู่ที่หมวด &quot;ไอเดียทริป&quot; ด้านบน
-            </p>
           </section>
         ) : null}
 
@@ -801,14 +698,14 @@ export function TravelDashboard({
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
           <PaperCard
-            eyebrow="RSS / alerts"
-            title="เหตุการณ์และข่าวที่ควรรู้"
+            eyebrow="Explore more"
+            title="รอบเมือง & ข่าวล่าสุด"
             icon={Waves}
-            description="รวม feed ล่าสุดที่ช่วยเช็กว่าวันนี้มีข่าวหรือกิจกรรมที่น่ารู้ก่อนออกเที่ยวหรือไม่"
+            description={`เมืองใกล้เคียงสำหรับ day trip, จุดรอบ ${city.name} และข่าวอีเวนต์ แยกไว้อีกหน้าเพื่อให้หน้านี้โฟกัสที่แผนวันนี้`}
           >
             <div className="mt-5 grid gap-3">
-              {events.available ? (
-                events.items.map((item) => (
+              {events.available && events.items.length ? (
+                events.items.slice(0, 2).map((item) => (
                   <a
                     key={`${item.url}-${item.title}`}
                     href={item.url}
@@ -827,11 +724,17 @@ export function TravelDashboard({
                     </div>
                   </a>
                 ))
-              ) : (
-                <div className="rounded-[24px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,253,249,0.8)] p-5 text-sm leading-7 text-[var(--ink-muted)]">
-                  {events.message ?? "ยังไม่มี feed ล่าสุดในตอนนี้"}
+              ) : null}
+              <Link
+                href={`/city/${city.slug}/around`}
+                className="flex items-center justify-between gap-3 rounded-[24px] border border-[var(--line-strong)] bg-[var(--accent)] p-4 text-[#faf7f2] transition hover:bg-[#1b2a39]"
+              >
+                <div>
+                  <p className="text-sm font-medium">ดูเมืองใกล้เคียง จุดรอบเมือง และข่าวทั้งหมด</p>
+                  <p className="mt-1 text-xs text-white/70">day trip • จุดน่าสนใจรัศมี 10 กม. • อีเวนต์ล่าสุด</p>
                 </div>
-              )}
+                <Compass className="h-5 w-5 shrink-0" aria-hidden />
+              </Link>
             </div>
           </PaperCard>
 
@@ -1109,6 +1012,8 @@ function SignalRow({ label, value, note }: { label: string; value: string; note:
   );
 }
 
+const IDEA_COLLAPSED_COUNT = 3;
+
 function IdeaColumn({
   title,
   eyebrow,
@@ -1122,6 +1027,10 @@ function IdeaColumn({
   items: RecommendationWithImage[];
   cityName: string;
 }) {
+  const [showAll, setShowAll] = useState(false);
+  const visibleItems = showAll ? items : items.slice(0, IDEA_COLLAPSED_COUNT);
+  const hiddenCount = items.length - IDEA_COLLAPSED_COUNT;
+
   return (
     <section className="overflow-hidden rounded-[34px] border border-[var(--line)] bg-[var(--surface)] shadow-[0_18px_70px_rgba(31,36,48,0.05)]">
       <div className="border-b border-[var(--line)] bg-[rgba(255,252,248,0.75)] px-5 py-5 md:px-6">
@@ -1137,7 +1046,7 @@ function IdeaColumn({
       </div>
 
       <div className="space-y-3 p-5 md:p-6">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <a
             key={`${item.kind}-${item.title}`}
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.title} ${item.area} ${cityName} Japan`)}`}
@@ -1174,6 +1083,16 @@ function IdeaColumn({
             </div>
           </a>
         ))}
+
+        {hiddenCount > 0 ? (
+          <button
+            type="button"
+            onClick={() => setShowAll((prev) => !prev)}
+            className="w-full rounded-[24px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,253,249,0.8)] px-4 py-3 text-sm font-medium text-[var(--accent)] transition hover:border-[var(--accent)]"
+          >
+            {showAll ? "ย่อรายการลง" : `ดูเพิ่มอีก ${hiddenCount} รายการ`}
+          </button>
+        ) : null}
       </div>
     </section>
   );
