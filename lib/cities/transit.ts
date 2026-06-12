@@ -18,6 +18,13 @@ export type TransitLine = {
   stops: TransitStop[];
 };
 
+export type TransitPass = {
+  name: string;
+  // ราคาโดยประมาณ — แสดงพร้อมคำเตือนให้เช็กอีกครั้งก่อนซื้อ
+  price: string;
+  note: string;
+};
+
 export type CityTransit = {
   station: {
     name: string;
@@ -26,6 +33,7 @@ export type CityTransit = {
     lon: number;
   };
   description: string;
+  passes?: TransitPass[];
   lines: TransitLine[];
 };
 
@@ -41,6 +49,10 @@ const transitByCity: Record<string, CityTransit> = {
     },
     description:
       "สายหลักที่ออกจากสถานี Sapporo ครอบคลุมย่านเที่ยวเกือบทั้งหมด — ใต้ดิน 3 สาย, JR ไปสนามบินและ Otaru, รถรางสำหรับวิว Mt. Moiwa และบัสสายเที่ยวยอดนิยม",
+    passes: [
+      { name: "ตั๋ววันรถใต้ดิน", price: "~¥830", note: "คุ้มตั้งแต่เที่ยวที่สาม ครอบทั้ง 3 สาย" },
+      { name: "Donichika Kippu", price: "~¥520", note: "ตั๋ววันราคาพิเศษเฉพาะเสาร์-อาทิตย์และวันหยุด" },
+    ],
     lines: [
       {
         id: "namboku",
@@ -175,6 +187,10 @@ const transitByCity: Record<string, CityTransit> = {
     },
     description:
       "สายที่นักท่องเที่ยวใช้จริงจากสถานี Tokyo — Yamanote วนรอบย่านหลัก, Chuo ผ่ากลางไป Shinjuku, ใต้ดินไป Ginza/Asakusa และรถด่วนสนามบินทั้งสองฝั่ง",
+    passes: [
+      { name: "Tokyo Subway Ticket 24/48/72 ชม.", price: "~¥800-1,500", note: "เฉพาะนักท่องเที่ยวต่างชาติ ครอบใต้ดินทุกสาย (ไม่รวม JR) ซื้อที่สนามบิน" },
+      { name: "Welcome Suica", price: "เติมเงิน", note: "บัตรแตะขึ้นได้ทุกระบบ ไม่ต้องคิดเรื่องตั๋วเลยถ้าเที่ยวไม่อัดแน่น" },
+    ],
     lines: [
       {
         id: "yamanote",
@@ -279,6 +295,10 @@ const transitByCity: Record<string, CityTransit> = {
     },
     description:
       "จากสถานี Osaka (Umeda) — สายวน JR รอบเมือง, Midosuji ลงใต้สู่ Namba, สายตรง USJ, รถเร็วพิเศษไป Kyoto และเส้นสนามบิน Kansai",
+    passes: [
+      { name: "Osaka Amazing Pass", price: "~¥2,800/วัน", note: "รวมรถ+ค่าเข้าจุดเที่ยว 40+ แห่ง (ปราสาท, ชิงช้าฟ้า HEP FIVE) คุ้มถ้าเที่ยวจริงจัง" },
+      { name: "Enjoy Eco Card", price: "~¥820 (~¥620 ส.-อา.)", note: "ตั๋ววันใต้ดิน+บัส แบบเบสิกสำหรับวันเดินเมือง" },
+    ],
     lines: [
       {
         id: "osaka-loop",
@@ -365,6 +385,9 @@ const transitByCity: Record<string, CityTransit> = {
     },
     description:
       "วัดดังของ Kyoto กระจายหลายทิศ — ใต้ดินขึ้นเหนือ, JR ไป Fushimi Inari/Uji/Arashiyama และรถบัสประจำทางสำหรับ Kiyomizu, Gion, Kinkakuji",
+    passes: [
+      { name: "ตั๋ววันใต้ดิน+บัส", price: "~¥1,100", note: "ตั๋วบัสอย่างเดียวยกเลิกไปแล้ว — ใบนี้คือตัวแทน ใช้ได้ทั้งสองระบบ" },
+    ],
     lines: [
       {
         id: "karasuma",
@@ -458,6 +481,9 @@ const transitByCity: Record<string, CityTransit> = {
     },
     description:
       "Fukuoka คือเมืองที่สนามบินใกล้ใจกลางที่สุดในญี่ปุ่น — ใต้ดิน 2 สถานีถึง Hakata และทุกย่านหลักเรียงอยู่บนสายเดียวกัน",
+    passes: [
+      { name: "ตั๋ววันรถใต้ดิน", price: "~¥640", note: "ถูกสุดในลิสต์นี้ เพราะเมืองกะทัดรัด นั่ง 3 เที่ยวก็คุ้มแล้ว" },
+    ],
     lines: [
       {
         id: "kuko-line",
@@ -525,6 +551,10 @@ const transitByCity: Record<string, CityTransit> = {
     },
     description:
       "จากสถานี Nagoya — ใต้ดินสายเหลืองเข้าย่าน Sakae, Meitetsu ไปสนามบิน Centrair และปราสาท Inuyama, Aonami ไปพิพิธภัณฑ์รถไฟ",
+    passes: [
+      { name: "Donichi Eco Kippu", price: "~¥620", note: "ตั๋ววันใต้ดิน+บัส เสาร์-อาทิตย์/วันหยุด (วันธรรมดา ~¥870)" },
+      { name: "Me~guru Bus 1 วัน", price: "~¥500", note: "บัสสายพิพิธภัณฑ์-ปราสาท วนจุดเที่ยวในเมืองโดยเฉพาะ" },
+    ],
     lines: [
       {
         id: "higashiyama",
@@ -588,6 +618,9 @@ const transitByCity: Record<string, CityTransit> = {
     },
     description:
       "สองเส้นหลักที่นักท่องเที่ยวใช้: รถรางสายประวัติศาสตร์ลงหน้าโดมปรมาณู กับ JR ไปท่าเรือเฟอร์รีข้ามเกาะ Miyajima — และบัสวนฟรีสำหรับ JR Pass",
+    passes: [
+      { name: "ตั๋ววันรถราง+เรือเฟอร์รี", price: "~¥1,000", note: "ครอบรถราง Hiroden ทุกสาย + เรือข้ามไป Miyajima ในใบเดียว" },
+    ],
     lines: [
       {
         id: "hiroden-2",
@@ -643,6 +676,9 @@ const transitByCity: Record<string, CityTransit> = {
     },
     description:
       "หัวใจของเมืองคือ Enoden — รถไฟท้องถิ่นเลียบทะเลที่เป็นจุดหมายในตัวเอง บวกเส้นไปวัดฝั่งเหนือและวัดป่าไผ่ฝั่งตะวันออก",
+    passes: [
+      { name: "Enoden Noriori-kun", price: "~¥800", note: "ขึ้นลง Enoden ได้ทั้งวัน — แค่ลงถ่ายรูป 3 ป้ายก็คุ้มแล้ว" },
+    ],
     lines: [
       {
         id: "enoden",
@@ -697,6 +733,9 @@ const transitByCity: Record<string, CityTransit> = {
     },
     description:
       "จุดเที่ยวหลักของ Kanazawa ไม่มีรถไฟในเมืองเชื่อม — ทุกอย่างพึ่ง Loop Bus จากหน้าสถานี และจากที่นี่ยังมีบัสด่วนตรงไป Shirakawa-go",
+    passes: [
+      { name: "ตั๋ววัน Loop Bus", price: "~¥800", note: "ขึ้นลงได้ทั้งวันทั้งวนซ้าย-วนขวา คุ้มตั้งแต่เที่ยวที่สาม" },
+    ],
     lines: [
       {
         id: "kanazawa-loop",
@@ -738,6 +777,9 @@ const transitByCity: Record<string, CityTransit> = {
     },
     description:
       "โซนกวาง-วัดใหญ่อยู่ฝั่งตะวันออกของเมือง เดินไกลพอสมควร — บัสวนช่วยได้มาก และมีรถไฟแยกไปวัด Horyuji กับเมืองรอบข้าง",
+    passes: [
+      { name: "ตั๋ววันบัส Nara Park", price: "~¥600", note: "ครอบโซนสวนกวาง-วัดใหญ่ทั้งหมด ถ้าแวะ Horyuji ด้วยมีแบบขยายโซน" },
+    ],
     lines: [
       {
         id: "nara-loop-bus",
@@ -792,6 +834,9 @@ const transitByCity: Record<string, CityTransit> = {
     },
     description:
       "ฮับจริงของ Kobe คือ Sannomiya — บัสวนเก็บย่านเที่ยวทั้งหมด, รถไฟอัตโนมัติไปสนามบิน และ JR เร็วพิเศษไปปราสาท Himeji",
+    passes: [
+      { name: "ตั๋ววัน City Loop", price: "~¥700", note: "บัสเรโทรวนย่านเที่ยว ขึ้นลงได้ทั้งวัน คุ้มตั้งแต่เที่ยวที่สาม" },
+    ],
     lines: [
       {
         id: "city-loop",
@@ -857,6 +902,9 @@ const transitByCity: Record<string, CityTransit> = {
     },
     description:
       "ในเมืองใช้บัสวน Loople เก็บมรดกตระกูล Date ส่วนรอบนอกมีสองเส้นเด่น: อ่าวสน Matsushima และวัดบนผา Yamadera",
+    passes: [
+      { name: "ตั๋ววัน Loople", price: "~¥630", note: "บัสวนจุดประวัติศาสตร์ มีแบบรวมรถใต้ดิน ~¥920 ถ้าจะไปไกลกว่านั้น" },
+    ],
     lines: [
       {
         id: "loople",

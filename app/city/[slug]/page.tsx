@@ -15,6 +15,7 @@ import { resolveCity } from "@/lib/services/geocode";
 import { getWarnings } from "@/lib/services/warnings";
 import { getWebcams } from "@/lib/services/webcams";
 import { getWeather } from "@/lib/services/weather";
+import { getWikiPois } from "@/lib/services/pois";
 import { getCityTransit } from "@/lib/cities/transit";
 import { getCityDrive } from "@/lib/cities/drive-spots";
 
@@ -58,7 +59,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
   }
 
   const config = getCityConfigBySlug(city.slug);
-  const [weather, aqi, webcam, events, quakes, fx, warnings] = await Promise.all([
+  const [weather, aqi, webcam, events, quakes, fx, warnings, pois] = await Promise.all([
     getWeather(city.lat, city.lon),
     getAqi(city.lat, city.lon),
     getWebcams(city.lat, city.lon, config),
@@ -66,6 +67,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
     getQuakes(city.lat, city.lon),
     getFx(),
     getWarnings({ slug: city.slug, prefecture: city.prefecture }),
+    getWikiPois(city.lat, city.lon, city.name),
   ]);
   const summary = await getAiSummary({ cityName: city.name, cityConfig: config, weather, aqi, webcam, events });
 
@@ -109,6 +111,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
       warnings={warnings}
       transit={getCityTransit(city.slug)}
       drive={getCityDrive(city.slug)}
+      pois={pois}
       summary={summary}
       nearbyCities={nearbyCities}
       recommendations={recommendations}

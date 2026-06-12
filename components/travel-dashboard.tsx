@@ -7,6 +7,7 @@ import {
   Activity,
   Banknote,
   Bot,
+  Calendar,
   Car,
   Check,
   CloudRain,
@@ -14,6 +15,7 @@ import {
   Copy,
   ExternalLink,
   Gift,
+  Globe,
   Home,
   MapPin,
   MessagesSquare,
@@ -22,6 +24,7 @@ import {
   ShieldAlert,
   Sparkles,
   Thermometer,
+  Ticket,
   TrainFront,
   Tv,
   UtensilsCrossed,
@@ -31,12 +34,15 @@ import {
 import { CitySearch } from "@/components/city-search";
 import type { Recommendation } from "@/lib/cities/city-configs";
 import type { CityDrive } from "@/lib/cities/drive-spots";
+import { formatMonthDay, japanHolidayWindows, windowStatus } from "@/lib/cities/holidays";
+import { getCitySeasons, type SeasonKind } from "@/lib/cities/seasons";
 import type { CityTransit, TransitLineKind } from "@/lib/cities/transit";
 import type { JapanCitySeed } from "@/lib/cities/japan-major-cities";
 import type { SummarySignal } from "@/lib/services/ai-summary";
 import type { AqiSignal } from "@/lib/services/aqi";
 import type { EventSignal } from "@/lib/services/events";
 import type { FxSignal } from "@/lib/services/fx";
+import type { PoiSignal } from "@/lib/services/pois";
 import type { QuakeSignal } from "@/lib/services/quakes";
 import type { WarningSignal } from "@/lib/services/warnings";
 import type { WebcamOption, WebcamSignal } from "@/lib/services/webcams";
@@ -79,6 +85,7 @@ type DashboardProps = {
   warnings: WarningSignal;
   transit: CityTransit | null;
   drive: CityDrive | null;
+  pois: PoiSignal;
   summary: SummarySignal;
   nearbyCities: {
     slug: string;
@@ -128,6 +135,7 @@ export function TravelDashboard({
   warnings,
   transit,
   drive,
+  pois,
   summary,
   nearbyCities,
   recommendations,
@@ -146,6 +154,23 @@ export function TravelDashboard({
   const [selectedWebcamIndex, setSelectedWebcamIndex] = useState(0);
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
   const severeWarnings = warnings.items.filter((item) => item.level !== "advisory");
+
+  const seasonItems = useMemo(
+    () =>
+      getCitySeasons(city.slug)
+        .map((item) => ({ ...item, status: windowStatus(item.from, item.to) }))
+        .sort((a, b) => seasonRank(a.status) - seasonRank(b.status)),
+    [city.slug],
+  );
+
+  const holidayNotice = useMemo(() => {
+    const statuses = japanHolidayWindows.map((window) => ({ window, status: windowStatus(window.from, window.to) }));
+    return (
+      statuses.find(({ status }) => status.state === "active") ??
+      statuses.find(({ status }) => status.state === "upcoming" && status.daysUntil <= 14) ??
+      null
+    );
+  }, []);
   const webcamOptions = webcam.options?.length
     ? webcam.options
     : [{ title: webcam.title ?? "Live camera", url: webcam.url, previewImage: webcam.previewImage, source: webcam.source }];
@@ -266,6 +291,18 @@ export function TravelDashboard({
               JMA ประกาศเตือนภัยในพื้นที่นี้:{" "}
               {severeWarnings.map((item) => item.label).join(" • ")}
               <span className="ml-2 font-normal text-[#a04f3f]">เช็กรายละเอียดที่การ์ดเตือนภัยด้านล่างก่อนวางแผนออกนอกที่พัก</span>
+            </p>
+          </div>
+        ) : null}
+
+        {holidayNotice ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-[28px] border border-[#b9770e]/35 bg-[#fdf6e9] px-5 py-4 text-[#7a571a]">
+            <Calendar className="h-5 w-5 shrink-0" aria-hidden />
+            <p className="text-sm font-medium leading-6">
+              {holidayNotice.status.state === "active"
+                ? `ตอนนี้อยู่ในช่วง ${holidayNotice.window.name} (${formatMonthDay(holidayNotice.window.from)} – ${formatMonthDay(holidayNotice.window.to)})`
+                : `อีก ${holidayNotice.status.state === "upcoming" ? holidayNotice.status.daysUntil : ""} วันจะเข้าช่วง ${holidayNotice.window.name}`}
+              <span className="ml-2 font-normal text-[#9c7a3a]">{holidayNotice.window.note}</span>
             </p>
           </div>
         ) : null}
@@ -396,6 +433,43 @@ export function TravelDashboard({
           </div>
         </section>
 
+        {seasonItems.length ? (
+          <section className="rounded-[36px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_18px_70px_rgba(31,36,48,0.05)] md:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <SectionIntro
+                eyebrow="Season radar"
+                title={`จังหวะฤดูกาลของ ${city.name}`}
+                description="ช่วงพีคโดยประมาณจากค่าเฉลี่ยหลายปี ใช้วางแผนล่วงหน้าได้ว่าควรมาเดือนไหน"
+              />
+              <div className="hidden rounded-2xl border border-[var(--line)] bg-[rgba(255,253,249,0.76)] p-3 text-[var(--accent)] md:block">
+                <Calendar className="h-5 w-5" aria-hidden />
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {seasonItems.map((item) => (
+                <div key={item.name} className="flex flex-col rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.9)] p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: seasonKindColors[item.kind] }} aria-hidden />
+                      <h3 className="text-sm font-medium text-[var(--foreground)]">{item.name}</h3>
+                    </div>
+                    {item.status.state === "active" ? (
+                      <span className="shrink-0 rounded-full bg-[#2e7d32] px-2.5 py-0.5 text-[10px] font-semibold text-white">กำลังพีค</span>
+                    ) : item.status.state === "upcoming" ? (
+                      <span className="shrink-0 rounded-full bg-[#b9770e] px-2.5 py-0.5 text-[10px] font-semibold text-white">อีก {item.status.daysUntil} วัน</span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1.5 text-xs font-medium text-[var(--accent-warm)]">
+                    {formatMonthDay(item.from)} – {formatMonthDay(item.to)}
+                  </p>
+                  <p className="mt-1.5 text-xs leading-5 text-[var(--ink-muted)]">{item.note}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <section id="nearby" className="rounded-[36px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_18px_70px_rgba(31,36,48,0.05)] md:p-7">
           <SectionIntro
             eyebrow="Nearby cities"
@@ -513,6 +587,29 @@ export function TravelDashboard({
               </div>
             </div>
 
+            {transit.passes?.length ? (
+              <div className="mt-5 rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.84)] p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
+                  <Ticket className="h-4 w-4 text-[var(--accent)]" aria-hidden />
+                  ตั๋ว pass ที่คุ้มสำหรับเมืองนี้
+                </div>
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  {transit.passes.map((pass) => (
+                    <div key={pass.name} className="flex items-start justify-between gap-3 rounded-[18px] border border-[var(--line)] bg-[var(--surface-soft)] px-3.5 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[var(--foreground)]">{pass.name}</p>
+                        <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{pass.note}</p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-[var(--line)] bg-[rgba(255,253,249,0.9)] px-2.5 py-1 text-[11px] font-medium text-[var(--accent)]">
+                        {pass.price}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 px-1 text-[11px] leading-5 text-[var(--ink-muted)]">ราคาโดยประมาณ อาจปรับได้ — เช็กอีกครั้งตอนซื้อหน้าเคาน์เตอร์/ตู้</p>
+              </div>
+            ) : null}
+
             <p className="mt-4 px-1 text-xs leading-6 text-[var(--ink-muted)]">
               เส้นทางคัดมือสำหรับนักท่องเที่ยว แสดงเฉพาะป้ายหลัก ตำแหน่งเป็นค่าโดยประมาณ — กดที่สายเพื่อไฮไลต์บนแผนที่ หรือกดไอคอนลิงก์เพื่อดูตารางเวลาจริงใน Google Maps
             </p>
@@ -520,6 +617,54 @@ export function TravelDashboard({
         ) : null}
 
         {drive ? <DriveSection drive={drive} cityName={city.name} /> : null}
+
+        {pois.available && pois.items.length ? (
+          <section className="rounded-[36px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_18px_70px_rgba(31,36,48,0.05)] md:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <SectionIntro
+                eyebrow="More around the city"
+                title="เผื่ออยากไปต่อ"
+                description={`จุดที่อยู่รอบ ${city.name} ในรัศมี ~10 กม. ดึงอัตโนมัติจาก Wikipedia — กดการ์ดเพื่อเปิดตำแหน่งใน Google Maps`}
+              />
+              <div className="hidden rounded-2xl border border-[var(--line)] bg-[rgba(255,253,249,0.76)] p-3 text-[var(--accent)] md:block">
+                <Globe className="h-5 w-5" aria-hidden />
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {pois.items.map((poi) => (
+                <a
+                  key={poi.title}
+                  href={`https://www.google.com/maps/search/?api=1&query=${poi.lat},${poi.lon}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group flex flex-col overflow-hidden rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.9)] transition hover:border-[var(--line-strong)] hover:shadow-[0_16px_44px_rgba(31,36,48,0.08)]"
+                >
+                  {poi.thumbnail ? (
+                    <div className="relative h-36 overflow-hidden bg-[linear-gradient(180deg,#e7ded1,#d7dde3)]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={poi.thumbnail} alt={poi.title} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+                      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(31,36,48,0.25))]" />
+                    </div>
+                  ) : null}
+                  <div className="flex flex-1 flex-col p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-medium text-[var(--foreground)]">{poi.title}</h3>
+                      <span className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--ink-muted)]">
+                        ~{poi.distanceKm} กม.
+                      </span>
+                    </div>
+                    {poi.extract ? <p className="mt-2 flex-1 text-xs leading-5 text-[var(--ink-muted)]">{poi.extract}</p> : null}
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            <p className="mt-4 px-1 text-xs leading-6 text-[var(--ink-muted)]">
+              รายการนี้สร้างอัตโนมัติจาก {pois.source} จึงอาจมีจุดที่ไม่ใช่ที่เที่ยวปนบ้าง — ลิสต์คัดมือของเราอยู่ที่หมวด &quot;ไอเดียทริป&quot; ด้านบน
+            </p>
+          </section>
+        ) : null}
 
         <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
           <PaperCard
@@ -1100,6 +1245,20 @@ const transitKindLabels: Record<TransitLineKind, string> = {
   tram: "รถราง",
   bus: "บัส",
 };
+
+const seasonKindColors: Record<SeasonKind, string> = {
+  bloom: "#d98ca6",
+  foliage: "#c0392b",
+  snow: "#5dade2",
+  event: "#b8860b",
+};
+
+// เรียงการ์ดฤดูกาล: กำลังพีคก่อน ตามด้วยใกล้ถึง (น้อยวันก่อน) แล้วค่อยช่วงอื่น
+function seasonRank(status: ReturnType<typeof windowStatus>) {
+  if (status.state === "active") return -1;
+  if (status.state === "upcoming") return status.daysUntil;
+  return 9999;
+}
 
 // ปลายทางสำหรับลิงก์ Google Maps — ใช้ป้ายที่ไกลจากสถานีต้นทางที่สุด
 // (สายวนอย่างรถรางมีป้ายแรกซ้ำกับป้ายสุดท้าย เลยใช้ stops[length-1] ตรง ๆ ไม่ได้)
