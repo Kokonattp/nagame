@@ -1,6 +1,12 @@
 import { cached } from "@/lib/utils/cache";
 import { openWeatherIdToText, round, weatherCodeToText } from "@/lib/utils/format";
 
+export type RainByPeriod = {
+  morning: number | null;
+  afternoon: number | null;
+  evening: number | null;
+};
+
 export type WeatherSignal = {
   available: boolean;
   source: string;
@@ -11,6 +17,7 @@ export type WeatherSignal = {
   condition: string;
   weatherCode: number | null;
   rainChance: number | null;
+  rainByPeriod: RainByPeriod;
   windSpeed: number | null;
   updatedAt: string;
   message?: string;
@@ -42,10 +49,33 @@ type OpenWeatherCurrent = {
 
 type OpenWeatherForecast = {
   list?: {
+    dt?: number;
     main?: { temp_min?: number; temp_max?: number };
     pop?: number;
   }[];
 };
+
+// ช่วงเวลาสำหรับวางแผนวัน (ชั่วโมงตามเวลาญี่ปุ่น)
+const DAY_PERIODS = {
+  morning: { from: 9, to: 12 },
+  afternoon: { from: 12, to: 17 },
+  evening: { from: 17, to: 21 },
+} as const;
+
+function emptyRainByPeriod(): RainByPeriod {
+  return { morning: null, afternoon: null, evening: null };
+}
+
+function rainPeriodFromEntries(entries: { hour: number; probability: number }[]): RainByPeriod {
+  const result = emptyRainByPeriod();
+  for (const [period, range] of Object.entries(DAY_PERIODS) as [keyof RainByPeriod, { from: number; to: number }][]) {
+    const values = entries
+      .filter((entry) => entry.hour >= range.from && entry.hour < range.to)
+      .map((entry) => entry.probability);
+    result[period] = values.length ? Math.round(Math.max(...values)) : null;
+  }
+  return result;
+}
 
 export async function getWeather(lat: number, lon: number): Promise<WeatherSignal> {
   return cached(`weather:${lat.toFixed(3)}:${lon.toFixed(3)}`, 60 * 30, async () => {
@@ -89,6 +119,15 @@ async function getOpenWeather(lat: number, lon: number): Promise<WeatherSignal> 
     const highs = today.map((item) => item.main?.temp_max).filter((v): v is number => typeof v === "number");
     const lows = today.map((item) => item.main?.temp_min).filter((v): v is number => typeof v === "number");
     const rainChance = Math.max(...today.map((item) => item.pop ?? 0), 0) * 100;
+    // forecast เป็นช่วงละ 3 ชม. — แปลง dt เป็นชั่วโมง JST แล้วสรุปฝนต่อช่วงของวัน
+    const rainByPeriod = rainPeriodFromEntries(
+      today
+        .filter((item) => typeof item.dt === "number")
+        .map((item) => ({
+          hour: new Date((item.dt! + 9 * 3600) * 1000).getUTCHours(),
+          probability: (item.pop ?? 0) * 100,
+        })),
+    );
 
     return {
       available: true,
@@ -101,6 +140,7 @@ async function getOpenWeather(lat: number, lon: number): Promise<WeatherSignal> 
       condition: openWeatherIdToText(current.weather?.[0]?.id) ?? current.weather?.[0]?.description ?? "ยังไม่มีข้อมูล",
       weatherCode: current.weather?.[0]?.id ?? null,
       rainChance: round(rainChance),
+      rainByPeriod,
       windSpeed: round((current.wind?.speed ?? 0) * 3.6, 1),
       updatedAt: new Date().toISOString(),
     };
@@ -129,6 +169,16 @@ async function getOpenMeteoWeather(lat: number, lon: number): Promise<WeatherSig
     const rainChance =
       data.daily?.precipitation_probability_max?.[0] ??
       (hourlyRain.length ? Math.max(...hourlyRain) : null);
+    // hourly.time เป็นเวลา JST อยู่แล้ว (ตั้ง timezone ตอนขอ)
+    const hourlyTimes = data.hourly?.time ?? [];
+    const rainByPeriod = rainPeriodFromEntries(
+      (data.hourly?.precipitation_probability ?? [])
+        .map((probability, index) => ({
+          hour: Number(hourlyTimes[index]?.slice(11, 13) ?? NaN),
+          probability,
+        }))
+        .filter((entry) => Number.isFinite(entry.hour)),
+    );
 
     return {
       available: true,
@@ -140,6 +190,7 @@ async function getOpenMeteoWeather(lat: number, lon: number): Promise<WeatherSig
       condition: weatherCodeToText(weatherCode),
       weatherCode,
       rainChance: round(rainChance),
+      rainByPeriod,
       windSpeed: round(data.current?.wind_speed_10m, 1),
       updatedAt: new Date().toISOString(),
     };
@@ -159,6 +210,7 @@ function unavailableWeather(message: string): WeatherSignal {
     condition: "ไม่มีข้อมูลอากาศ",
     weatherCode: null,
     rainChance: null,
+    rainByPeriod: emptyRainByPeriod(),
     windSpeed: null,
     updatedAt: new Date().toISOString(),
     message,
