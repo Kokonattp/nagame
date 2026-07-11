@@ -207,25 +207,8 @@ export function TravelDashboard({
         const response = await fetch("/api/assistant", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            cityName: city.name,
-            prefecture: city.prefecture,
-            prompt: value,
-            weather: {
-              condition: weather.condition,
-              temperature: weather.temperature,
-              rainChance: weather.rainChance,
-            },
-            aqi: {
-              label: aqi.label,
-              aqi: aqi.aqi,
-            },
-            events: events.items.map((item) => ({
-              title: item.title,
-              publishedAt: item.publishedAt,
-            })),
-            recommendations,
-          }),
+          // advisor ดึง signal ฝั่ง server เอง — ส่งแค่เมืองกับคำถามพอ
+          body: JSON.stringify({ citySlug: city.slug, prompt: value }),
         });
 
         const data = (await response.json()) as { reply?: string; error?: string };
