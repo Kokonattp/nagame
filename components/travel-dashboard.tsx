@@ -38,7 +38,7 @@ import { formatMonthDay, japanHolidayWindows, windowStatus } from "@/lib/cities/
 import { getCitySeasons, type SeasonKind } from "@/lib/cities/seasons";
 import type { CityTransit, TransitLineKind } from "@/lib/cities/transit";
 import type { JapanCitySeed } from "@/lib/cities/japan-major-cities";
-import type { SummarySignal } from "@/lib/services/ai-summary";
+import type { DayPlanSignal } from "@/lib/services/day-plan";
 import type { AqiSignal } from "@/lib/services/aqi";
 import type { EventSignal } from "@/lib/services/events";
 import type { FxSignal } from "@/lib/services/fx";
@@ -84,7 +84,6 @@ type DashboardProps = {
   warnings: WarningSignal;
   transit: CityTransit | null;
   drive: CityDrive | null;
-  summary: SummarySignal;
   recommendations: {
     see: RecommendationWithImage[];
     eat: RecommendationWithImage[];
@@ -123,7 +122,6 @@ export function TravelDashboard({
   warnings,
   transit,
   drive,
-  summary,
   recommendations,
   seeds,
 }: DashboardProps) {
@@ -148,6 +146,24 @@ export function TravelDashboard({
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // แผนวันนี้โหลดฝั่ง client — หน้าเพจไม่ต้องรอ AI ตอน server render
+  const [dayPlan, setDayPlan] = useState<DayPlanSignal | null | undefined>(undefined);
+  useEffect(() => {
+    let cancelled = false;
+    setDayPlan(undefined);
+    fetch(`/api/day-plan?slug=${encodeURIComponent(city.slug)}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((plan: DayPlanSignal | null) => {
+        if (!cancelled) setDayPlan(plan);
+      })
+      .catch(() => {
+        if (!cancelled) setDayPlan(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [city.slug]);
 
   const seasonItems = useMemo(
     () =>
@@ -411,17 +427,61 @@ export function TravelDashboard({
             </PaperCard>
 
             <PaperCard
-              eyebrow="Travel signals"
-              title="สรุปสั้นสำหรับใช้หน้างาน"
+              eyebrow="Today's plan"
+              title="แผนวันนี้แบบจัดให้"
               icon={SearchCheck}
-              description="อ่านแล้วตัดสินใจได้ทันทีว่าควรเดินต่อ หลบฝน หรือปรับจังหวะวัน"
+              description="จัดจากฝนรายช่วงเวลา ประกาศเตือน และจุดคัดมือของเมือง — เปิดเส้นทางต่อได้ทันที"
             >
               <div className="mt-4 space-y-3">
-                <p className="rounded-[22px] border border-[var(--line)] bg-[rgba(255,253,249,0.84)] px-4 py-3 text-sm leading-7 text-[var(--foreground)]">
-                  {summary.text}
-                </p>
-                <SignalRow label="สูงสุด / ต่ำสุด" value={`${weather.high ?? "--"}° / ${weather.low ?? "--"}°`} note="ดูช่วงกลางวันเทียบกับเย็น" />
-                <p className="px-1 text-xs text-[var(--ink-muted)]">ที่มา: {summary.source}</p>
+                {dayPlan === undefined ? (
+                  <div className="animate-pulse rounded-[22px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,253,249,0.8)] px-4 py-6 text-center text-sm text-[var(--ink-muted)]">
+                    กำลังจัดแผนจากข้อมูลล่าสุด…
+                  </div>
+                ) : dayPlan?.available ? (
+                  <>
+                    {dayPlan.context ? (
+                      <p className="rounded-[22px] border border-[var(--line)] bg-[rgba(255,253,249,0.84)] px-4 py-3 text-sm leading-6 text-[var(--foreground)]">
+                        {dayPlan.context}
+                      </p>
+                    ) : null}
+                    {dayPlan.periods.map((period) => (
+                      <div key={period.slot} className="rounded-[22px] border border-[var(--line)] bg-[rgba(255,253,249,0.84)] px-4 py-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-[var(--accent)]">{period.label}</p>
+                          {typeof period.rainChance === "number" ? (
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                                period.rainChance >= 60 ? "bg-[#9c3d31] text-white" : "bg-[var(--surface-soft)] text-[var(--ink-muted)]"
+                              }`}
+                            >
+                              ฝน {period.rainChance}%
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1.5 text-sm font-medium leading-6 text-[var(--foreground)]">
+                          {period.items.map((item) => item.title).join(" → ")}
+                        </p>
+                        {period.reason ? <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{period.reason}</p> : null}
+                      </div>
+                    ))}
+                    {dayPlan.routeUrl ? (
+                      <a
+                        href={dayPlan.routeUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-center gap-2 rounded-[22px] bg-[var(--accent)] px-4 py-3 text-sm font-medium text-[#faf7f2] transition hover:bg-[#1b2a39]"
+                      >
+                        เปิดเส้นทางทั้งวันใน Google Maps <ExternalLink className="h-4 w-4" aria-hidden />
+                      </a>
+                    ) : null}
+                    <SignalRow label="สูงสุด / ต่ำสุด" value={`${weather.high ?? "--"}° / ${weather.low ?? "--"}°`} note="ดูช่วงกลางวันเทียบกับเย็น" />
+                    <p className="px-1 text-xs text-[var(--ink-muted)]">ที่มา: {dayPlan.source} • ถามต่อ/ปรับแผนได้ที่ AI Insight ท้ายหน้า</p>
+                  </>
+                ) : (
+                  <div className="rounded-[22px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,253,249,0.8)] px-4 py-4 text-sm leading-7 text-[var(--ink-muted)]">
+                    {dayPlan?.message ?? "ยังจัดแผนไม่ได้ในตอนนี้ ลองรีเฟรชอีกครั้ง"}
+                  </div>
+                )}
               </div>
             </PaperCard>
           </div>
