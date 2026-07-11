@@ -18,19 +18,7 @@ export type PoiSignal = {
   message?: string;
 };
 
-type GeoSearchResponse = {
-  query?: {
-    geosearch?: {
-      pageid: number;
-      title: string;
-      lat: number;
-      lon: number;
-      dist: number;
-    }[];
-  };
-};
-
-type PageDetailResponse = {
+type GeneratorResponse = {
   query?: {
     pages?: Record<
       string,
@@ -39,6 +27,7 @@ type PageDetailResponse = {
         title: string;
         extract?: string;
         thumbnail?: { source?: string };
+        coordinates?: { lat: number; lon: number; dist?: number }[];
       }
     >;
   };
@@ -51,65 +40,56 @@ const EXCLUDE_PATTERN =
 export async function getWikiPois(lat: number, lon: number, cityName: string): Promise<PoiSignal> {
   return cached(`pois:${lat.toFixed(3)}:${lon.toFixed(3)}`, 60 * 60 * 24, async () => {
     try {
-      const geoUrl = new URL("https://en.wikipedia.org/w/api.php");
-      geoUrl.searchParams.set("action", "query");
-      geoUrl.searchParams.set("list", "geosearch");
-      geoUrl.searchParams.set("gscoord", `${lat}|${lon}`);
-      geoUrl.searchParams.set("gsradius", "10000");
-      geoUrl.searchParams.set("gslimit", "40");
-      geoUrl.searchParams.set("format", "json");
+      // generator=geosearch รวมค้นหา+รายละเอียดในคำขอเดียว (เดิมยิง 2 รอบต่อกัน)
+      // ggslimit 20 = เพดาน exlimit ของ extracts ต่อคำขอพอดี
+      const url = new URL("https://en.wikipedia.org/w/api.php");
+      url.searchParams.set("action", "query");
+      url.searchParams.set("generator", "geosearch");
+      url.searchParams.set("ggscoord", `${lat}|${lon}`);
+      url.searchParams.set("ggsradius", "10000");
+      url.searchParams.set("ggslimit", "20");
+      url.searchParams.set("prop", "extracts|pageimages|coordinates");
+      url.searchParams.set("exintro", "1");
+      url.searchParams.set("explaintext", "1");
+      url.searchParams.set("exlimit", "max");
+      url.searchParams.set("piprop", "thumbnail");
+      url.searchParams.set("pithumbsize", "640");
+      url.searchParams.set("codistancefrompoint", `${lat}|${lon}`);
+      url.searchParams.set("format", "json");
 
-      const geoResponse = await fetch(geoUrl, {
+      const response = await fetch(url, {
         headers: { "User-Agent": "Nagame/1.0 travel companion" },
         next: { revalidate: 86400 },
       });
-      if (!geoResponse.ok) throw new Error("GeoSearch unavailable");
+      if (!response.ok) throw new Error("GeoSearch unavailable");
 
-      const geoData = (await geoResponse.json()) as GeoSearchResponse;
-      const places = (geoData.query?.geosearch ?? [])
-        .filter((place) => place.title.toLowerCase() !== cityName.toLowerCase())
-        .filter((place) => !EXCLUDE_PATTERN.test(place.title))
-        .slice(0, 12);
+      const data = (await response.json()) as GeneratorResponse;
+      const pages = Object.values(data.query?.pages ?? {});
 
-      if (!places.length) {
-        return emptySignal("ยังไม่พบจุดที่น่าสนใจรอบเมืองนี้จาก Wikipedia");
-      }
-
-      const detailUrl = new URL("https://en.wikipedia.org/w/api.php");
-      detailUrl.searchParams.set("action", "query");
-      detailUrl.searchParams.set("pageids", places.map((place) => place.pageid).join("|"));
-      detailUrl.searchParams.set("prop", "extracts|pageimages");
-      detailUrl.searchParams.set("exintro", "1");
-      detailUrl.searchParams.set("explaintext", "1");
-      detailUrl.searchParams.set("exlimit", "max");
-      detailUrl.searchParams.set("piprop", "thumbnail");
-      detailUrl.searchParams.set("pithumbsize", "640");
-      detailUrl.searchParams.set("format", "json");
-
-      const detailResponse = await fetch(detailUrl, {
-        headers: { "User-Agent": "Nagame/1.0 travel companion" },
-        next: { revalidate: 86400 },
-      });
-      const detailData = detailResponse.ok ? ((await detailResponse.json()) as PageDetailResponse) : null;
-      const pages = detailData?.query?.pages ?? {};
-
-      const items: PoiItem[] = places
-        .map((place) => {
-          const detail = pages[String(place.pageid)];
-          const extract = detail?.extract?.trim() ?? null;
+      const items: PoiItem[] = pages
+        .filter((page) => page.title.toLowerCase() !== cityName.toLowerCase())
+        .filter((page) => !EXCLUDE_PATTERN.test(page.title))
+        .filter((page) => page.coordinates?.[0])
+        .map((page) => {
+          const coords = page.coordinates![0];
+          const extract = page.extract?.trim() ?? null;
           return {
-            title: place.title,
+            title: page.title,
             extract: extract ? truncate(extract, 180) : null,
-            thumbnail: detail?.thumbnail?.source ?? null,
-            lat: place.lat,
-            lon: place.lon,
-            distanceKm: Math.round((place.dist / 1000) * 10) / 10,
-            wikiUrl: `https://en.wikipedia.org/wiki/${encodeURIComponent(place.title.replace(/ /g, "_"))}`,
+            thumbnail: page.thumbnail?.source ?? null,
+            lat: coords.lat,
+            lon: coords.lon,
+            distanceKm: Math.round(((coords.dist ?? 0) / 1000) * 10) / 10,
+            wikiUrl: `https://en.wikipedia.org/wiki/${encodeURIComponent(page.title.replace(/ /g, "_"))}`,
           };
         })
         // เรียงรูปขึ้นก่อนแล้วตามระยะ — การ์ดที่มีรูปช่วยให้ตัดสินใจเร็วกว่า
         .sort((a, b) => Number(Boolean(b.thumbnail)) - Number(Boolean(a.thumbnail)) || a.distanceKm - b.distanceKm)
         .slice(0, 9);
+
+      if (!items.length) {
+        return emptySignal("ยังไม่พบจุดที่น่าสนใจรอบเมืองนี้จาก Wikipedia");
+      }
 
       return {
         available: items.length > 0,

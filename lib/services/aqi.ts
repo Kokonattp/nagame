@@ -125,15 +125,18 @@ async function getOpenMeteoAqi(lat: number, lon: number): Promise<AqiSignal> {
     const response = await fetch(url, { next: { revalidate: 1800 } });
     if (!response.ok) throw new Error("AQI unavailable");
     const data = (await response.json()) as OpenMeteoAir;
-    const aqi = round(data.current?.us_aqi);
+    const rawAqi = round(data.current?.us_aqi);
+    // us_aqi = 0 เป๊ะแทบไม่เกิดในโลกจริง — มักหมายถึงไม่มีข้อมูลจากสถานีมากกว่าอากาศดี
+    const aqi = rawAqi === 0 ? null : rawAqi;
 
     return {
       available: typeof aqi === "number",
       source: "Open-Meteo Air Quality",
       aqi,
       pm25: round(data.current?.pm2_5, 1),
-      label: aqiLabel(aqi),
+      label: typeof aqi === "number" ? aqiLabel(aqi) : "ไม่มีข้อมูล",
       updatedAt: new Date().toISOString(),
+      message: typeof aqi === "number" ? undefined : "สถานีวัดใกล้เมืองนี้ยังไม่ส่งข้อมูล",
     };
   } catch {
     return {
