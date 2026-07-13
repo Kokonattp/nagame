@@ -118,9 +118,12 @@ async function attachPlaceImages(
 
   // ค้นรูปเฉพาะสถานที่จริง — รายการ generic เป็นชื่อสมมุติ ค้นไปก็ได้รูปไม่ตรง
   const lookupItems = allItems.filter((item) => !item.generic);
+  // ตอน server render ข้ามรอบสอง fuzzy (สูงสุด 10 call เว้น 300ms) ไม่ให้รูปการ์ด
+  // ที่เป็น "nice to have" มา block การโหลดหน้า — รอบแรก batch 1 call ยังทำงาน
   const images = await getPlaceImages(
     cityName,
     lookupItems.map((item) => ({ title: item.title, area: item.area })),
+    { skipFuzzyFallback: true },
   );
   const imageByItem = new Map(lookupItems.map((item, index) => [item, images[index]]));
   const enriched = allItems.map((item) => ({ ...item, image: imageByItem.get(item) ?? null }));

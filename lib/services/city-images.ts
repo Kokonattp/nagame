@@ -235,7 +235,19 @@ export async function getCityHeroImage(input: CityImageInput) {
   return results.get(input.slug) ?? null;
 }
 
-export async function getPlaceImages(cityName: string, items: PlaceImageInput[]): Promise<(string | null)[]> {
+type PlaceImageOptions = {
+  // ข้ามรอบสอง (fuzzy search ทีละรายการ สูงสุด 10 call เว้น 300ms ต่อ call)
+  // ใช้ตอน server render เพื่อไม่ให้รูป "nice to have" ไป block การโหลดหน้า —
+  // รอบแรก (batch 1 call) ยังทำงาน รูปหลักยังมา. ค่า default = ทำครบเหมือนเดิม
+  // เพื่อไม่ให้จุดเรียกอื่นเปลี่ยนพฤติกรรม.
+  skipFuzzyFallback?: boolean;
+};
+
+export async function getPlaceImages(
+  cityName: string,
+  items: PlaceImageInput[],
+  options: PlaceImageOptions = {},
+): Promise<(string | null)[]> {
   const keyOf = (item: PlaceImageInput) => `place-image:${cityName}:${item.title}`.toLowerCase();
   const results: (string | null)[] = new Array(items.length).fill(null);
   let pendingIndexes: number[] = [];
@@ -268,6 +280,8 @@ export async function getPlaceImages(cityName: string, items: PlaceImageInput[])
   }
 
   // รอบสอง: ค้นหาแบบ fuzzy ทีละรายการ และรับเฉพาะหน้าที่ชื่อสอดคล้องกับสถานที่จริง
+  // ข้ามได้ตอน server render — รอบนี้ยิงได้ถึง 10 call เว้น 300ms = คอขวดหลักของหน้า
+  if (options.skipFuzzyFallback) return results;
   for (const index of pendingIndexes.slice(0, SEARCH_FALLBACK_LIMIT)) {
     try {
       const item = items[index];
