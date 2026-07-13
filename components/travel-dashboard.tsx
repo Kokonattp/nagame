@@ -18,7 +18,6 @@ import {
   Gift,
   Home,
   MapPin,
-  MessagesSquare,
   Mountain,
   SearchCheck,
   ShieldAlert,
@@ -82,6 +81,7 @@ type DashboardProps = {
   quakes: QuakeSignal;
   fx: FxSignal;
   warnings: WarningSignal;
+  verdict: string;
   transit: CityTransit | null;
   drive: CityDrive | null;
   recommendations: {
@@ -120,17 +120,17 @@ export function TravelDashboard({
   quakes,
   fx,
   warnings,
+  verdict,
   transit,
   drive,
   recommendations,
   seeds,
 }: DashboardProps) {
   const [chatInput, setChatInput] = useState("");
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content: `พร้อมช่วยวางแผนเที่ยว ${city.name} แบบสงบ ใช้ง่าย และอิงข้อมูลของหน้าปัจจุบันครับ`,
-    },
+  // seed คำทักทายอาแป๊ะที่คำนวณฝั่ง server เป็นข้อความแรก — initializer อ่าน prop
+  // ครั้งเดียว ค่าคงที่ระหว่าง server render กับ hydration (ไม่ recompute ฝั่ง client)
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => [
+    { role: "assistant", content: verdict },
   ]);
   const [chatError, setChatError] = useState("");
   const [webcamOpen, setWebcamOpen] = useState(false);
@@ -229,7 +229,7 @@ export function TravelDashboard({
   return (
     <main className="min-h-screen overflow-x-clip text-[var(--foreground)]">
       <div className="mx-auto flex w-full max-w-[1380px] flex-col gap-8 px-4 pb-12 pt-4 md:px-8 md:pt-6 xl:px-10">
-        <header className="z-40 rounded-[30px] border border-[var(--line)] bg-[rgba(255,251,245,0.84)] px-4 py-4 shadow-[0_14px_48px_rgba(31,36,48,0.06)] backdrop-blur-xl md:sticky md:top-3 md:px-6">
+        <header className="z-40 nb-card px-4 py-4 md:sticky md:top-3 md:px-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
               <Link
@@ -255,21 +255,21 @@ export function TravelDashboard({
             <nav className="flex flex-wrap gap-2 text-sm text-[var(--ink-muted)]">
               <Link
                 href="/"
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--accent)] px-4 py-2 text-[#faf7f2] transition hover:bg-[#1b2a39]"
+                className="nb-pill nb-pill-indigo inline-flex items-center gap-1.5 px-4 py-2"
               >
                 <Home className="h-3.5 w-3.5" aria-hidden />
                 ทุกเมือง
               </Link>
-              <a href="#overview" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">วันนี้</a>
+              <a href="#assistant" className="nb-pill nb-pill-gold px-4 py-2">ถามอาแป๊ะ</a>
+              <a href="#day-plan" className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">แผนวันนี้</a>
               {transit ? (
-                <a href="#transit" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">เดินทาง</a>
+                <a href="#transit" className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">เดินทาง</a>
               ) : null}
               {drive ? (
-                <a href="#drive" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">ขับรถ</a>
+                <a href="#drive" className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">ขับรถ</a>
               ) : null}
-              <a href="#ideas" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">ไอเดียทริป</a>
-              <Link href={`/city/${city.slug}/around`} className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">รอบเมือง</Link>
-              <a href="#assistant" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-4 py-2 hover:border-[var(--line-strong)]">AI Insight</a>
+              <a href="#ideas" className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">ไอเดียทริป</a>
+              <Link href={`/city/${city.slug}/around`} className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">รอบเมือง</Link>
             </nav>
           </div>
           <div className="mt-4">
@@ -278,7 +278,7 @@ export function TravelDashboard({
         </header>
 
         {severeWarnings.length ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-[28px] border border-[#c0392b]/35 bg-[#fdf1ee] px-5 py-4 text-[#7a2418]">
+          <div className="flex flex-wrap items-center gap-3 rounded-[var(--nb-radius)] border-[2.5px] border-[var(--nb-ink)] bg-[var(--nb-vermilion-soft)] px-5 py-4 text-[#7a2418] shadow-[var(--nb-shadow-sm)]">
             <ShieldAlert className="h-5 w-5 shrink-0" aria-hidden />
             <p className="text-sm font-medium leading-6">
               JMA ประกาศเตือนภัยในพื้นที่นี้:{" "}
@@ -289,7 +289,7 @@ export function TravelDashboard({
         ) : null}
 
         {holidayNotice ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-[28px] border border-[#b9770e]/35 bg-[#fdf6e9] px-5 py-4 text-[#7a571a]">
+          <div className="flex flex-wrap items-center gap-3 rounded-[var(--nb-radius)] border-[2.5px] border-[var(--nb-ink)] bg-[var(--nb-gold)]/25 px-5 py-4 text-[#7a571a] shadow-[var(--nb-shadow-sm)]">
             <Calendar className="h-5 w-5 shrink-0" aria-hidden />
             <p className="text-sm font-medium leading-6">
               {holidayNotice.status.state === "active"
@@ -300,176 +300,177 @@ export function TravelDashboard({
           </div>
         ) : null}
 
-        <section id="overview" className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.95fr)]">
-          <div className="min-w-0 overflow-hidden rounded-[36px] border border-[var(--line)] bg-[var(--surface-strong)] shadow-[0_24px_80px_rgba(31,36,48,0.07)]">
-            <div className="relative min-h-[560px]">
+        {/* ─── Tier 1 — พระเอก: คำตอบอาแป๊ะ + แชท + อากาศเหลือบเดียว ─── */}
+        <section id="overview" className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+          {/* ซ้าย: คำทักทายอาแป๊ะ (verdict) + กล่องแชท */}
+          <section id="assistant" className="nb-card min-w-0 overflow-hidden">
+            {/* แถบภาพเมืองบาง ๆ เป็นหัว ไม่ใช่ hero เต็มจอ */}
+            <div className="relative h-36 overflow-hidden border-b-[2.5px] border-[var(--nb-ink)] md:h-44">
               {cityMeta.heroImage ? (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={cityMeta.heroImage} alt={`${city.name}, Japan`} className="absolute inset-0 h-full w-full object-cover" />
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(27,28,30,0.18),rgba(31,36,48,0.62))]" />
+                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(27,28,30,0.10),rgba(31,36,48,0.55))]" />
                 </>
               ) : (
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,#e7ded1,#d7dde3)]" />
               )}
-
-              <div className="relative flex h-full flex-col justify-between p-6 md:p-8">
-                <div className="flex flex-col gap-8">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <span className="inline-flex rounded-full border border-white/25 bg-white/12 px-3 py-1 text-xs font-medium uppercase tracking-[0.22em] text-white/86">
-                      {cityMeta.mood}
-                    </span>
-                    <div className="ml-auto max-w-full rounded-[22px] border border-white/15 bg-[rgba(255,255,255,0.10)] px-4 py-3 text-right text-white backdrop-blur-md md:rounded-[28px] md:px-5 md:py-4">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-white/68 md:text-[11px] md:tracking-[0.24em]">Latest weather</p>
-                      <p className="mt-1 font-serif text-4xl md:mt-2 md:text-6xl">{weather.temperature ?? "--"}°</p>
-                      <p className="mt-1 text-sm text-white/80">{weather.condition}</p>
-                    </div>
-                  </div>
-
-                  <div className="max-w-3xl space-y-4 text-white">
-                    <h2 className="font-serif text-4xl leading-tight md:text-6xl">
-                      เที่ยว {city.name}
-                      <br />
-                      แบบสงบ ใช้ง่าย และพอดีกับวันจริง
-                    </h2>
-                    <p className="max-w-2xl text-sm leading-7 text-white/82 md:text-base">
-                      {cityMeta.intro}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <MetricCard icon={Thermometer} label="Feels like" value={formatValue(weather.feelsLike, "°C")} detail={weatherTone} />
-                  <MetricCard icon={CloudRain} label="Rain chance" value={formatValue(weather.rainChance, "%")} detail="ใช้เลือกทางเดินเมืองหรือแผนหลบฝน" />
-                  <MetricCard icon={Wind} label="Wind" value={formatValue(weather.windSpeed, " km/h")} detail="ช่วยตัดสินใจจุดวิว ริมน้ำ และ rooftop" />
-                  <MetricCard icon={ShieldAlert} label="AQI" value={typeof aqi.aqi === "number" ? `${aqi.aqi}` : aqi.label} detail={`อากาศ ${aqi.label}`} />
+              <div className="absolute inset-x-4 bottom-3 flex items-end justify-between gap-3">
+                <span className="nb-pill nb-pill-gold uppercase tracking-[0.14em]">{cityMeta.mood}</span>
+                <div className="rounded-[12px] border-2 border-[var(--nb-ink)] bg-[var(--surface)] px-3 py-1.5 text-right">
+                  <span className="font-serif text-2xl text-[var(--foreground)]">{weather.temperature ?? "--"}°</span>
+                  <span className="ml-1.5 text-xs text-[var(--ink-muted)]">{weather.condition}</span>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid min-w-0 gap-6">
-            <PaperCard
-              eyebrow="Live webcam"
-              title={activeWebcam?.title ?? `ดูบรรยากาศ ${city.name}`}
-              icon={Tv}
-              description={
-                webcam.available
-                  ? "เช็กท้องฟ้า ความหนาแน่นของคน และสภาพหน้างานจากในแอปก่อนออกเที่ยว"
-                  : webcam.message ?? "ตอนนี้ยังไม่พบ webcam ที่ใช้งานได้"
-              }
-            >
-              <button
-                type="button"
-                onClick={() => setWebcamOpen(true)}
-                className="mt-4 block w-full overflow-hidden rounded-[28px] border border-[var(--line)] bg-[var(--surface-soft)] text-left transition hover:border-[var(--line-strong)]"
-              >
-                <div className="relative aspect-[16/10] overflow-hidden">
-                  {activeWebcam?.previewImage ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={activeWebcam.previewImage} alt={activeWebcam.title ?? "Webcam preview"} className="h-full w-full object-cover" />
-                      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(31,36,48,0.48))]" />
-                    </>
-                  ) : (
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,#e9e2d8,#d7dde3)]" />
-                  )}
-                  <div className="absolute inset-x-4 bottom-4 rounded-[22px] bg-[rgba(255,252,247,0.88)] px-4 py-3 backdrop-blur">
-                    <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--accent-warm)]">In-app viewer</p>
-                    <p className="mt-1 text-sm font-medium text-[var(--foreground)]">กดเพื่อดู webcam ในแอป</p>
-                  </div>
-                </div>
-              </button>
+            <div className="p-5 md:p-6">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[var(--nb-ink)] bg-[var(--nb-vermilion)] text-sm font-bold text-white">阿</span>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--accent-warm)]">อาแป๊ะว่าไง</p>
+              </div>
 
-              {webcamOptions.length > 1 ? (
-                <div className="mt-3 flex w-0 min-w-full gap-2 overflow-x-auto pb-1">
-                  {webcamOptions.map((option, index) => (
-                    <button
-                      key={`${option.title}-${index}`}
-                      type="button"
-                      onClick={() => setSelectedWebcamIndex(index)}
-                      title={option.title}
-                      className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-[14px] border-2 transition ${
-                        index === selectedWebcamIndex
-                          ? "border-[var(--accent)]"
-                          : "border-transparent opacity-75 hover:opacity-100"
-                      }`}
+              {/* คำทักทายอาแป๊ะ — speech bubble ตราประทับ (ข้อความแรกของแชท) + แชทต่อ */}
+              <div className="mt-4 space-y-3">
+                <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
+                  {chatMessages.map((message, index) => (
+                    <div
+                      key={`${message.role}-${index}`}
+                      className={
+                        message.role === "assistant"
+                          ? index === 0
+                            ? "rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-vermilion-soft)] p-4 shadow-[3px_3px_0_0_var(--nb-ink)]"
+                            : "mr-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--surface-soft)] p-4"
+                          : "ml-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-indigo-soft)] p-4"
+                      }
                     >
-                      {option.previewImage ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={option.previewImage} alt={option.title} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(180deg,#e9e2d8,#d7dde3)] text-[10px] text-[var(--ink-muted)]">
-                          view {index + 1}
+                      {index !== 0 ? (
+                        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+                          {message.role === "assistant" ? <Bot className="h-3.5 w-3.5" aria-hidden /> : <Compass className="h-3.5 w-3.5" aria-hidden />}
+                          {message.role === "assistant" ? "อาแป๊ะ" : "คุณ"}
                         </div>
-                      )}
+                      ) : null}
+                      <p className="whitespace-pre-line text-sm leading-7 text-[var(--foreground)]">{message.content}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {quickPrompts.map((prompt) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      onClick={() => submitPrompt(prompt)}
+                      className="nb-pill transition hover:bg-[var(--nb-gold)]/30"
+                    >
+                      {prompt}
                     </button>
                   ))}
                 </div>
-              ) : null}
-            </PaperCard>
 
-            <PaperCard
-              eyebrow="Today's plan"
-              title="แผนวันนี้แบบจัดให้"
-              icon={SearchCheck}
-              description="จัดจากฝนรายช่วงเวลา ประกาศเตือน และจุดคัดมือของเมือง — เปิดเส้นทางต่อได้ทันที"
-            >
-              <div className="mt-4 space-y-3">
-                {dayPlan === undefined ? (
-                  <div className="animate-pulse rounded-[22px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,253,249,0.8)] px-4 py-6 text-center text-sm text-[var(--ink-muted)]">
-                    กำลังจัดแผนจากข้อมูลล่าสุด…
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    submitPrompt(chatInput);
+                  }}
+                  className="space-y-3"
+                >
+                  <textarea
+                    value={chatInput}
+                    onChange={(event) => setChatInput(event.target.value)}
+                    placeholder="ถามอาแป๊ะ เช่น ถ้าฝน 70% ควรสลับไปย่านไหนก่อน"
+                    maxLength={300}
+                    rows={2}
+                    className="nb-flat w-full px-4 py-3 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--ink-muted)] focus:shadow-[3px_3px_0_0_var(--nb-ink)]"
+                  />
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    {chatError ? <p className="text-sm font-medium text-[var(--nb-vermilion)]">{chatError}</p> : <span className="text-xs text-[var(--ink-muted)]">ตอบจากข้อมูลล่าสุดของหน้านี้</span>}
+                    <button type="submit" disabled={isPending} className="nb-btn px-5 py-2.5 text-sm">
+                      {isPending ? "กำลังคิด..." : "ถามอาแป๊ะ"}
+                    </button>
                   </div>
-                ) : dayPlan?.available ? (
-                  <>
-                    {dayPlan.context ? (
-                      <p className="rounded-[22px] border border-[var(--line)] bg-[rgba(255,253,249,0.84)] px-4 py-3 text-sm leading-6 text-[var(--foreground)]">
-                        {dayPlan.context}
-                      </p>
-                    ) : null}
-                    {dayPlan.periods.map((period) => (
-                      <div key={period.slot} className="rounded-[22px] border border-[var(--line)] bg-[rgba(255,253,249,0.84)] px-4 py-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-semibold text-[var(--accent)]">{period.label}</p>
-                          {typeof period.rainChance === "number" ? (
-                            <span
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                                period.rainChance >= 60 ? "bg-[#9c3d31] text-white" : "bg-[var(--surface-soft)] text-[var(--ink-muted)]"
-                              }`}
-                            >
-                              ฝน {period.rainChance}%
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="mt-1.5 text-sm font-medium leading-6 text-[var(--foreground)]">
-                          {period.items.map((item) => item.title).join(" → ")}
-                        </p>
-                        {period.reason ? <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{period.reason}</p> : null}
-                      </div>
-                    ))}
-                    {dayPlan.routeUrl ? (
-                      <a
-                        href={dayPlan.routeUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center justify-center gap-2 rounded-[22px] bg-[var(--accent)] px-4 py-3 text-sm font-medium text-[#faf7f2] transition hover:bg-[#1b2a39]"
-                      >
-                        เปิดเส้นทางทั้งวันใน Google Maps <ExternalLink className="h-4 w-4" aria-hidden />
-                      </a>
-                    ) : null}
-                    <SignalRow label="สูงสุด / ต่ำสุด" value={`${weather.high ?? "--"}° / ${weather.low ?? "--"}°`} note="ดูช่วงกลางวันเทียบกับเย็น" />
-                    <p className="px-1 text-xs text-[var(--ink-muted)]">ที่มา: {dayPlan.source} • ถามต่อ/ปรับแผนได้ที่ AI Insight ท้ายหน้า</p>
-                  </>
-                ) : (
-                  <div className="rounded-[22px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,253,249,0.8)] px-4 py-4 text-sm leading-7 text-[var(--ink-muted)]">
-                    {dayPlan?.message ?? "ยังจัดแผนไม่ได้ในตอนนี้ ลองรีเฟรชอีกครั้ง"}
-                  </div>
-                )}
+                </form>
               </div>
-            </PaperCard>
+            </div>
+          </section>
+
+          {/* ขวา: อากาศเหลือบเดียว (metric pills) + เกริ่นเมือง */}
+          <div className="grid min-w-0 content-start gap-4">
+            <div className="nb-card p-5 md:p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-warm)]">วันนี้ที่ {city.name}</p>
+              <p className="mt-3 text-sm leading-7 text-[var(--ink-muted)]">{cityMeta.intro}</p>
+              <div className="mt-4 grid grid-cols-2 gap-2.5">
+                <MetricChip icon={Thermometer} label="รู้สึกเหมือน" value={formatValue(weather.feelsLike, "°C")} />
+                <MetricChip icon={CloudRain} label="โอกาสฝน" value={formatValue(weather.rainChance, "%")} tone={(weather.rainChance ?? 0) >= 60 ? "alert" : undefined} />
+                <MetricChip icon={Wind} label="ลม" value={formatValue(weather.windSpeed, " km/h")} />
+                <MetricChip icon={ShieldAlert} label="ค่าฝุ่น AQI" value={typeof aqi.aqi === "number" ? `${aqi.aqi}` : aqi.label} tone={typeof aqi.aqi === "number" && aqi.aqi > 100 ? "alert" : "ok"} />
+              </div>
+              <p className="mt-3 text-xs leading-6 text-[var(--ink-muted)]">{weatherTone}</p>
+            </div>
           </div>
         </section>
 
+        {/* ─── Tier 2 — บริบทเหลือบเดียว: แผนวันนี้ ─── */}
+        <section id="day-plan" className="nb-card p-5 md:p-7">
+          <div className="flex items-start justify-between gap-4">
+            <SectionIntro
+              eyebrow="Today's plan"
+              title="แผนวันนี้แบบจัดให้"
+              description="จัดจากฝนรายช่วงเวลา ประกาศเตือน และจุดคัดมือของเมือง — อยากปรับแผน ถามอาแป๊ะด้านบนได้เลย"
+            />
+            <div className="nb-flat hidden shrink-0 p-3 text-[var(--nb-ink)] md:block">
+              <SearchCheck className="h-5 w-5" aria-hidden />
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {dayPlan === undefined ? (
+              <div className="animate-pulse nb-flat px-4 py-6 text-center text-sm text-[var(--ink-muted)] md:col-span-2 xl:col-span-3">
+                กำลังจัดแผนจากข้อมูลล่าสุด…
+              </div>
+            ) : dayPlan?.available ? (
+              <>
+                {dayPlan.context ? (
+                  <p className="nb-flat px-4 py-3 text-sm leading-6 text-[var(--foreground)] md:col-span-2 xl:col-span-3">
+                    {dayPlan.context}
+                  </p>
+                ) : null}
+                {dayPlan.periods.map((period) => (
+                  <div key={period.slot} className="nb-flat px-4 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-[var(--nb-ink)]">{period.label}</p>
+                      {typeof period.rainChance === "number" ? (
+                        <span className={`nb-pill ${period.rainChance >= 60 ? "nb-pill-alert" : ""}`}>ฝน {period.rainChance}%</span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1.5 text-sm font-medium leading-6 text-[var(--foreground)]">
+                      {period.items.map((item) => item.title).join(" → ")}
+                    </p>
+                    {period.reason ? <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{period.reason}</p> : null}
+                  </div>
+                ))}
+                {dayPlan.routeUrl ? (
+                  <a
+                    href={dayPlan.routeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="nb-btn flex items-center justify-center gap-2 px-4 py-3 text-sm md:col-span-2 xl:col-span-3"
+                  >
+                    เปิดเส้นทางทั้งวันใน Google Maps <ExternalLink className="h-4 w-4" aria-hidden />
+                  </a>
+                ) : null}
+                <p className="px-1 text-xs text-[var(--ink-muted)] md:col-span-2 xl:col-span-3">
+                  สูงสุด/ต่ำสุด {weather.high ?? "--"}° / {weather.low ?? "--"}° • ที่มา: {dayPlan.source}
+                </p>
+              </>
+            ) : (
+              <div className="nb-flat px-4 py-4 text-sm leading-7 text-[var(--ink-muted)] md:col-span-2 xl:col-span-3">
+                {dayPlan?.message ?? "ยังจัดแผนไม่ได้ในตอนนี้ ลองรีเฟรชอีกครั้ง"}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ─── Tier 3 — พับ/เลือกดู: ไอเดียทริป, เดินทาง, ขับรถ ─── */}
         <section id="ideas" className="grid gap-6 xl:grid-cols-3">
           <IdeaColumn title="ไปไหนดี" eyebrow="Where to go" icon={Compass} items={recommendations.see} cityName={city.name} />
           <IdeaColumn title="กินอะไรดี" eyebrow="What to eat" icon={UtensilsCrossed} items={recommendations.eat} cityName={city.name} />
@@ -482,14 +483,14 @@ export function TravelDashboard({
         </section>
 
         {transit ? (
-          <section id="transit" className="rounded-[36px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_18px_70px_rgba(31,36,48,0.05)] md:p-7">
+          <section id="transit" className="nb-card p-5 md:p-7">
             <div className="flex items-start justify-between gap-4">
               <SectionIntro
                 eyebrow="From the station"
                 title={`ขึ้นอะไรจาก ${transit.station.name}`}
                 description={transit.description}
               />
-              <div className="hidden rounded-2xl border border-[var(--line)] bg-[rgba(255,253,249,0.76)] p-3 text-[var(--accent)] md:block">
+              <div className="nb-flat hidden shrink-0 p-3 text-[var(--nb-ink)] md:block">
                 <TrainFront className="h-5 w-5" aria-hidden />
               </div>
             </div>
@@ -579,14 +580,14 @@ export function TravelDashboard({
         {drive ? <DriveSection drive={drive} cityName={city.name} /> : null}
 
         {seasonItems.length ? (
-          <section className="rounded-[36px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_18px_70px_rgba(31,36,48,0.05)] md:p-7">
+          <section className="nb-card p-5 md:p-7">
             <div className="flex items-start justify-between gap-4">
               <SectionIntro
                 eyebrow="Season radar"
                 title={`จังหวะฤดูกาลของ ${city.name}`}
                 description="ช่วงพีคโดยประมาณจากค่าเฉลี่ยหลายปี ใช้วางแผนล่วงหน้าได้ว่าควรมาเดือนไหน"
               />
-              <div className="hidden rounded-2xl border border-[var(--line)] bg-[rgba(255,253,249,0.76)] p-3 text-[var(--accent)] md:block">
+              <div className="nb-flat hidden shrink-0 p-3 text-[var(--nb-ink)] md:block">
                 <Calendar className="h-5 w-5" aria-hidden />
               </div>
             </div>
@@ -615,6 +616,7 @@ export function TravelDashboard({
           </section>
         ) : null}
 
+        {/* ─── Tier 4 — สัญญาณสด (moat): เตือนภัย, แผ่นดินไหว, เรทเงิน, กล้อง ─── */}
         <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
           <PaperCard
             eyebrow="Weather alerts"
@@ -770,10 +772,10 @@ export function TravelDashboard({
               ) : null}
               <Link
                 href={`/city/${city.slug}/around`}
-                className="flex items-center justify-between gap-3 rounded-[24px] border border-[var(--line-strong)] bg-[var(--accent)] p-4 text-[#faf7f2] transition hover:bg-[#1b2a39]"
+                className="flex items-center justify-between gap-3 rounded-[var(--nb-radius-sm)] border-[2.5px] border-[var(--nb-ink)] bg-[var(--nb-indigo)] p-4 text-white shadow-[var(--nb-shadow-sm)] transition hover:-translate-y-0.5 hover:shadow-[var(--nb-shadow)]"
               >
                 <div>
-                  <p className="text-sm font-medium">ดูเมืองใกล้เคียง จุดรอบเมือง และข่าวทั้งหมด</p>
+                  <p className="text-sm font-semibold">ดูเมืองใกล้เคียง จุดรอบเมือง และข่าวทั้งหมด</p>
                   <p className="mt-1 text-xs text-white/70">day trip • จุดน่าสนใจรัศมี 10 กม. • อีเวนต์ล่าสุด</p>
                 </div>
                 <Compass className="h-5 w-5 shrink-0" aria-hidden />
@@ -781,79 +783,62 @@ export function TravelDashboard({
             </div>
           </PaperCard>
 
-          <section id="assistant" className="rounded-[36px] border border-[rgba(255,248,240,0.16)] bg-[#232830] p-5 text-[#f7f2ea] shadow-[0_24px_90px_rgba(31,36,48,0.16)] md:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[#cda47f]">AI insight</p>
-                <h2 className="mt-2 font-serif text-3xl">คุยโต้ตอบเพื่อวางแผนทริป</h2>
-                <p className="mt-3 text-sm leading-7 text-[#ddd5cb]">
-                  ถามต่อจากข้อมูลเมือง อากาศ ข่าว และ recommendation บนหน้านี้ได้เลย
-                </p>
+          <PaperCard
+            eyebrow="Live webcam"
+            title={activeWebcam?.title ?? `ดูบรรยากาศ ${city.name}`}
+            icon={Tv}
+            description={
+              webcam.available
+                ? "เช็กท้องฟ้า ความหนาแน่นของคน และสภาพหน้างานจากในแอปก่อนออกเที่ยว"
+                : webcam.message ?? "ตอนนี้ยังไม่พบ webcam ที่ใช้งานได้"
+            }
+          >
+            <button
+              type="button"
+              onClick={() => setWebcamOpen(true)}
+              className="nb-card-sm mt-4 block w-full overflow-hidden text-left transition hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_var(--nb-ink)]"
+            >
+              <div className="relative aspect-[16/10] overflow-hidden">
+                {activeWebcam?.previewImage ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={activeWebcam.previewImage} alt={activeWebcam.title ?? "Webcam preview"} className="h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(31,36,48,0.48))]" />
+                  </>
+                ) : (
+                  <div className="absolute inset-0 bg-[linear-gradient(180deg,#e9e2d8,#d7dde3)]" />
+                )}
+                <div className="absolute inset-x-3 bottom-3 rounded-[12px] border-2 border-[var(--nb-ink)] bg-[var(--surface)] px-4 py-2">
+                  <p className="text-sm font-semibold text-[var(--foreground)]">กดเพื่อดู webcam ในแอป</p>
+                </div>
               </div>
-              <MessagesSquare className="mt-1 h-5 w-5 text-[#d7b08a]" aria-hidden />
-            </div>
+            </button>
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              {quickPrompts.map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  onClick={() => submitPrompt(prompt)}
-                  className="rounded-full border border-white/10 bg-white/6 px-3 py-2 text-sm text-[#f4ede6] transition hover:bg-white/10"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-5 space-y-3 rounded-[28px] border border-white/8 bg-white/4 p-4">
-              <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1">
-                {chatMessages.map((message, index) => (
-                  <div
-                    key={`${message.role}-${index}`}
-                    className={
-                      message.role === "assistant"
-                        ? "mr-8 rounded-[22px] border border-white/8 bg-white/6 p-4"
-                        : "ml-8 rounded-[22px] bg-[#efe2d0] p-4 text-[#232830]"
-                    }
+            {webcamOptions.length > 1 ? (
+              <div className="mt-3 flex w-0 min-w-full gap-2 overflow-x-auto pb-1">
+                {webcamOptions.map((option, index) => (
+                  <button
+                    key={`${option.title}-${index}`}
+                    type="button"
+                    onClick={() => setSelectedWebcamIndex(index)}
+                    title={option.title}
+                    className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-[12px] border-2 transition ${
+                      index === selectedWebcamIndex ? "border-[var(--nb-ink)]" : "border-transparent opacity-75 hover:opacity-100"
+                    }`}
                   >
-                    <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em]">
-                      {message.role === "assistant" ? <Bot className="h-3.5 w-3.5" aria-hidden /> : <Compass className="h-3.5 w-3.5" aria-hidden />}
-                      {message.role === "assistant" ? "AI Assistant" : "You"}
-                    </div>
-                    <p className="whitespace-pre-line text-sm leading-7">{message.content}</p>
-                  </div>
+                    {option.previewImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={option.previewImage} alt={option.title} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(180deg,#e9e2d8,#d7dde3)] text-[10px] text-[var(--ink-muted)]">
+                        view {index + 1}
+                      </div>
+                    )}
+                  </button>
                 ))}
               </div>
-
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  submitPrompt(chatInput);
-                }}
-                className="space-y-3"
-              >
-                <textarea
-                  value={chatInput}
-                  onChange={(event) => setChatInput(event.target.value)}
-                  placeholder="ถาม เช่น ถ้าฝน 70% ควรสลับไปย่านไหนก่อน"
-                  maxLength={300}
-                  rows={3}
-                  className="w-full rounded-[22px] border border-white/10 bg-[#1a1f27] px-4 py-3 text-sm text-white outline-none placeholder:text-[#9d978f]"
-                />
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  {chatError ? <p className="text-sm text-[#f2b3a3]">{chatError}</p> : <span className="text-xs text-[#bdb5aa]">ตอบจากข้อมูลล่าสุดเท่าที่หน้าแอปมี</span>}
-                  <button
-                    type="submit"
-                    disabled={isPending}
-                    className="inline-flex items-center justify-center rounded-full bg-[#efe2d0] px-5 py-3 text-sm font-medium text-[#232830] transition hover:bg-[#f5eadb] disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {isPending ? "กำลังคิด..." : "ถาม AI Insight"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </section>
+            ) : null}
+          </PaperCard>
         </section>
       </div>
 
@@ -862,7 +847,7 @@ export function TravelDashboard({
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           aria-label="กลับขึ้นบนสุด"
-          className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--accent)] text-[#faf7f2] shadow-[0_14px_40px_rgba(31,36,48,0.28)] transition hover:bg-[#1b2a39]"
+          className="nb-btn fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center !bg-[var(--nb-indigo)] text-white"
         >
           <ArrowUp className="h-5 w-5" aria-hidden />
         </button>
@@ -986,14 +971,14 @@ function PaperCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[34px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_18px_70px_rgba(31,36,48,0.05)] md:p-6">
+    <div className="nb-card p-5 md:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--accent-warm)]">{eyebrow}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-warm)]">{eyebrow}</p>
           <h3 className="mt-2 font-serif text-2xl text-[var(--foreground)]">{title}</h3>
           <p className="mt-3 text-sm leading-7 text-[var(--ink-muted)]">{description}</p>
         </div>
-        <div className="rounded-2xl border border-[var(--line)] bg-[rgba(255,253,249,0.76)] p-3 text-[var(--accent)]">
+        <div className="nb-flat shrink-0 p-3 text-[var(--nb-ink)]">
           <Icon className="h-5 w-5" aria-hidden />
         </div>
       </div>
@@ -1020,37 +1005,38 @@ function SectionIntro({
   );
 }
 
-function MetricCard({
-  icon: Icon,
-  label,
-  value,
-  detail,
-}: {
-  icon: typeof Thermometer;
-  label: string;
-  value: string;
-  detail: string;
-}) {
+function SignalRow({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-[rgba(255,251,245,0.10)] p-4 backdrop-blur">
-      <div className="flex items-center gap-2 text-sm text-white/76">
-        <Icon className="h-4 w-4" aria-hidden />
-        <span>{label}</span>
+    <div className="nb-flat flex items-start justify-between gap-4 px-4 py-3">
+      <div>
+        <p className="text-sm font-semibold text-[var(--foreground)]">{label}</p>
+        <p className="mt-1 text-xs leading-6 text-[var(--ink-muted)]">{note}</p>
       </div>
-      <p className="mt-3 font-serif text-3xl text-white">{value}</p>
-      <p className="mt-2 text-xs leading-6 text-white/72">{detail}</p>
+      <p className="text-right text-lg font-semibold text-[var(--nb-ink)]">{value}</p>
     </div>
   );
 }
 
-function SignalRow({ label, value, note }: { label: string; value: string; note: string }) {
+// อากาศเหลือบเดียวใน hero — chip ขอบหมึกหนา ตราประทับ (แทน MetricCard พื้นโปร่งของ hero เดิม)
+function MetricChip({
+  icon: Icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: typeof Thermometer;
+  label: string;
+  value: string;
+  tone?: "alert" | "ok";
+}) {
+  const toneClass = tone === "alert" ? "bg-[var(--nb-vermilion-soft)]" : tone === "ok" ? "bg-[var(--nb-matcha-soft)]" : "bg-[var(--surface-soft)]";
   return (
-    <div className="flex items-start justify-between gap-4 rounded-[22px] border border-[var(--line)] bg-[rgba(255,253,249,0.84)] px-4 py-3">
-      <div>
-        <p className="text-sm font-medium text-[var(--foreground)]">{label}</p>
-        <p className="mt-1 text-xs leading-6 text-[var(--ink-muted)]">{note}</p>
+    <div className={`rounded-[12px] border-2 border-[var(--nb-ink)] px-3 py-2.5 ${toneClass}`}>
+      <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)]">
+        <Icon className="h-3.5 w-3.5" aria-hidden />
+        <span>{label}</span>
       </div>
-      <p className="text-right text-lg font-medium text-[var(--accent)]">{value}</p>
+      <p className="mt-1.5 font-serif text-2xl text-[var(--foreground)]">{value}</p>
     </div>
   );
 }
@@ -1075,14 +1061,14 @@ function IdeaColumn({
   const hiddenCount = items.length - IDEA_COLLAPSED_COUNT;
 
   return (
-    <section className="overflow-hidden rounded-[34px] border border-[var(--line)] bg-[var(--surface)] shadow-[0_18px_70px_rgba(31,36,48,0.05)]">
-      <div className="border-b border-[var(--line)] bg-[rgba(255,252,248,0.75)] px-5 py-5 md:px-6">
+    <section className="nb-card overflow-hidden">
+      <div className="border-b-[2.5px] border-[var(--nb-ink)] bg-[var(--nb-gold)]/25 px-5 py-5 md:px-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--accent-warm)]">{eyebrow}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-warm)]">{eyebrow}</p>
             <h2 className="mt-2 font-serif text-3xl text-[var(--foreground)]">{title}</h2>
           </div>
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-strong)] p-3 text-[var(--accent)]">
+          <div className="nb-flat shrink-0 p-3 text-[var(--nb-ink)]">
             <Icon className="h-5 w-5" aria-hidden />
           </div>
         </div>
@@ -1095,7 +1081,7 @@ function IdeaColumn({
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.title} ${item.area} ${cityName} Japan`)}`}
             target="_blank"
             rel="noreferrer"
-            className="group block overflow-hidden rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.88)] transition hover:border-[var(--line-strong)] hover:shadow-[0_16px_44px_rgba(31,36,48,0.08)]"
+            className="nb-card-sm group block overflow-hidden transition hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_var(--nb-ink)]"
           >
             {item.image ? (
               <div className="relative h-36 overflow-hidden bg-[linear-gradient(180deg,#e7ded1,#d7dde3)]">
@@ -1131,7 +1117,7 @@ function IdeaColumn({
           <button
             type="button"
             onClick={() => setShowAll((prev) => !prev)}
-            className="w-full rounded-[24px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,253,249,0.8)] px-4 py-3 text-sm font-medium text-[var(--accent)] transition hover:border-[var(--accent)]"
+            className="nb-flat w-full px-4 py-3 text-sm font-semibold text-[var(--nb-ink)] transition hover:bg-[var(--nb-gold)]/20"
           >
             {showAll ? "ย่อรายการลง" : `ดูเพิ่มอีก ${hiddenCount} รายการ`}
           </button>
@@ -1155,14 +1141,14 @@ function DriveSection({ drive, cityName }: { drive: CityDrive; cityName: string 
   }
 
   return (
-    <section id="drive" className="rounded-[36px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_18px_70px_rgba(31,36,48,0.05)] md:p-7">
+    <section id="drive" className="nb-card p-5 md:p-7">
       <div className="flex items-start justify-between gap-4">
         <SectionIntro
           eyebrow="Drive & mapcode"
           title={`ขับรถเที่ยวจาก ${cityName}`}
           description={`${drive.intro} — กด copy แล้วเอา mapcode ไปกดใส่ car navi ของรถเช่าได้เลย`}
         />
-        <div className="hidden rounded-2xl border border-[var(--line)] bg-[rgba(255,253,249,0.76)] p-3 text-[var(--accent)] md:block">
+        <div className="nb-flat hidden shrink-0 p-3 text-[var(--nb-ink)] md:block">
           <Car className="h-5 w-5" aria-hidden />
         </div>
       </div>

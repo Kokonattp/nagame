@@ -72,6 +72,57 @@ export async function getAdvisorReply(citySlug: string, prompt: string): Promise
   return { reply: buildFallbackReply(context, intent, prompt), source: "Rule-based advisor" };
 }
 
+// คำทักทายเปิดหน้าของอาแป๊ะ — คำนวณฝั่ง server ครั้งเดียว ส่งเป็น prop ให้ hero
+// (seed เป็นข้อความแรกของแชท → คนเข้ามายังไม่พิมพ์ก็เห็น "คำตอบ" ทันที).
+// zero-LLM ในโหมด local; ถ้ามี AI key ค่อยยิง compose หนึ่งครั้งตอน build/revalidate.
+// PERF: gatherContext ยิง weather/aqi/events/warnings ซ้ำกับ page.tsx แต่ทุกตัว
+// ห่อ cached() (TTL 10-30 นาที) → เป็น cache hit ในหน้าเดียวกัน ไม่ใช่ network ซ้ำ.
+// อาศัย revalidate=600 ของเพจ ทำให้ทั้งหน้า render ไม่เกิน 1 ครั้ง/10 นาที/เมือง.
+export async function getCityVerdict(citySlug: string): Promise<string> {
+  const context = await gatherContext(citySlug);
+  if (!context) return `สวัสดีครับ ยังไม่รู้จักเมืองนี้ ลองเลือกเมืองจากหน้าแรกอีกครั้งนะครับ`;
+
+  const intent: AdvisorIntent = { period: "now", wantsFlights: false };
+  const opener = `ช่วงนี้เที่ยว ${context.cityName} ดีไหม อาแป๊ะช่วยดูให้`;
+
+  const hasAiKey = Boolean(process.env.AI_API_KEY || process.env.GEMINI_API_KEY);
+  if (hasAiKey) {
+    const aiReply = await composeAiReply(context, intent, opener);
+    if (aiReply) return aiReply;
+  }
+
+  return buildVerdictReply(context);
+}
+
+// คำทักทายแบบกฎ — โปรแอ็กทีฟ (ไม่ใช่ถาม-ตอบ) สรุปภาพรวมวันนี้ให้ครบในย่อหน้าเดียว
+function buildVerdictReply(context: AdvisorContext): string {
+  const lead: string[] = [];
+  const severe = context.warnings.items.find((item) => item.level !== "advisory");
+  if (severe) lead.push(`⚠ มีประกาศเตือน${severe.label}อยู่ เช็กก่อนออกนอกที่พักนะครับ`);
+  if (context.holidayName) lead.push(`ช่วงนี้เป็น${context.holidayName} คนเยอะ ที่พัก/รถไฟควรจองล่วงหน้า`);
+
+  const rainChance = context.weather.rainChance;
+  const weatherLine = context.weather.available
+    ? `ตอนนี้ ${context.cityName} ${context.weather.condition}${typeof context.weather.temperature === "number" ? ` ราว ${context.weather.temperature}°C` : ""}${typeof rainChance === "number" ? ` โอกาสฝน ${rainChance}%` : ""}.`
+    : `ตอนนี้ยังดึงข้อมูลอากาศของ ${context.cityName} ไม่ครบ.`;
+
+  const seasonLine = context.activeSeasons.length
+    ? `กำลังเป็นช่วง${context.activeSeasons.slice(0, 2).join(" และ ")} พอดี.`
+    : "";
+
+  const rainHigh = typeof rainChance === "number" && rainChance >= 60;
+  const firstPick = context.recommendations.see[0]?.title;
+  const closer = rainHigh
+    ? "ฝนมีสิทธิ์มา เริ่มจากจุดในร่มหรือที่เปลี่ยนแผนง่ายก่อนดีกว่าครับ — แผนเต็มวันดูข้างล่างได้เลย 👇"
+    : firstPick
+      ? `ถ้าให้เริ่ม แนะนำ ${firstPick} ก่อน — แผนเต็มวันอยู่ข้างล่าง ถามต่อได้เลยครับ 👇`
+      : "อยากได้แผนแบบไหนบอกอาแป๊ะได้เลยครับ 👇";
+
+  return [`สวัสดีครับ 👋`, ...lead, [weatherLine, seasonLine].filter(Boolean).join(" "), closer]
+    .filter(Boolean)
+    .join("\n");
+}
+
 async function gatherContext(citySlug: string): Promise<AdvisorContext | null> {
   const city = await resolveCity(citySlug);
   if (!city) return null;

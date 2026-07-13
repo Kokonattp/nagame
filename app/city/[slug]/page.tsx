@@ -5,6 +5,7 @@ import { japanMajorCities } from "@/lib/cities/japan-major-cities";
 import { getCityConfigBySlug } from "@/lib/cities/city-configs";
 import { getCityMeta, getRecommendationSets } from "@/lib/cities/travel-meta";
 import type { Recommendation } from "@/lib/cities/city-configs";
+import { getCityVerdict } from "@/lib/services/advisor";
 import { getAqi } from "@/lib/services/aqi";
 import { getCityHeroImagesBulk, getPlaceImages } from "@/lib/services/city-images";
 import { getEvents } from "@/lib/services/events";
@@ -57,7 +58,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
   }
 
   const config = getCityConfigBySlug(city.slug);
-  const [weather, aqi, webcam, events, quakes, fx, warnings] = await Promise.all([
+  const [weather, aqi, webcam, events, quakes, fx, warnings, verdict] = await Promise.all([
     getWeather(city.lat, city.lon),
     getAqi(city.lat, city.lon),
     getWebcams(city.lat, city.lon, config),
@@ -65,6 +66,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
     getQuakes(city.lat, city.lon),
     getFx(),
     getWarnings({ slug: city.slug, prefecture: city.prefecture }),
+    getCityVerdict(city.slug),
   ]);
 
   const cityMetaBase = getCityMeta(city.slug, city.name);
@@ -92,6 +94,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
       quakes={quakes}
       fx={fx}
       warnings={warnings}
+      verdict={verdict}
       transit={getCityTransit(city.slug)}
       drive={getCityDrive(city.slug)}
       recommendations={recommendations}

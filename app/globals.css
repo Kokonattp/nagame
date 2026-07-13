@@ -2,17 +2,36 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f0e7;
-  --foreground: #1f2430;
-  --surface: rgba(255, 252, 247, 0.88);
+  --background: #f2ebdd;
+  --foreground: #23282f;
+  --surface: #fffdf8;
   --surface-strong: #fffdfa;
-  --surface-soft: #efe8dd;
+  --surface-soft: #efe6d6;
   --line: rgba(74, 58, 39, 0.14);
   --line-strong: rgba(47, 40, 31, 0.22);
   --ink-muted: #6d645a;
   --accent: #243447;
   --accent-soft: #d8c4ab;
   --accent-warm: #8b5a3c;
+
+  /* Neo-brutalist-washi layer — เส้นหมึกหนา + เงาแข็ง + ตราประทับสีญี่ปุ่น
+     ผ่อนคลาย: หมึกน้ำเงินเข้มแทนดำสนิท, พื้น washi ครีม, มุมโค้งกลาง */
+  --nb-ink: #23282f;           /* เส้นขอบ/ตัวอักษรหลัก — หมึกเข้ม ไม่ใช่ดำสนิท */
+  --nb-border: 2.5px;          /* ความหนาเส้นขอบซิกเนเจอร์ */
+  --nb-radius: 18px;           /* มุมโค้งกลาง — นุ่มกว่า brutalist ดิบ */
+  --nb-radius-sm: 12px;
+  --nb-shadow: 4px 4px 0 0 var(--nb-ink);       /* เงาแข็ง ไม่เบลอ */
+  --nb-shadow-sm: 3px 3px 0 0 var(--nb-ink);
+  --nb-shadow-press: 2px 2px 0 0 var(--nb-ink);
+
+  /* ตราประทับสีญี่ปุ่น — นุ่มลงจาก LOGA ให้เข้าเว็บเที่ยว */
+  --nb-vermilion: #c8503c;     /* 朱色 shu-iro — accent หลัก/เตือน */
+  --nb-vermilion-soft: #f4dcd3;
+  --nb-matcha: #7a8b4f;        /* 抹茶 — ok/ปลอดภัย */
+  --nb-matcha-soft: #e4e7cf;
+  --nb-gold: #e0b23c;          /* ทองอ่อน — highlight/ปุ่ม */
+  --nb-indigo: #37507a;        /* 藍 ai — ข้อมูล/ลิงก์ */
+  --nb-indigo-soft: #dbe1ed;
 }
 
 @theme inline {
@@ -56,3 +75,67 @@ iframe {
 ::selection {
   background: rgba(139, 90, 60, 0.18);
 }
+
+/* ── Neo-brutalist-washi utilities ─────────────────────────────────
+   การ์ดขอบหมึกหนา + เงาแข็ง ไม่มี blur/gradient ตามอัตลักษณ์ brutalist
+   แต่พื้น washi ครีม + มุมโค้งกลาง ให้ความรู้สึกผ่อนคลายแบบเว็บเที่ยว */
+.nb-card {
+  border: var(--nb-border) solid var(--nb-ink);
+  border-radius: var(--nb-radius);
+  background: var(--surface);
+  box-shadow: var(--nb-shadow);
+}
+.nb-card-sm {
+  border: var(--nb-border) solid var(--nb-ink);
+  border-radius: var(--nb-radius-sm);
+  background: var(--surface);
+  box-shadow: var(--nb-shadow-sm);
+}
+.nb-flat {
+  border: var(--nb-border) solid var(--nb-ink);
+  border-radius: var(--nb-radius-sm);
+  background: var(--surface);
+}
+
+/* ปุ่มกดได้ — เงาแข็งเด้ง กดแล้วจมลง (เอกลักษณ์ brutalist ที่สนุก) */
+.nb-btn {
+  border: var(--nb-border) solid var(--nb-ink);
+  border-radius: 999px;
+  background: var(--nb-gold);
+  color: var(--nb-ink);
+  box-shadow: var(--nb-shadow-sm);
+  font-weight: 600;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+}
+.nb-btn:hover {
+  transform: translate(1px, 1px);
+  box-shadow: var(--nb-shadow-press);
+}
+.nb-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 0 var(--nb-ink);
+}
+.nb-btn:disabled {
+  opacity: 0.55;
+  transform: none;
+  box-shadow: var(--nb-shadow-sm);
+  cursor: not-allowed;
+}
+
+/* pill ตราประทับ — ขอบหมึกหนา ตัวหนา เหมือน hanko */
+.nb-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 2px solid var(--nb-ink);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.4;
+  background: var(--surface);
+}
+.nb-pill-alert { background: var(--nb-vermilion); color: #fff; border-color: var(--nb-ink); }
+.nb-pill-ok { background: var(--nb-matcha); color: #fff; }
+.nb-pill-gold { background: var(--nb-gold); color: var(--nb-ink); }
+.nb-pill-indigo { background: var(--nb-indigo); color: #fff; }
