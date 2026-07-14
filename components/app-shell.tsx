@@ -1,0 +1,141 @@
+"use client";
+
+// AppShell — เปลือกของ nagame ที่ "ไม่รู้เนื้อหา" (shell-agnostic): รับ 4 พื้นผิวเป็น slot
+// แล้วจัดวางเอง — desktop = 2 แพน (แชทซ้ายค้างตลอด + เวที map/book/trip ขวา),
+// mobile = แท็บล่าง 4 ปุ่ม (แชทเป็นค่าเริ่มต้น). tab อยู่ใน ?tab= เพื่อ deep-link ข้ามแท็บได้
+// (แชทเป็น router: กร๊วกแนะ → ลิงก์เปิดแผนที่ที่กรองไว้). ตาม [[nagame-v2-direction]].
+
+import { Suspense, useCallback, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { MessageCircle, Map as MapIcon, BookMarked, Luggage } from "lucide-react";
+
+export type ShellTab = "chat" | "map" | "book" | "trip";
+
+const STAGE_TABS: { key: Exclude<ShellTab, "chat">; label: string; jp: string; icon: typeof MapIcon }[] = [
+  { key: "map", label: "แผนที่", jp: "地図", icon: MapIcon },
+  { key: "book", label: "สมุดตรา", jp: "御朱印", icon: BookMarked },
+  { key: "trip", label: "ทริป", jp: "旅程", icon: Luggage },
+];
+
+const MOBILE_TABS: { key: ShellTab; label: string; icon: typeof MapIcon }[] = [
+  { key: "chat", label: "แชท", icon: MessageCircle },
+  { key: "map", label: "แผนที่", icon: MapIcon },
+  { key: "book", label: "สมุดตรา", icon: BookMarked },
+  { key: "trip", label: "ทริป", icon: Luggage },
+];
+
+export type AppShellProps = {
+  chat: ReactNode;
+  map: ReactNode;
+  book: ReactNode;
+  trip: ReactNode;
+  /** ชื่อเมือง/หัวข้อที่โชว์บนแถบซ้าย (เช่น "โตเกียว 東京") */
+  title?: ReactNode;
+};
+
+function AppShellInner({ chat, map, book, trip, title }: AppShellProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+
+  const rawTab = params.get("tab");
+  const tab: ShellTab = (["chat", "map", "book", "trip"] as const).includes(rawTab as ShellTab)
+    ? (rawTab as ShellTab)
+    : "chat";
+
+  // เปลี่ยนแท็บ = อัปเดต ?tab= (scroll:false กันเด้งบนสุด, deep-link ได้)
+  const setTab = useCallback(
+    (next: ShellTab) => {
+      const sp = new URLSearchParams(params.toString());
+      if (next === "chat") sp.delete("tab");
+      else sp.set("tab", next);
+      const qs = sp.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [params, pathname, router],
+  );
+
+  // เวทีขวา (desktop) / เนื้อหาแท็บที่ไม่ใช่แชท (mobile)
+  const stageTab: Exclude<ShellTab, "chat"> = tab === "chat" ? "map" : tab;
+  const stageBody = stageTab === "map" ? map : stageTab === "book" ? book : trip;
+
+  return (
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      {/* ===== DESKTOP: 2-pane (≥1024px) ===== */}
+      <div className="mx-auto hidden h-screen max-w-[1440px] lg:grid lg:grid-cols-[384px_1fr]">
+        {/* ซ้าย: แชทกร๊วกค้างตลอด */}
+        <aside className="flex min-h-0 flex-col border-r-[2.5px] border-[var(--nb-ink)] bg-[var(--surface)]">
+          {chat}
+        </aside>
+        {/* ขวา: เวที map/book/trip สลับด้วย stage tabs */}
+        <section className="flex min-h-0 flex-col bg-[var(--background)]">
+          <div className="flex items-center gap-2 border-b-[2.5px] border-[var(--nb-ink)] bg-[var(--surface)] px-4 py-3">
+            {title ? (
+              <span className="mr-2 text-sm font-bold text-[var(--foreground)]">{title}</span>
+            ) : null}
+            {STAGE_TABS.map((t) => {
+              const Icon = t.icon;
+              const active = stageTab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setTab(t.key)}
+                  aria-pressed={active}
+                  className={`flex items-center gap-1.5 rounded-[10px] border-[2px] border-[var(--nb-ink)] px-3.5 py-2 text-[13px] font-bold shadow-[var(--nb-shadow-press)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--nb-vermilion)] ${
+                    active
+                      ? "bg-[var(--nb-vermilion)] text-white"
+                      : "bg-[var(--surface)] text-[var(--foreground)] hover:-translate-y-px"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" aria-hidden />
+                  {t.label}
+                  <span className="text-[10px] opacity-60">{t.jp}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="min-h-0 flex-1 overflow-auto">{stageBody}</div>
+        </section>
+      </div>
+
+      {/* ===== MOBILE: single surface + bottom tab bar ===== */}
+      <div className="flex min-h-screen flex-col lg:hidden">
+        <div className="min-h-0 flex-1 overflow-auto pb-24">
+          {tab === "chat" ? chat : tab === "map" ? map : tab === "book" ? book : trip}
+        </div>
+        <nav className="fixed inset-x-0 bottom-3 z-40 mx-auto max-w-[430px] px-4">
+          <div className="grid grid-cols-4 items-center rounded-[2rem] border-[2.5px] border-[var(--nb-ink)] bg-[var(--surface)] px-2 py-1.5 shadow-[var(--nb-shadow)]">
+            {MOBILE_TABS.map((t) => {
+              const Icon = t.icon;
+              const active = tab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setTab(t.key)}
+                  aria-pressed={active}
+                  className={`flex h-14 flex-col items-center justify-center rounded-2xl transition ${
+                    active ? "text-[var(--nb-vermilion)]" : "text-[var(--ink-muted)]"
+                  }`}
+                >
+                  <Icon className="h-5 w-5" aria-hidden />
+                  <span className="mt-1 text-[11px] font-bold">{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+    </div>
+  );
+}
+
+export function AppShell(props: AppShellProps) {
+  // useSearchParams ต้องอยู่ใต้ Suspense ใน Next 15 (กัน bail-out ทั้งหน้าเป็น CSR)
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[var(--background)]" />}>
+      <AppShellInner {...props} />
+    </Suspense>
+  );
+}
