@@ -4,8 +4,9 @@
 // ตาม [[nagame-v2-direction]] + แผน Fable (agent a3e39cabe05d3a18f):
 //  - แชท = TravelDashboard เดิมทั้งก้อน (แก้ 0 บรรทัด, ส่งผ่านเป็น children)
 //  - map/book/trip = แท็บเต็มจอ, รับพิกัด/slug เมืองจริง
-//  - gate ด้วย ?shell=1 อ่านฝั่ง client (ไม่แตะ searchParams ใน server page → ISR ยังอยู่)
-//    ไม่มี shell=1 = คืน dashboard เดิมล้วน (kill switch หนึ่ง release)
+//  - shell = ค่าเริ่มต้นแล้ว (verify prod: chunk servable + CityShell marker ใน HTML).
+//    gate อ่านฝั่ง client (ไม่แตะ searchParams ใน server page → ISR ยังอยู่).
+//    ทางถอย = ?shell=0 → คืน dashboard เดิมล้วน (kill switch หนึ่ง release ถ้าเจอบั๊ก browser)
 
 import { Suspense, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
@@ -49,8 +50,8 @@ function TripStub({ cityName }: { cityName: string }) {
 
 function CityShellInner({ city, children }: { city: CityLite; children: ReactNode }) {
   const params = useSearchParams();
-  // ยังไม่เปิด shell → คืน dashboard เดิมล้วน (ปลอดภัย, เป็น kill switch)
-  if (params.get("shell") !== "1") return <>{children}</>;
+  // shell = ค่าเริ่มต้น. ทางถอย ?shell=0 → คืน dashboard เดิมล้วน (kill switch)
+  if (params.get("shell") === "0") return <>{children}</>;
 
   return (
     <AppShell
