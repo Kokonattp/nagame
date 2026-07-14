@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUp,
   Bot,
@@ -11,13 +11,23 @@ import {
   Compass,
   ExternalLink,
   Home,
+  type LucideIcon,
   SearchCheck,
   ShieldAlert,
   Thermometer,
-  Tv,
-  Waves,
   Wind,
 } from "lucide-react";
+import { getKruakMood } from "@/lib/game/mood";
+import {
+  countStamps,
+  earnStamp,
+  getCityStamps,
+  STAMP_KEYS,
+  STAMP_META,
+  STAMPS_PER_CITY,
+  type CityStamps,
+  type StampKey,
+} from "@/lib/game/journal";
 import { CitySearch } from "@/components/city-search";
 import type { Recommendation } from "@/lib/cities/city-configs";
 import type { CityDrive } from "@/lib/cities/drive-spots";
@@ -96,9 +106,9 @@ export function TravelDashboard({
   weather,
   aqi,
   webcam,
-  events,
   warnings,
   verdict,
+  recommendations,
   seeds,
 }: DashboardProps) {
   const [chatInput, setChatInput] = useState("");
@@ -114,12 +124,73 @@ export function TravelDashboard({
   const [showBackToTop, setShowBackToTop] = useState(false);
   const severeWarnings = warnings.items.filter((item) => item.level !== "advisory");
 
+  // ── เกม: 御朱印帳 สมุดตราประทับของกร๊วก (localStorage, per-เมือง) ──
+  const [stamps, setStamps] = useState<CityStamps>({});
+  const [journalOpen, setJournalOpen] = useState(false);
+  const [slammingStamp, setSlammingStamp] = useState<StampKey | null>(null);
+  const [justCompleted, setJustCompleted] = useState(false);
+  const stampCount = countStamps(stamps);
+
+  // NPC มู้ด — pure จากสัญญาณที่มีอยู่แล้ว ไม่ fetch ใหม่
+  const mood = useMemo(
+    () => getKruakMood({ hasSevereWarning: severeWarnings.length > 0, rainChance: weather.rainChance, aqi: aqi.aqi }),
+    [severeWarnings.length, weather.rainChance, aqi.aqi],
+  );
+
+  // ประทับตรา: idempotent, ยิง animation เฉพาะครั้งที่ได้ใหม่, เช็คครบ 5/5 เพื่อคำชมของกร๊วก
+  const claimStamp = useCallback(
+    (key: StampKey) => {
+      const { earned, stamps: next } = earnStamp(city.slug, key);
+      if (!earned) return;
+      setStamps(next);
+      setSlammingStamp(key);
+      window.setTimeout(() => setSlammingStamp((cur) => (cur === key ? null : cur)), 450);
+      if (countStamps(next) === STAMPS_PER_CITY) {
+        setJustCompleted(true);
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "ครบทุกตราของเมืองนี้แล้ว! กร๊วกภูมิใจนะ 🎉 ไปเก็บเมืองอื่นต่อกันเลย" },
+        ]);
+      }
+    },
+    [city.slug],
+  );
+
+  // โหลดตราของเมืองนี้ + ประทับ "เยือนเมือง" อัตโนมัติเมื่อเปิดหน้า (ครั้งแรกของเมืองนั้น)
+  useEffect(() => {
+    const existing = getCityStamps(city.slug);
+    setStamps(existing);
+    setJustCompleted(false);
+    if (!existing.visit) {
+      const { stamps: next } = earnStamp(city.slug, "visit");
+      setStamps(next);
+    }
+  }, [city.slug]);
+
   useEffect(() => {
     const onScroll = () => setShowBackToTop(window.scrollY > 900);
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // ประทับ "ดูแผนวันนี้" เมื่อ #day-plan โผล่เข้ามาในจอ
+  const dayPlanRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const node = dayPlanRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          claimStamp("dayplan");
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.4 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [claimStamp]);
 
   // แผนวันนี้โหลดฝั่ง client — หน้าเพจไม่ต้องรอ AI ตอน server render
   const [dayPlan, setDayPlan] = useState<DayPlanSignal | null | undefined>(undefined);
@@ -167,6 +238,7 @@ export function TravelDashboard({
     setChatError("");
     setChatMessages((prev) => [...prev, { role: "user", content: value }]);
     setIsPending(true);
+    claimStamp("chat"); // ตรา 💬 — ทักกร๊วกแล้ว
 
     void (async () => {
       try {
@@ -284,9 +356,43 @@ export function TravelDashboard({
             </div>
 
             <div className="p-5 md:p-6">
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[var(--nb-ink)] bg-[var(--nb-vermilion)] text-sm font-bold text-white">阿</span>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--accent-warm)]">กร๊วกว่าไง</p>
+              {/* NPC nameplate สไตล์กล่องบทสนทนา RPG — avatar เปลี่ยนอารมณ์ตามข้อมูลจริง */}
+              <div className="flex items-center gap-3">
+                <span
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[2.5px] border-[var(--nb-ink)] bg-[var(--nb-vermilion-soft)] text-2xl shadow-[2px_2px_0_0_var(--nb-ink)]"
+                  aria-hidden
+                >
+                  {mood.emoji}
+                </span>
+                <div className="min-w-0">
+                  <p className="font-serif text-lg leading-tight text-[var(--foreground)]">กร๊วก</p>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--accent-warm)]">
+                    {mood.tone ?? "ผู้ช่วยเที่ยวประจำเมือง"}
+                  </p>
+                </div>
+                {/* pill row เกม: กล้องสด + ตราประทับ 朱 x/5 (พื้นผิวเกมบนหน้า = แค่นี้) */}
+                <div className="ml-auto flex shrink-0 items-center gap-2">
+                  {webcam.available && activeWebcam?.previewImage ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWebcamOpen(true);
+                        claimStamp("webcam");
+                      }}
+                      className="nb-pill transition hover:bg-[var(--nb-gold)]/30"
+                    >
+                      📷 กล้องสด
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setJournalOpen(true)}
+                    className={`nb-pill transition hover:bg-[var(--nb-gold)]/30 ${slammingStamp ? "kruak-stamp-slam" : ""} ${stampCount === STAMPS_PER_CITY ? "nb-pill-gold" : ""}`}
+                    aria-label={`สมุดตราประทับ ได้ ${stampCount} จาก ${STAMPS_PER_CITY} ตรา`}
+                  >
+                    朱 {stampCount}/{STAMPS_PER_CITY}
+                  </button>
+                </div>
               </div>
 
               {/* คำทักทายกร๊วก — speech bubble ตราประทับ (ข้อความแรกของแชท) + แชทต่อ */}
@@ -331,7 +437,10 @@ export function TravelDashboard({
                       {index === 0 && webcam.available && activeWebcam?.previewImage ? (
                         <button
                           type="button"
-                          onClick={() => setWebcamOpen(true)}
+                          onClick={() => {
+                            setWebcamOpen(true);
+                            claimStamp("webcam"); // ตรา 📷 — ชะโงกดูเมืองแล้ว
+                          }}
                           className="mt-3 block w-full overflow-hidden rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--surface)] text-left shadow-[3px_3px_0_0_var(--nb-ink)] transition hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_var(--nb-ink)]"
                         >
                           <div className="relative aspect-[16/9] overflow-hidden">
@@ -388,10 +497,10 @@ export function TravelDashboard({
             </div>
           </section>
 
-          {/* ขวา: อากาศเหลือบเดียว (metric pills) + เกริ่นเมือง */}
+          {/* ขวา: สภาพศาลเจ้าวันนี้ (metric = stat bar HUD) + เกริ่นเมือง */}
           <div className="grid min-w-0 content-start gap-4">
             <div className="nb-card p-5 md:p-6">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-warm)]">วันนี้ที่ {city.name}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-warm)]">สภาพศาลเจ้าวันนี้ · {city.name}</p>
               <p className="mt-3 text-sm leading-7 text-[var(--ink-muted)]">{cityMeta.intro}</p>
               <div className="mt-4 grid grid-cols-2 gap-2.5">
                 <MetricChip icon={Thermometer} label="รู้สึกเหมือน" value={formatValue(weather.feelsLike, "°C")} />
@@ -404,11 +513,11 @@ export function TravelDashboard({
           </div>
         </section>
 
-        {/* ─── Tier 2 — บริบทเหลือบเดียว: แผนวันนี้ ─── */}
-        <section id="day-plan" className="nb-card p-5 md:p-7">
+        {/* ─── Tier 2 — เควสต์วันนี้: แผนวันนี้ ─── */}
+        <section id="day-plan" ref={dayPlanRef} className="nb-card p-5 md:p-7">
           <div className="flex items-start justify-between gap-4">
             <SectionIntro
-              eyebrow="Today's plan"
+              eyebrow="เควสต์วันนี้ · today's quest"
               title="แผนวันนี้แบบจัดให้"
               description="จัดจากฝนรายช่วงเวลา ประกาศเตือน และจุดคัดมือของเมือง — อยากปรับแผน ถามกร๊วกด้านบนได้เลย"
             />
@@ -465,10 +574,12 @@ export function TravelDashboard({
         </section>
 
 
-        {/* ─── Tier 4 — สัญญาณสด (moat): เตือนภัย, แผ่นดินไหว, เรทเงิน, กล้อง ─── */}
-        <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+        {/* ─── Tier 3 — ของฝากจากกร๊วก (loot) + ประกาศจากศาลเจ้า (เตือนภัย) ─── */}
+        <section className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <KruakPicksCard citySlug={city.slug} recommendations={recommendations} onClaim={() => claimStamp("recs")} />
+
           <PaperCard
-            eyebrow="Weather alerts"
+            eyebrow="ประกาศจากศาลเจ้า · shrine notice"
             title="ประกาศเตือนภัยอากาศ"
             icon={ShieldAlert}
             description={`ประกาศเตือนภัย/เฝ้าระวังระดับภูมิภาครอบ ${city.name} จาก JMA อัปเดตทุก 10 นาที`}
@@ -512,106 +623,6 @@ export function TravelDashboard({
                 <p className="px-1 text-xs text-[var(--ink-muted)]">ประกาศล่าสุด: {formatPublishedAt(warnings.reportedAt)}</p>
               ) : null}
             </div>
-          </PaperCard>
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
-          <PaperCard
-            eyebrow="Explore more"
-            title="รอบเมือง & ข่าวล่าสุด"
-            icon={Waves}
-            description={`เมืองใกล้เคียงสำหรับ day trip, จุดรอบ ${city.name} และข่าวอีเวนต์ แยกไว้อีกหน้าเพื่อให้หน้านี้โฟกัสที่แผนวันนี้`}
-          >
-            <div className="mt-5 grid gap-3">
-              {events.available && events.items.length ? (
-                events.items.slice(0, 2).map((item) => (
-                  <a
-                    key={`${item.url}-${item.title}`}
-                    href={item.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.9)] p-4 transition hover:border-[var(--line-strong)]"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-[var(--foreground)]">{item.title}</p>
-                        <p className="mt-2 text-xs text-[var(--ink-muted)]">
-                          {[item.source ?? events.source, item.publishedAt ? formatPublishedAt(item.publishedAt) : null].filter(Boolean).join(" • ")}
-                        </p>
-                      </div>
-                      <ExternalLink className="mt-1 h-4 w-4 shrink-0 text-[var(--accent)]" aria-hidden />
-                    </div>
-                  </a>
-                ))
-              ) : null}
-              <Link
-                href={`/city/${city.slug}/around`}
-                className="flex items-center justify-between gap-3 rounded-[var(--nb-radius-sm)] border-[2.5px] border-[var(--nb-ink)] bg-[var(--nb-indigo)] p-4 text-white shadow-[var(--nb-shadow-sm)] transition hover:-translate-y-0.5 hover:shadow-[var(--nb-shadow)]"
-              >
-                <div>
-                  <p className="text-sm font-semibold">ดูเมืองใกล้เคียง จุดรอบเมือง และข่าวทั้งหมด</p>
-                  <p className="mt-1 text-xs text-white/70">day trip • จุดน่าสนใจรัศมี 10 กม. • อีเวนต์ล่าสุด</p>
-                </div>
-                <Compass className="h-5 w-5 shrink-0" aria-hidden />
-              </Link>
-            </div>
-          </PaperCard>
-
-          <PaperCard
-            eyebrow="Live webcam"
-            title={activeWebcam?.title ?? `ดูบรรยากาศ ${city.name}`}
-            icon={Tv}
-            description={
-              webcam.available
-                ? "เช็กท้องฟ้า ความหนาแน่นของคน และสภาพหน้างานจากในแอปก่อนออกเที่ยว"
-                : webcam.message ?? "ตอนนี้ยังไม่พบ webcam ที่ใช้งานได้"
-            }
-          >
-            <button
-              type="button"
-              onClick={() => setWebcamOpen(true)}
-              className="nb-card-sm mt-4 block w-full overflow-hidden text-left transition hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_var(--nb-ink)]"
-            >
-              <div className="relative aspect-[16/10] overflow-hidden">
-                {activeWebcam?.previewImage ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={activeWebcam.previewImage} alt={activeWebcam.title ?? "Webcam preview"} className="h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(31,36,48,0.48))]" />
-                  </>
-                ) : (
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,#e9e2d8,#d7dde3)]" />
-                )}
-                <div className="absolute inset-x-3 bottom-3 rounded-[12px] border-2 border-[var(--nb-ink)] bg-[var(--surface)] px-4 py-2">
-                  <p className="text-sm font-semibold text-[var(--foreground)]">กดเพื่อดู webcam ในแอป</p>
-                </div>
-              </div>
-            </button>
-
-            {webcamOptions.length > 1 ? (
-              <div className="mt-3 flex w-0 min-w-full gap-2 overflow-x-auto pb-1">
-                {webcamOptions.map((option, index) => (
-                  <button
-                    key={`${option.title}-${index}`}
-                    type="button"
-                    onClick={() => setSelectedWebcamIndex(index)}
-                    title={option.title}
-                    className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-[12px] border-2 transition ${
-                      index === selectedWebcamIndex ? "border-[var(--nb-ink)]" : "border-transparent opacity-75 hover:opacity-100"
-                    }`}
-                  >
-                    {option.previewImage ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={option.previewImage} alt={option.title} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(180deg,#e9e2d8,#d7dde3)] text-[10px] text-[var(--ink-muted)]">
-                        view {index + 1}
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            ) : null}
           </PaperCard>
         </section>
       </div>
@@ -727,7 +738,136 @@ export function TravelDashboard({
           </div>
         </div>
       ) : null}
+
+      {journalOpen ? (
+        <KruakJournalModal
+          cityName={city.name}
+          stamps={stamps}
+          justCompleted={justCompleted}
+          onClose={() => setJournalOpen(false)}
+        />
+      ) : null}
     </main>
+  );
+}
+
+// การ์ด "ของฝากจากกร๊วก" (loot drop) — โชว์ 1 อันต่อหมวด (พัก/กิน/เที่ยว) เท่านั้น.
+// กฎกันหลุดเป็น dashboard: หน้าหลักโชว์ index 0 ของแต่ละหมวด อยากได้มากกว่านั้น = ไป /around.
+function KruakPicksCard({
+  citySlug,
+  recommendations,
+  onClaim,
+}: {
+  citySlug: string;
+  recommendations: DashboardProps["recommendations"];
+  onClaim: () => void;
+}) {
+  const picks = [
+    { emoji: "🛏", label: "พัก", item: recommendations.sleep[0] },
+    { emoji: "🍜", label: "กิน", item: recommendations.eat[0] },
+    { emoji: "⛩", label: "เที่ยว", item: recommendations.see[0] },
+  ].filter((pick) => pick.item);
+
+  return (
+    <div className="nb-card p-5 md:p-6">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-warm)]">ของฝากจากกร๊วกวันนี้ · today&apos;s drop</p>
+      <h3 className="mt-2 font-serif text-2xl text-[var(--foreground)]">กร๊วกเลือกให้ที่นึง</h3>
+      <p className="mt-3 text-sm leading-7 text-[var(--ink-muted)]">คัดมาหมวดละหนึ่งจากที่กร๊วกชอบ — อยากดูครบทุกที่ กดปุ่มด้านล่างไปหน้ารอบเมือง</p>
+
+      <div className="mt-4 space-y-2.5">
+        {picks.map((pick) => (
+          <div key={pick.label} className="flex items-start gap-3 rounded-[14px] border-2 border-[var(--nb-ink)] bg-[var(--surface-soft)] px-3.5 py-3">
+            <span className="text-xl leading-none" aria-hidden>{pick.emoji}</span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-warm)]">{pick.label}</p>
+              <p className="truncate text-sm font-semibold text-[var(--foreground)]">{pick.item!.title}</p>
+              {pick.item!.note ? <p className="truncate text-xs leading-5 text-[var(--ink-muted)]">{pick.item!.note}</p> : null}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Link
+        href={`/city/${citySlug}/around`}
+        onClick={onClaim}
+        className="mt-4 flex items-center justify-between gap-3 rounded-[var(--nb-radius-sm)] border-[2.5px] border-[var(--nb-ink)] bg-[var(--nb-indigo)] p-4 text-white shadow-[var(--nb-shadow-sm)] transition hover:-translate-y-0.5 hover:shadow-[var(--nb-shadow)]"
+      >
+        <div>
+          <p className="text-sm font-semibold">ดูที่พัก / ที่กิน / ที่เที่ยวทั้งหมด</p>
+          <p className="mt-1 text-xs text-white/70">รับตรา 🍜 + จุดคัดมือทั้งเมืองที่หน้ารอบเมือง</p>
+        </div>
+        <Compass className="h-5 w-5 shrink-0" aria-hidden />
+      </Link>
+    </div>
+  );
+}
+
+// สมุด 御朱印帳 — เปิดจาก pill 朱 เท่านั้น (ไม่ render บนหน้า). โชว์ 5 ช่องตรา: ได้=ประทับสีชาด, ยังไม่ได้=เส้นจาง
+function KruakJournalModal({
+  cityName,
+  stamps,
+  justCompleted,
+  onClose,
+}: {
+  cityName: string;
+  stamps: CityStamps;
+  justCompleted: boolean;
+  onClose: () => void;
+}) {
+  const earned = countStamps(stamps);
+  return (
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-[rgba(23,24,27,0.72)] backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+      <div
+        className="flex h-full w-full flex-col overflow-hidden bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--nb-shadow)] sm:h-auto sm:max-h-[92vh] sm:max-w-md sm:rounded-[var(--nb-radius)] sm:border-[2.5px] sm:border-[var(--nb-ink)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b-[2.5px] border-[var(--nb-ink)] px-5 py-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-warm)]">御朱印帳 · สมุดตราประทับ</p>
+            <h3 className="mt-1 font-serif text-xl text-[var(--foreground)]">{cityName} · {earned}/{STAMPS_PER_CITY}</h3>
+          </div>
+          <button type="button" onClick={onClose} className="nb-pill shrink-0 px-4 py-2">ปิด</button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+          {justCompleted ? (
+            <p className="mb-4 rounded-[14px] border-2 border-[var(--nb-ink)] bg-[var(--nb-gold)]/30 px-4 py-3 text-center text-sm font-semibold text-[var(--foreground)]">
+              🎉 ครบทุกตราของ {cityName} แล้ว! กร๊วกภูมิใจนะ
+            </p>
+          ) : (
+            <p className="mb-4 text-sm leading-6 text-[var(--ink-muted)]">เก็บตราครบทั้ง {STAMPS_PER_CITY} ดวงของเมืองนี้ — ตราได้จากการเที่ยวไปกับกร๊วกในแอป</p>
+          )}
+          <div className="grid grid-cols-1 gap-3">
+            {STAMP_KEYS.map((key) => {
+              const has = Boolean(stamps[key]);
+              const meta = STAMP_META[key];
+              return (
+                <div
+                  key={key}
+                  className={`flex items-center gap-3 rounded-[14px] border-2 px-4 py-3 transition ${
+                    has
+                      ? "border-[var(--nb-ink)] bg-[var(--nb-vermilion-soft)]"
+                      : "border-dashed border-[var(--line-strong)] bg-transparent opacity-70"
+                  }`}
+                >
+                  <span
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 text-xl ${
+                      has ? "border-[var(--nb-vermilion)] bg-[var(--surface)]" : "border-[var(--line-strong)] grayscale"
+                    }`}
+                    aria-hidden
+                  >
+                    {has ? meta.emoji : "○"}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">{meta.label}</p>
+                    <p className="text-xs leading-5 text-[var(--ink-muted)]">{has ? "ได้แล้ว ✓" : meta.hint}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -741,7 +881,7 @@ function PaperCard({
   eyebrow: string;
   title: string;
   description: string;
-  icon: typeof Tv;
+  icon: LucideIcon;
   children: React.ReactNode;
 }) {
   return (
