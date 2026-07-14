@@ -18,6 +18,7 @@ import {
   Wind,
 } from "lucide-react";
 import { getKruakMood } from "@/lib/game/mood";
+import { KruakAvatar } from "@/components/kruak-avatar";
 import {
   countStamps,
   earnStamp,
@@ -358,12 +359,7 @@ export function TravelDashboard({
             <div className="p-5 md:p-6">
               {/* NPC nameplate สไตล์กล่องบทสนทนา RPG — avatar เปลี่ยนอารมณ์ตามข้อมูลจริง */}
               <div className="flex items-center gap-3">
-                <span
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[2.5px] border-[var(--nb-ink)] bg-[var(--nb-vermilion-soft)] text-2xl shadow-[2px_2px_0_0_var(--nb-ink)]"
-                  aria-hidden
-                >
-                  {mood.emoji}
-                </span>
+                <KruakAvatar art={mood.art} />
                 <div className="min-w-0">
                   <p className="font-serif text-lg leading-tight text-[var(--foreground)]">กร๊วก</p>
                   <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--accent-warm)]">
