@@ -6,13 +6,15 @@
 
 import { useEffect, useState } from "react";
 import { MapPin, Trash2, Navigation } from "lucide-react";
-import { getTripForCity, removeFromTrip, type TripItem } from "@/lib/game/trip";
+import { getTripForCity, loadTripFromServer, removeFromTrip, type TripItem } from "@/lib/game/trip";
 
 export function TripPanel({ citySlug, cityName }: { citySlug: string; cityName: string }) {
   const [items, setItems] = useState<TripItem[] | null>(null); // null = ยังไม่อ่าน (กัน SSR mismatch)
 
   useEffect(() => {
+    // แสดง local ทันที (เร็ว) แล้วค่อย merge จาก server (ถ้า backend ตั้งไว้ — ไม่งั้นเงียบ)
     setItems(getTripForCity(citySlug));
+    void loadTripFromServer().then((merged) => setItems(merged.filter((it) => it.citySlug === citySlug)));
   }, [citySlug]);
 
   // ยังไม่ mount (SSR) → โครงว่างเงียบ ไม่ render เนื้อ (localStorage อ่านได้เฉพาะ client)
