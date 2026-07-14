@@ -4,29 +4,17 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Activity,
   ArrowUp,
-  Banknote,
   Bot,
   Calendar,
-  Car,
-  Check,
   CloudRain,
   Compass,
-  Copy,
   ExternalLink,
-  Gift,
   Home,
-  MapPin,
-  Mountain,
   SearchCheck,
   ShieldAlert,
-  Sparkles,
   Thermometer,
-  Ticket,
-  TrainFront,
   Tv,
-  UtensilsCrossed,
   Waves,
   Wind,
 } from "lucide-react";
@@ -34,8 +22,7 @@ import { CitySearch } from "@/components/city-search";
 import type { Recommendation } from "@/lib/cities/city-configs";
 import type { CityDrive } from "@/lib/cities/drive-spots";
 import { formatMonthDay, japanHolidayWindows, windowStatus } from "@/lib/cities/holidays";
-import { getCitySeasons, type SeasonKind } from "@/lib/cities/seasons";
-import type { CityTransit, TransitLineKind } from "@/lib/cities/transit";
+import type { CityTransit } from "@/lib/cities/transit";
 import type { JapanCitySeed } from "@/lib/cities/japan-major-cities";
 import type { DayPlanSignal } from "@/lib/services/day-plan";
 import type { AqiSignal } from "@/lib/services/aqi";
@@ -50,13 +37,6 @@ const WebcamMap = dynamic(() => import("@/components/webcam-map").then((mod) => 
   ssr: false,
   loading: () => (
     <div className="flex h-full w-full items-center justify-center bg-white/4 text-xs text-[#d2ccc3]">กำลังโหลดแผนที่...</div>
-  ),
-});
-
-const TransitMap = dynamic(() => import("@/components/transit-map").then((mod) => mod.TransitMap), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-[var(--surface-soft)] text-xs text-[var(--ink-muted)]">กำลังโหลดแผนที่...</div>
   ),
 });
 
@@ -117,13 +97,8 @@ export function TravelDashboard({
   aqi,
   webcam,
   events,
-  quakes,
-  fx,
   warnings,
   verdict,
-  transit,
-  drive,
-  recommendations,
   seeds,
 }: DashboardProps) {
   const [chatInput, setChatInput] = useState("");
@@ -136,7 +111,6 @@ export function TravelDashboard({
   const [webcamOpen, setWebcamOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [selectedWebcamIndex, setSelectedWebcamIndex] = useState(0);
-  const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const severeWarnings = warnings.items.filter((item) => item.level !== "advisory");
 
@@ -164,14 +138,6 @@ export function TravelDashboard({
       cancelled = true;
     };
   }, [city.slug]);
-
-  const seasonItems = useMemo(
-    () =>
-      getCitySeasons(city.slug)
-        .map((item) => ({ ...item, status: windowStatus(item.from, item.to) }))
-        .sort((a, b) => seasonRank(a.status) - seasonRank(b.status)),
-    [city.slug],
-  );
 
   const holidayNotice = useMemo(() => {
     const statuses = japanHolidayWindows.map((window) => ({ window, status: windowStatus(window.from, window.to) }));
@@ -262,14 +228,7 @@ export function TravelDashboard({
               </Link>
               <a href="#assistant" className="nb-pill nb-pill-gold px-4 py-2">ถามอาแป๊ะ</a>
               <a href="#day-plan" className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">แผนวันนี้</a>
-              {transit ? (
-                <a href="#transit" className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">เดินทาง</a>
-              ) : null}
-              {drive ? (
-                <a href="#drive" className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">ขับรถ</a>
-              ) : null}
-              <a href="#ideas" className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">ไอเดียทริป</a>
-              <Link href={`/city/${city.slug}/around`} className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">รอบเมือง</Link>
+              <Link href={`/city/${city.slug}/around`} className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">รอบเมือง & เดินทาง</Link>
             </nav>
           </div>
           <div className="mt-4">
@@ -470,151 +429,6 @@ export function TravelDashboard({
           </div>
         </section>
 
-        {/* ─── Tier 3 — พับ/เลือกดู: ไอเดียทริป, เดินทาง, ขับรถ ─── */}
-        <section id="ideas" className="grid gap-6 xl:grid-cols-3">
-          <IdeaColumn title="ไปไหนดี" eyebrow="Where to go" icon={Compass} items={recommendations.see} cityName={city.name} />
-          <IdeaColumn title="กินอะไรดี" eyebrow="What to eat" icon={UtensilsCrossed} items={recommendations.eat} cityName={city.name} />
-          <IdeaColumn title="นอนไหนดี" eyebrow="Where to stay" icon={Mountain} items={recommendations.sleep} cityName={city.name} />
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-2">
-          <IdeaColumn title="ของฝาก & คาเฟ่" eyebrow="Souvenirs & cafes" icon={Gift} items={recommendations.shop} cityName={city.name} />
-          <IdeaColumn title="กิจกรรมน่าทำ" eyebrow="Things to do" icon={Sparkles} items={recommendations.do} cityName={city.name} />
-        </section>
-
-        {transit ? (
-          <section id="transit" className="nb-card p-5 md:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <SectionIntro
-                eyebrow="From the station"
-                title={`ขึ้นอะไรจาก ${transit.station.name}`}
-                description={transit.description}
-              />
-              <div className="nb-flat hidden shrink-0 p-3 text-[var(--nb-ink)] md:block">
-                <TrainFront className="h-5 w-5" aria-hidden />
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
-              <div className="h-[340px] overflow-hidden rounded-[28px] border border-[var(--line)] md:h-[440px]">
-                <TransitMap
-                  transit={transit}
-                  selectedLineId={selectedLineId}
-                  onSelect={(lineId) => setSelectedLineId((prev) => (prev === lineId ? null : lineId))}
-                />
-              </div>
-
-              <div className="grid content-start gap-2.5 xl:max-h-[440px] xl:overflow-y-auto xl:pr-1">
-                {transit.lines.map((line) => {
-                  const destination = farthestStop(line, transit.station);
-                  const selected = selectedLineId === line.id;
-                  return (
-                    <div
-                      key={line.id}
-                      className={`flex items-stretch gap-2 rounded-[24px] border bg-[rgba(255,253,249,0.9)] p-3 transition ${
-                        selected ? "border-[var(--accent)] shadow-[0_12px_36px_rgba(31,36,48,0.08)]" : "border-[var(--line)] hover:border-[var(--line-strong)]"
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setSelectedLineId((prev) => (prev === line.id ? null : line.id))}
-                        className="min-w-0 flex-1 text-left"
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: line.color }} aria-hidden />
-                          <span className="text-sm font-medium text-[var(--foreground)]">{line.name}</span>
-                          <span className="rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--ink-muted)]">
-                            {transitKindLabels[line.kind]}
-                          </span>
-                        </div>
-                        <p className="mt-1.5 text-xs font-medium text-[var(--accent-warm)]">→ {line.to}</p>
-                        <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{line.note}</p>
-                        {line.boardAt ? (
-                          <p className="mt-1 text-[11px] leading-5 text-[var(--ink-muted)]">จุดขึ้นรถ: {line.boardAt}</p>
-                        ) : null}
-                      </button>
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&origin=${transit.station.lat},${transit.station.lon}&destination=${destination.lat},${destination.lon}&travelmode=transit`}
-                        target="_blank"
-                        rel="noreferrer"
-                        title={`เปิดเส้นทางไป ${destination.name} ใน Google Maps`}
-                        className="flex shrink-0 items-center self-center rounded-full border border-[var(--line)] p-2.5 text-[var(--accent)] transition hover:border-[var(--line-strong)]"
-                      >
-                        <ExternalLink className="h-4 w-4" aria-hidden />
-                      </a>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {transit.passes?.length ? (
-              <div className="mt-5 rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.84)] p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
-                  <Ticket className="h-4 w-4 text-[var(--accent)]" aria-hidden />
-                  ตั๋ว pass ที่คุ้มสำหรับเมืองนี้
-                </div>
-                <div className="mt-3 grid gap-2 md:grid-cols-2">
-                  {transit.passes.map((pass) => (
-                    <div key={pass.name} className="flex items-start justify-between gap-3 rounded-[18px] border border-[var(--line)] bg-[var(--surface-soft)] px-3.5 py-2.5">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-[var(--foreground)]">{pass.name}</p>
-                        <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{pass.note}</p>
-                      </div>
-                      <span className="shrink-0 rounded-full border border-[var(--line)] bg-[rgba(255,253,249,0.9)] px-2.5 py-1 text-[11px] font-medium text-[var(--accent)]">
-                        {pass.price}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-2 px-1 text-[11px] leading-5 text-[var(--ink-muted)]">ราคาโดยประมาณ อาจปรับได้ — เช็กอีกครั้งตอนซื้อหน้าเคาน์เตอร์/ตู้</p>
-              </div>
-            ) : null}
-
-            <p className="mt-4 px-1 text-xs leading-6 text-[var(--ink-muted)]">
-              เส้นทางคัดมือสำหรับนักท่องเที่ยว แสดงเฉพาะป้ายหลัก ตำแหน่งเป็นค่าโดยประมาณ — กดที่สายเพื่อไฮไลต์บนแผนที่ หรือกดไอคอนลิงก์เพื่อดูตารางเวลาจริงใน Google Maps
-            </p>
-          </section>
-        ) : null}
-
-        {drive ? <DriveSection drive={drive} cityName={city.name} /> : null}
-
-        {seasonItems.length ? (
-          <section className="nb-card p-5 md:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <SectionIntro
-                eyebrow="Season radar"
-                title={`จังหวะฤดูกาลของ ${city.name}`}
-                description="ช่วงพีคโดยประมาณจากค่าเฉลี่ยหลายปี ใช้วางแผนล่วงหน้าได้ว่าควรมาเดือนไหน"
-              />
-              <div className="nb-flat hidden shrink-0 p-3 text-[var(--nb-ink)] md:block">
-                <Calendar className="h-5 w-5" aria-hidden />
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {seasonItems.map((item) => (
-                <div key={item.name} className="flex flex-col rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.9)] p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: seasonKindColors[item.kind] }} aria-hidden />
-                      <h3 className="text-sm font-medium text-[var(--foreground)]">{item.name}</h3>
-                    </div>
-                    {item.status.state === "active" ? (
-                      <span className="shrink-0 rounded-full bg-[#2e7d32] px-2.5 py-0.5 text-[10px] font-semibold text-white">กำลังพีค</span>
-                    ) : item.status.state === "upcoming" ? (
-                      <span className="shrink-0 rounded-full bg-[#b9770e] px-2.5 py-0.5 text-[10px] font-semibold text-white">อีก {item.status.daysUntil} วัน</span>
-                    ) : null}
-                  </div>
-                  <p className="mt-1.5 text-xs font-medium text-[var(--accent-warm)]">
-                    {formatMonthDay(item.from)} – {formatMonthDay(item.to)}
-                  </p>
-                  <p className="mt-1.5 text-xs leading-5 text-[var(--ink-muted)]">{item.note}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
 
         {/* ─── Tier 4 — สัญญาณสด (moat): เตือนภัย, แผ่นดินไหว, เรทเงิน, กล้อง ─── */}
         <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
@@ -662,81 +476,6 @@ export function TravelDashboard({
               {warnings.reportedAt ? (
                 <p className="px-1 text-xs text-[var(--ink-muted)]">ประกาศล่าสุด: {formatPublishedAt(warnings.reportedAt)}</p>
               ) : null}
-            </div>
-          </PaperCard>
-
-          <PaperCard
-            eyebrow="Earthquake watch"
-            title="แผ่นดินไหวรอบ 72 ชม."
-            icon={Activity}
-            description={`เฝ้าดูแผ่นดินไหวใกล้ ${city.name} (รัศมี ~350 กม.) และเหตุรุนแรงทั่วญี่ปุ่น จากข้อมูล JMA`}
-          >
-            <div className="mt-4 space-y-3">
-              {quakes.available && quakes.items.length ? (
-                quakes.items.map((item) => (
-                  <div
-                    key={`${item.time}-${item.place}`}
-                    className="rounded-[22px] border border-[var(--line)] bg-[rgba(255,253,249,0.84)] px-4 py-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-medium text-[var(--foreground)]">
-                        {item.place}
-                        {item.tsunami ? <span className="ml-2 rounded-full bg-[#9c3d31] px-2 py-0.5 text-[10px] font-semibold text-white">เฝ้าระวังสึนามิ</span> : null}
-                      </p>
-                      <p className="shrink-0 text-sm font-semibold text-[var(--accent)]">
-                        {typeof item.magnitude === "number" ? `M${item.magnitude}` : "M–"}
-                      </p>
-                    </div>
-                    <p className="mt-1 text-xs leading-6 text-[var(--ink-muted)]">
-                      {[
-                        item.shindo ? `แรงสั่นสูงสุดระดับ ${item.shindo}` : null,
-                        item.distanceKm !== null ? `ห่างประมาณ ${item.distanceKm} กม.` : null,
-                        `${item.time} JST`,
-                      ]
-                        .filter(Boolean)
-                        .join(" • ")}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-[22px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,253,249,0.8)] px-4 py-4 text-sm leading-7 text-[var(--ink-muted)]">
-                  {quakes.available
-                    ? `ไม่มีแผ่นดินไหวที่น่ากังวลใกล้ ${city.name} ในช่วง 72 ชั่วโมงที่ผ่านมา`
-                    : quakes.message ?? "ยังเชื่อมต่อข้อมูลแผ่นดินไหวไม่ได้ในตอนนี้"}
-                </div>
-              )}
-            </div>
-          </PaperCard>
-
-          <PaperCard
-            eyebrow="Money"
-            title="เรทเงินสำหรับทริป"
-            icon={Banknote}
-            description="อัตราแลกเปลี่ยนกลางเยน-บาท อัปเดตทุก 6 ชั่วโมง ใช้กะงบหน้างานได้เลย"
-          >
-            <div className="mt-4 space-y-3">
-              {fx.available && fx.thbPer100Jpy !== null ? (
-                <>
-                  <SignalRow label="100 เยน" value={`≈ ${fx.thbPer100Jpy.toFixed(2)} บาท`} note="ค่าน้ำ ขนม ของจุกจิก" />
-                  <SignalRow
-                    label="1,000 เยน"
-                    value={`≈ ${(fx.thbPer100Jpy * 10).toFixed(0)} บาท`}
-                    note="ราเมงหนึ่งชาม / ตั๋วรถไฟในเมือง"
-                  />
-                  <SignalRow
-                    label="10,000 เยน"
-                    value={`≈ ${(fx.thbPer100Jpy * 100).toFixed(0)} บาท`}
-                    note="งบกินเที่ยวสบาย ๆ หนึ่งวัน"
-                  />
-                  {fx.jpyPer100Thb !== null ? (
-                    <p className="px-1 text-xs text-[var(--ink-muted)]">กลับด้าน: 100 บาท ≈ {fx.jpyPer100Thb.toFixed(0)} เยน</p>
-                  ) : null}
-                </>
-              ) : (
-                <div className="rounded-[22px] border border-dashed border-[var(--line-strong)] bg-[rgba(255,253,249,0.8)] px-4 py-4 text-sm leading-7 text-[var(--ink-muted)]">
-                  ยังดึงอัตราแลกเปลี่ยนไม่ได้ในตอนนี้ ลองรีเฟรชอีกครั้ง
-                </div>
-              )}
             </div>
           </PaperCard>
         </section>
@@ -1005,18 +744,6 @@ function SectionIntro({
   );
 }
 
-function SignalRow({ label, value, note }: { label: string; value: string; note: string }) {
-  return (
-    <div className="nb-flat flex items-start justify-between gap-4 px-4 py-3">
-      <div>
-        <p className="text-sm font-semibold text-[var(--foreground)]">{label}</p>
-        <p className="mt-1 text-xs leading-6 text-[var(--ink-muted)]">{note}</p>
-      </div>
-      <p className="text-right text-lg font-semibold text-[var(--nb-ink)]">{value}</p>
-    </div>
-  );
-}
-
 // อากาศเหลือบเดียวใน hero — chip ขอบหมึกหนา ตราประทับ (แทน MetricCard พื้นโปร่งของ hero เดิม)
 function MetricChip({
   icon: Icon,
@@ -1041,206 +768,8 @@ function MetricChip({
   );
 }
 
-const IDEA_COLLAPSED_COUNT = 3;
-
-function IdeaColumn({
-  title,
-  eyebrow,
-  icon: Icon,
-  items,
-  cityName,
-}: {
-  title: string;
-  eyebrow: string;
-  icon: typeof Compass;
-  items: RecommendationWithImage[];
-  cityName: string;
-}) {
-  const [showAll, setShowAll] = useState(false);
-  const visibleItems = showAll ? items : items.slice(0, IDEA_COLLAPSED_COUNT);
-  const hiddenCount = items.length - IDEA_COLLAPSED_COUNT;
-
-  return (
-    <section className="nb-card overflow-hidden">
-      <div className="border-b-[2.5px] border-[var(--nb-ink)] bg-[var(--nb-gold)]/25 px-5 py-5 md:px-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-warm)]">{eyebrow}</p>
-            <h2 className="mt-2 font-serif text-3xl text-[var(--foreground)]">{title}</h2>
-          </div>
-          <div className="nb-flat shrink-0 p-3 text-[var(--nb-ink)]">
-            <Icon className="h-5 w-5" aria-hidden />
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-3 p-5 md:p-6">
-        {visibleItems.map((item) => (
-          <a
-            key={`${item.kind}-${item.title}`}
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.title} ${item.area} ${cityName} Japan`)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="nb-card-sm group block overflow-hidden transition hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_var(--nb-ink)]"
-          >
-            {item.image ? (
-              <div className="relative h-36 overflow-hidden bg-[linear-gradient(180deg,#e7ded1,#d7dde3)]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-                />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(31,36,48,0.28))]" />
-              </div>
-            ) : null}
-            <div className="p-4">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h3 className="text-lg font-medium text-[var(--foreground)]">{item.title}</h3>
-                  <div className="mt-2 flex items-center gap-2 text-xs text-[var(--ink-muted)]">
-                    <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <span>{item.area}</span>
-                  </div>
-                </div>
-                <span className="max-w-full shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-1 text-[11px] font-medium text-[var(--ink-muted)]">
-                  {item.signal}
-                </span>
-              </div>
-              <p className="mt-3 text-sm leading-7 text-[var(--ink-muted)]">{item.note}</p>
-            </div>
-          </a>
-        ))}
-
-        {hiddenCount > 0 ? (
-          <button
-            type="button"
-            onClick={() => setShowAll((prev) => !prev)}
-            className="nb-flat w-full px-4 py-3 text-sm font-semibold text-[var(--nb-ink)] transition hover:bg-[var(--nb-gold)]/20"
-          >
-            {showAll ? "ย่อรายการลง" : `ดูเพิ่มอีก ${hiddenCount} รายการ`}
-          </button>
-        ) : null}
-      </div>
-    </section>
-  );
-}
-
-function DriveSection({ drive, cityName }: { drive: CityDrive; cityName: string }) {
-  const [copiedSpot, setCopiedSpot] = useState<string | null>(null);
-
-  async function copyMapcode(spotName: string, mapcode: string) {
-    try {
-      await navigator.clipboard.writeText(mapcode);
-      setCopiedSpot(spotName);
-      setTimeout(() => setCopiedSpot((prev) => (prev === spotName ? null : prev)), 2000);
-    } catch {
-      // clipboard ใช้ไม่ได้ (เช่น เปิดผ่าน http) — ผู้ใช้ยังอ่านรหัสจากหน้าจอได้
-    }
-  }
-
-  return (
-    <section id="drive" className="nb-card p-5 md:p-7">
-      <div className="flex items-start justify-between gap-4">
-        <SectionIntro
-          eyebrow="Drive & mapcode"
-          title={`ขับรถเที่ยวจาก ${cityName}`}
-          description={`${drive.intro} — กด copy แล้วเอา mapcode ไปกดใส่ car navi ของรถเช่าได้เลย`}
-        />
-        <div className="nb-flat hidden shrink-0 p-3 text-[var(--nb-ink)] md:block">
-          <Car className="h-5 w-5" aria-hidden />
-        </div>
-      </div>
-
-      <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {drive.spots.map((spot) => (
-          <div
-            key={spot.name}
-            className="flex flex-col rounded-[24px] border border-[var(--line)] bg-[rgba(255,253,249,0.9)] p-4"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="text-sm font-medium text-[var(--foreground)]">{spot.name}</h3>
-              <span className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--ink-muted)]">
-                {spot.area}
-              </span>
-            </div>
-            <p className="mt-2 flex-1 text-xs leading-5 text-[var(--ink-muted)]">{spot.note}</p>
-            {spot.mapcode ? (
-              <button
-                type="button"
-                onClick={() => copyMapcode(spot.name, spot.mapcode!)}
-                className="mt-3 inline-flex items-center justify-between gap-2 rounded-[16px] border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2 text-left transition hover:border-[var(--line-strong)]"
-              >
-                <span className="font-mono text-sm font-medium tracking-wide text-[var(--accent)]">{spot.mapcode}</span>
-                {copiedSpot === spot.name ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#2e7d32]">
-                    <Check className="h-3.5 w-3.5" aria-hidden /> คัดลอกแล้ว
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-[var(--ink-muted)]">
-                    <Copy className="h-3.5 w-3.5" aria-hidden /> copy
-                  </span>
-                )}
-              </button>
-            ) : spot.tel ? (
-              <p className="mt-3 rounded-[16px] border border-dashed border-[var(--line-strong)] px-3 py-2 text-xs text-[var(--ink-muted)]">
-                ค้นใน navi ด้วยเบอร์โทร: <span className="font-mono font-medium text-[var(--accent)]">{spot.tel}</span>
-              </p>
-            ) : (
-              <p className="mt-3 rounded-[16px] border border-dashed border-[var(--line-strong)] px-3 py-2 text-xs leading-5 text-[var(--ink-muted)]">
-                ยังไม่มี mapcode ที่ยืนยันได้ — ค้นจาก japanmapcode.com ก่อนเดินทาง
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
-
-      <p className="mt-4 px-1 text-xs leading-6 text-[var(--ink-muted)]">
-        mapcode ส่วนใหญ่ชี้ไปที่ลานจอดรถของสถานที่ ถ้า navi ถามตัวเลขหลัง * ให้กดใส่ด้วยเพื่อความแม่นยำ • ที่มา: {drive.source}
-      </p>
-    </section>
-  );
-}
-
 function formatValue(value: number | null, suffix: string) {
   return typeof value === "number" ? `${value}${suffix}` : "--";
-}
-
-const transitKindLabels: Record<TransitLineKind, string> = {
-  subway: "ใต้ดิน",
-  jr: "JR",
-  tram: "รถราง",
-  bus: "บัส",
-};
-
-const seasonKindColors: Record<SeasonKind, string> = {
-  bloom: "#d98ca6",
-  foliage: "#c0392b",
-  snow: "#5dade2",
-  event: "#b8860b",
-};
-
-// เรียงการ์ดฤดูกาล: กำลังพีคก่อน ตามด้วยใกล้ถึง (น้อยวันก่อน) แล้วค่อยช่วงอื่น
-function seasonRank(status: ReturnType<typeof windowStatus>) {
-  if (status.state === "active") return -1;
-  if (status.state === "upcoming") return status.daysUntil;
-  return 9999;
-}
-
-// ปลายทางสำหรับลิงก์ Google Maps — ใช้ป้ายที่ไกลจากสถานีต้นทางที่สุด
-// (สายวนอย่างรถรางมีป้ายแรกซ้ำกับป้ายสุดท้าย เลยใช้ stops[length-1] ตรง ๆ ไม่ได้)
-function farthestStop(line: CityTransit["lines"][number], station: CityTransit["station"]) {
-  let best = line.stops[line.stops.length - 1];
-  let bestDistance = -1;
-  for (const stop of line.stops) {
-    const distance = (stop.lat - station.lat) ** 2 + (stop.lon - station.lon) ** 2;
-    if (distance > bestDistance) {
-      bestDistance = distance;
-      best = stop;
-    }
-  }
-  return best;
 }
 
 function formatPublishedAt(value: string) {
