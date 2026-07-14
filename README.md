@@ -43,7 +43,8 @@ npm run build    # ตรวจ type + build production
 OPENWEATHER_API_KEY=      # อากาศสำรอง (มี free tier)
 OPENAQ_API_KEY=           # คุณภาพอากาศ
 WINDY_WEBCAMS_API_KEY=    # กล้อง Windy รายเมือง
-AI_API_KEY=               # OpenAI (gpt-4o-mini) — ตัวเลือกแรกของแชท
+ANTHROPIC_API_KEY=        # Claude Haiku 4.5 — ตัวเลือกแรกของแชท (กร๊วก voice ดีสุด)
+AI_API_KEY=               # OpenAI (gpt-4o-mini) — fallback แชท
 GEMINI_API_KEY=           # Gemini 2.5 Flash-Lite — fallback แชท + AI summary
 ```
 

@@ -63,7 +63,7 @@ export async function getAdvisorReply(citySlug: string, prompt: string): Promise
   const context = await gatherContext(citySlug);
   const intent = parseIntent(prompt);
 
-  const hasAiKey = Boolean(process.env.AI_API_KEY || process.env.GEMINI_API_KEY);
+  const hasAiKey = Boolean(process.env.ANTHROPIC_API_KEY || process.env.AI_API_KEY || process.env.GEMINI_API_KEY);
   if (hasAiKey) {
     const aiReply = await composeAiReply(context, intent, prompt);
     if (aiReply) return { reply: aiReply, source: "AI advisor" };
@@ -85,7 +85,7 @@ export async function getCityVerdict(citySlug: string): Promise<string> {
   const intent: AdvisorIntent = { period: "now", wantsFlights: false };
   const opener = `ช่วงนี้เที่ยว ${context.cityName} ดีไหม กร๊วกช่วยดูให้`;
 
-  const hasAiKey = Boolean(process.env.AI_API_KEY || process.env.GEMINI_API_KEY);
+  const hasAiKey = Boolean(process.env.ANTHROPIC_API_KEY || process.env.AI_API_KEY || process.env.GEMINI_API_KEY);
   if (hasAiKey) {
     const aiReply = await composeAiReply(context, intent, opener);
     if (aiReply) return aiReply;
@@ -201,6 +201,12 @@ async function composeAiReply(context: AdvisorContext | null, intent: AdvisorInt
     },
   });
 
+  // ลำดับ provider: Claude (กร๊วก Thai voice ดีสุด) → OpenAI → Gemini → rule fallback.
+  // แต่ละตัวมี key ของตัวเอง ไม่มี key = ข้าม, ตอบเสีย (null) = ไล่ตัวถัดไป
+  if (process.env.ANTHROPIC_API_KEY) {
+    const reply = await requestClaudeReply(userContent);
+    if (reply) return reply;
+  }
   if (process.env.AI_API_KEY) {
     const reply = await requestOpenAiReply(userContent);
     if (reply) return reply;
@@ -210,6 +216,32 @@ async function composeAiReply(context: AdvisorContext | null, intent: AdvisorInt
     if (reply) return reply;
   }
   return null;
+}
+
+async function requestClaudeReply(userContent: string): Promise<string | null> {
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": process.env.ANTHROPIC_API_KEY as string,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: MAX_OUTPUT_TOKENS,
+        temperature: 0.3,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: userContent }],
+      }),
+    });
+    if (!response.ok) return null;
+    const data = (await response.json()) as { content?: { type?: string; text?: string }[] };
+    const text = data.content?.find((block) => block.type === "text")?.text;
+    return text?.trim() ?? null;
+  } catch {
+    return null;
+  }
 }
 
 async function requestOpenAiReply(userContent: string): Promise<string | null> {
