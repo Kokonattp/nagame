@@ -26,6 +26,8 @@ export type WashiMapProps = {
   pois: MapPoi[];
   /** ตำแหน่งกร๊วกบนแผนที่ + อารมณ์ตามอากาศ */
   kruak?: { lat: number; lon: number; mood: KruakArtKey; say?: string };
+  /** ย่านที่แชทส่งมาให้โฟกัส (?area=) → แผนที่ flyTo + ปักหมุดไฮไลต์ ไม่ remount */
+  focus?: { lat: number; lon: number; label: string } | null;
 };
 
 // สไตล์หมุด washi-tag (สร้างเป็น HTML string ให้ Leaflet divIcon)
@@ -54,9 +56,10 @@ function kruakHtml(mood: KruakArtKey, say?: string): string {
   </div>`;
 }
 
-export function WashiMap({ center, zoom = 14, pois, kruak }: WashiMapProps) {
+export function WashiMap({ center, zoom = 14, pois, kruak, focus }: WashiMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
+  const focusMarkerRef = useRef<import("leaflet").Marker | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,6 +110,35 @@ export function WashiMap({ center, zoom = 14, pois, kruak }: WashiMapProps) {
     // สร้างครั้งเดียวต่อ mount — center/pois เปลี่ยนจะ remount ทั้ง component (ก้าว B พอ)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // แชทส่งย่านมา (?area=) → flyTo + ปักหมุดไฮไลต์ (ไม่ remount ทั้งแผนที่ = ลื่น)
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const L = (await import("leaflet")).default;
+      const map = mapRef.current;
+      if (cancelled || !map) return;
+
+      // ล้างหมุดโฟกัสเดิมก่อนเสมอ
+      if (focusMarkerRef.current) {
+        focusMarkerRef.current.remove();
+        focusMarkerRef.current = null;
+      }
+      if (!focus) return;
+
+      map.flyTo([focus.lat, focus.lon], Math.max(map.getZoom(), 15), { duration: 0.8 });
+      const icon = L.divIcon({
+        html: poiHtml({ id: "focus", kind: "stay", lat: focus.lat, lon: focus.lon, label: `📍 ${focus.label}`, selected: true }),
+        className: "",
+        iconSize: undefined as unknown as [number, number],
+        iconAnchor: [0, 0],
+      });
+      focusMarkerRef.current = L.marker([focus.lat, focus.lon], { icon, zIndexOffset: 900 }).addTo(map);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [focus]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }

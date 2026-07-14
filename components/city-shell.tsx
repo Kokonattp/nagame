@@ -12,6 +12,7 @@ import { Suspense, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { AppShell } from "@/components/app-shell";
+import { getAreaCoord } from "@/lib/cities/area-coords";
 
 export type CityLite = {
   slug: string;
@@ -53,6 +54,11 @@ function CityShellInner({ city, children }: { city: CityLite; children: ReactNod
   // shell = ค่าเริ่มต้น. ทางถอย ?shell=0 → คืน dashboard เดิมล้วน (kill switch)
   if (params.get("shell") === "0") return <>{children}</>;
 
+  // ?area= = ย่านที่แชทส่งมาให้แผนที่โฟกัส (แชท = router). ไม่พบ → ไม่โฟกัส (null)
+  const area = params.get("area") ?? undefined;
+  const [flat, flon] = getAreaCoord(area, [city.lat, city.lon]);
+  const focus = area ? { lat: flat, lon: flon, label: area } : null;
+
   return (
     <AppShell
       layout="tabs"
@@ -68,6 +74,7 @@ function CityShellInner({ city, children }: { city: CityLite; children: ReactNod
           zoom={14}
           kruak={{ lat: city.lat, lon: city.lon, mood: "sunny", say: "แถวนี้เดินเที่ยวได้เลยครับ 🐾" }}
           pois={[]}
+          focus={focus}
         />
       }
       book={<ManholeBook citySlug={city.slug} cityName={city.name} />}

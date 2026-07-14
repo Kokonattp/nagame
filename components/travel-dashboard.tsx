@@ -774,11 +774,21 @@ function KruakPicksCard({
         {picks.map((pick) => (
           <div key={pick.label} className="flex items-start gap-3 rounded-[14px] border-2 border-[var(--nb-ink)] bg-[var(--surface-soft)] px-3.5 py-3">
             <span className="text-xl leading-none" aria-hidden>{pick.emoji}</span>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-warm)]">{pick.label}</p>
               <p className="truncate text-sm font-semibold text-[var(--foreground)]">{pick.item!.title}</p>
               {pick.item!.note ? <p className="truncate text-xs leading-5 text-[var(--ink-muted)]">{pick.item!.note}</p> : null}
             </div>
+            {pick.item!.area ? (
+              <Link
+                href={`/city/${citySlug}?tab=map&area=${encodeURIComponent(pick.item!.area)}`}
+                scroll={false}
+                className="nb-pill shrink-0 self-center px-2.5 py-1.5 text-[11px]"
+                title={`ดู ${pick.item!.area} บนแผนที่`}
+              >
+                📍 แผนที่
+              </Link>
+            ) : null}
           </div>
         ))}
       </div>
