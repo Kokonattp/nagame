@@ -118,9 +118,11 @@ function buildVerdictReply(context: AdvisorContext): string {
       ? `ถ้าให้เริ่ม แนะนำ ${firstPick} ก่อน — แผนเต็มวันอยู่ข้างล่าง ถามต่อได้เลยครับ 👇`
       : "อยากได้แผนแบบไหนบอกอาแป๊ะได้เลยครับ 👇";
 
+  // คั่นแต่ละก้อนความคิดด้วย \n\n เพื่อให้ฝั่ง client แตกเป็นหลาย speech bubble ได้
+  // (แต่ละบรรทัดใน lead ก็เป็น bubble แยก — ประกาศเตือน/วันหยุดควรเด่นทีละใบ)
   return [`สวัสดีครับ 👋`, ...lead, [weatherLine, seasonLine].filter(Boolean).join(" "), closer]
     .filter(Boolean)
-    .join("\n");
+    .join("\n\n");
 }
 
 async function gatherContext(citySlug: string): Promise<AdvisorContext | null> {

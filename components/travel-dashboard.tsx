@@ -293,24 +293,38 @@ export function TravelDashboard({
               <div className="mt-4 space-y-3">
                 <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
                   {chatMessages.map((message, index) => (
-                    <div key={`${message.role}-${index}`}>
-                      <div
-                        className={
-                          message.role === "assistant"
-                            ? index === 0
-                              ? "rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-vermilion-soft)] p-4 shadow-[3px_3px_0_0_var(--nb-ink)]"
-                              : "mr-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--surface-soft)] p-4"
-                            : "ml-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-indigo-soft)] p-4"
-                        }
-                      >
-                        {index !== 0 ? (
+                    <div key={`${message.role}-${index}`} className={index === 0 ? "space-y-2" : undefined}>
+                      {/* ข้อความแรก (คำทักทายอาแป๊ะ) แตกเป็นหลาย speech bubble ตาม \n\n —
+                          ให้ความรู้สึก "อาแป๊ะพิมพ์มาทีละใบ" ไม่ใช่กำแพงข้อความก้อนเดียว.
+                          ไม่แตะ chatMessages state (แตกตอน render เท่านั้น) = chat backend ไม่กระทบ */}
+                      {index === 0 ? (
+                        message.content
+                          .split(/\n{2,}/)
+                          .map((segment) => segment.trim())
+                          .filter(Boolean)
+                          .map((segment, segIndex) => (
+                            <div
+                              key={segIndex}
+                              className="rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-vermilion-soft)] p-4 shadow-[3px_3px_0_0_var(--nb-ink)]"
+                            >
+                              <p className="whitespace-pre-line text-sm leading-7 text-[var(--foreground)]">{segment}</p>
+                            </div>
+                          ))
+                      ) : (
+                        <div
+                          className={
+                            message.role === "assistant"
+                              ? "mr-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--surface-soft)] p-4"
+                              : "ml-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-indigo-soft)] p-4"
+                          }
+                        >
                           <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
                             {message.role === "assistant" ? <Bot className="h-3.5 w-3.5" aria-hidden /> : <Compass className="h-3.5 w-3.5" aria-hidden />}
                             {message.role === "assistant" ? "อาแป๊ะ" : "คุณ"}
                           </div>
-                        ) : null}
-                        <p className="whitespace-pre-line text-sm leading-7 text-[var(--foreground)]">{message.content}</p>
-                      </div>
+                          <p className="whitespace-pre-line text-sm leading-7 text-[var(--foreground)]">{message.content}</p>
+                        </div>
+                      )}
 
                       {/* delight: อาแป๊ะชะโงกดู webcam ให้ — bubble หลักฐานสด ต่อจากคำทักทาย
                           (เฉพาะข้อความแรก + มี webcam) แปลง data feed เป็นพฤติกรรมตัวละคร */}
