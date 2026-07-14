@@ -13,6 +13,7 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { AppShell } from "@/components/app-shell";
 import { getAreaCoord } from "@/lib/cities/area-coords";
+import type { MapPoi } from "@/components/map/washi-map";
 
 export type CityLite = {
   slug: string;
@@ -49,7 +50,7 @@ function TripStub({ cityName }: { cityName: string }) {
   );
 }
 
-function CityShellInner({ city, children }: { city: CityLite; children: ReactNode }) {
+function CityShellInner({ city, pois, children }: { city: CityLite; pois: MapPoi[]; children: ReactNode }) {
   const params = useSearchParams();
   // shell = ค่าเริ่มต้น. ทางถอย ?shell=0 → คืน dashboard เดิมล้วน (kill switch)
   if (params.get("shell") === "0") return <>{children}</>;
@@ -73,7 +74,7 @@ function CityShellInner({ city, children }: { city: CityLite; children: ReactNod
           center={[city.lat, city.lon]}
           zoom={14}
           kruak={{ lat: city.lat, lon: city.lon, mood: "sunny", say: "แถวนี้เดินเที่ยวได้เลยครับ 🐾" }}
-          pois={[]}
+          pois={pois}
           focus={focus}
         />
       }
@@ -83,10 +84,12 @@ function CityShellInner({ city, children }: { city: CityLite; children: ReactNod
   );
 }
 
-export function CityShell({ city, children }: { city: CityLite; children: ReactNode }) {
+export function CityShell({ city, pois = [], children }: { city: CityLite; pois?: MapPoi[]; children: ReactNode }) {
   return (
     <Suspense fallback={<>{children}</>}>
-      <CityShellInner city={city}>{children}</CityShellInner>
+      <CityShellInner city={city} pois={pois}>
+        {children}
+      </CityShellInner>
     </Suspense>
   );
 }

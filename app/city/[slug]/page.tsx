@@ -4,6 +4,7 @@ import { TravelDashboard } from "@/components/travel-dashboard";
 import { CityShell } from "@/components/city-shell";
 import { japanMajorCities } from "@/lib/cities/japan-major-cities";
 import { getCityConfigBySlug } from "@/lib/cities/city-configs";
+import { recommendationsToPois } from "@/lib/cities/recommendations-to-pois";
 import { getCityMeta, getRecommendationSets } from "@/lib/cities/travel-meta";
 import type { Recommendation } from "@/lib/cities/city-configs";
 import { getCityVerdict } from "@/lib/services/advisor";
@@ -82,6 +83,8 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
   };
   const recommendationsBase = getRecommendationSets(city.name, city.prefecture, config?.recommendations ?? []);
   const recommendations = await attachPlaceImages(recommendationsBase, city.name);
+  // หมุดบนแผนที่ washi = ที่กร๊วกแนะ ปักระดับย่าน (ก้าว G) — กันแผนที่ว่างเปล่า
+  const mapPois = recommendationsToPois(recommendations, [city.lat, city.lon]);
 
   return (
     <CityShell
@@ -92,6 +95,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
         lat: city.lat,
         lon: city.lon,
       }}
+      pois={mapPois}
     >
       <TravelDashboard
         key={city.slug}
