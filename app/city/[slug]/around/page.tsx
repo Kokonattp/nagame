@@ -91,7 +91,7 @@ export default async function CityAroundPage({ params }: { params: Promise<{ slu
             <nav className="flex flex-wrap gap-2 text-sm text-[var(--ink-muted)]">
               <Link href={`/city/${city.slug}`} className="nb-pill nb-pill-indigo inline-flex items-center gap-1.5 px-4 py-2">
                 <Home className="h-3.5 w-3.5" aria-hidden />
-                กลับหาอาแป๊ะ
+                กลับหากร๊วก
               </Link>
               {transit ? <a href="#transit" className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">เดินทาง</a> : null}
               {drive ? <a href="#drive" className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">ขับรถ</a> : null}

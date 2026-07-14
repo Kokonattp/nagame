@@ -9,7 +9,7 @@ import { resolveCity } from "@/lib/services/geocode";
 import { getWarnings } from "@/lib/services/warnings";
 import { getWeather } from "@/lib/services/weather";
 
-// อาแป๊ะตอบเป็น 1 LLM call: parseIntent (โค้ด) → รวม signal ฝั่ง server → compose.
+// กร๊วกตอบเป็น 1 LLM call: parseIntent (โค้ด) → รวม signal ฝั่ง server → compose.
 // intent parser เป็น pure function คืน contract เดิม {period, wantsFlights} —
 // ถ้าวันหน้าย้ายแชทออกจากหน้าเมือง (city ไม่รู้ล่วงหน้า) ค่อยสลับไส้เป็น LLM call
 // โดยไม่ต้องแตะ compose หรือ endpoint.
@@ -72,7 +72,7 @@ export async function getAdvisorReply(citySlug: string, prompt: string): Promise
   return { reply: buildFallbackReply(context, intent, prompt), source: "Rule-based advisor" };
 }
 
-// คำทักทายเปิดหน้าของอาแป๊ะ — คำนวณฝั่ง server ครั้งเดียว ส่งเป็น prop ให้ hero
+// คำทักทายเปิดหน้าของกร๊วก — คำนวณฝั่ง server ครั้งเดียว ส่งเป็น prop ให้ hero
 // (seed เป็นข้อความแรกของแชท → คนเข้ามายังไม่พิมพ์ก็เห็น "คำตอบ" ทันที).
 // zero-LLM ในโหมด local; ถ้ามี AI key ค่อยยิง compose หนึ่งครั้งตอน build/revalidate.
 // PERF: gatherContext ยิง weather/aqi/events/warnings ซ้ำกับ page.tsx แต่ทุกตัว
@@ -83,7 +83,7 @@ export async function getCityVerdict(citySlug: string): Promise<string> {
   if (!context) return `สวัสดีครับ ยังไม่รู้จักเมืองนี้ ลองเลือกเมืองจากหน้าแรกอีกครั้งนะครับ`;
 
   const intent: AdvisorIntent = { period: "now", wantsFlights: false };
-  const opener = `ช่วงนี้เที่ยว ${context.cityName} ดีไหม อาแป๊ะช่วยดูให้`;
+  const opener = `ช่วงนี้เที่ยว ${context.cityName} ดีไหม กร๊วกช่วยดูให้`;
 
   const hasAiKey = Boolean(process.env.AI_API_KEY || process.env.GEMINI_API_KEY);
   if (hasAiKey) {
@@ -116,7 +116,7 @@ function buildVerdictReply(context: AdvisorContext): string {
     ? "ฝนมีสิทธิ์มา เริ่มจากจุดในร่มหรือที่เปลี่ยนแผนง่ายก่อนดีกว่าครับ — แผนเต็มวันดูข้างล่างได้เลย 👇"
     : firstPick
       ? `ถ้าให้เริ่ม แนะนำ ${firstPick} ก่อน — แผนเต็มวันอยู่ข้างล่าง ถามต่อได้เลยครับ 👇`
-      : "อยากได้แผนแบบไหนบอกอาแป๊ะได้เลยครับ 👇";
+      : "อยากได้แผนแบบไหนบอกกร๊วกได้เลยครับ 👇";
 
   // คั่นแต่ละก้อนความคิดด้วย \n\n เพื่อให้ฝั่ง client แตกเป็นหลาย speech bubble ได้
   // (แต่ละบรรทัดใน lead ก็เป็น bubble แยก — ประกาศเตือน/วันหยุดควรเด่นทีละใบ)
@@ -167,7 +167,7 @@ async function gatherContext(citySlug: string): Promise<AdvisorContext | null> {
 
 const MAX_OUTPUT_TOKENS = 220;
 const SYSTEM_PROMPT =
-  "You are อาแป๊ะ, a warm but concise Thai travel advisor for Japan. Use only the provided context. Never invent current facts, timings, prices, or operating hours. Give ONE clear recommendation the traveller can act on, in Thai within 120 words. If a weather warning is active, lead with it.";
+  "You are กร๊วก, a warm but concise Thai travel advisor for Japan. Use only the provided context. Never invent current facts, timings, prices, or operating hours. Give ONE clear recommendation the traveller can act on, in Thai within 120 words. If a weather warning is active, lead with it.";
 
 async function composeAiReply(context: AdvisorContext | null, intent: AdvisorIntent, prompt: string): Promise<string | null> {
   if (!context) return null;

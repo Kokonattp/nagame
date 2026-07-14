@@ -102,7 +102,7 @@ export function TravelDashboard({
   seeds,
 }: DashboardProps) {
   const [chatInput, setChatInput] = useState("");
-  // seed คำทักทายอาแป๊ะที่คำนวณฝั่ง server เป็นข้อความแรก — initializer อ่าน prop
+  // seed คำทักทายกร๊วกที่คำนวณฝั่ง server เป็นข้อความแรก — initializer อ่าน prop
   // ครั้งเดียว ค่าคงที่ระหว่าง server render กับ hydration (ไม่ recompute ฝั่ง client)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => [
     { role: "assistant", content: verdict },
@@ -226,7 +226,7 @@ export function TravelDashboard({
                 <Home className="h-3.5 w-3.5" aria-hidden />
                 ทุกเมือง
               </Link>
-              <a href="#assistant" className="nb-pill nb-pill-gold px-4 py-2">ถามอาแป๊ะ</a>
+              <a href="#assistant" className="nb-pill nb-pill-gold px-4 py-2">ถามกร๊วก</a>
               <a href="#day-plan" className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">แผนวันนี้</a>
               <Link href={`/city/${city.slug}/around`} className="nb-pill px-4 py-2 transition hover:bg-[var(--nb-gold)]/20">รอบเมือง & เดินทาง</Link>
             </nav>
@@ -259,9 +259,9 @@ export function TravelDashboard({
           </div>
         ) : null}
 
-        {/* ─── Tier 1 — พระเอก: คำตอบอาแป๊ะ + แชท + อากาศเหลือบเดียว ─── */}
+        {/* ─── Tier 1 — พระเอก: คำตอบกร๊วก + แชท + อากาศเหลือบเดียว ─── */}
         <section id="overview" className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-          {/* ซ้าย: คำทักทายอาแป๊ะ (verdict) + กล่องแชท */}
+          {/* ซ้าย: คำทักทายกร๊วก (verdict) + กล่องแชท */}
           <section id="assistant" className="nb-card min-w-0 overflow-hidden">
             {/* แถบภาพเมืองบาง ๆ เป็นหัว ไม่ใช่ hero เต็มจอ */}
             <div className="relative h-36 overflow-hidden border-b-[2.5px] border-[var(--nb-ink)] md:h-44">
@@ -286,16 +286,16 @@ export function TravelDashboard({
             <div className="p-5 md:p-6">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[var(--nb-ink)] bg-[var(--nb-vermilion)] text-sm font-bold text-white">阿</span>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--accent-warm)]">อาแป๊ะว่าไง</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--accent-warm)]">กร๊วกว่าไง</p>
               </div>
 
-              {/* คำทักทายอาแป๊ะ — speech bubble ตราประทับ (ข้อความแรกของแชท) + แชทต่อ */}
+              {/* คำทักทายกร๊วก — speech bubble ตราประทับ (ข้อความแรกของแชท) + แชทต่อ */}
               <div className="mt-4 space-y-3">
                 <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
                   {chatMessages.map((message, index) => (
                     <div key={`${message.role}-${index}`} className={index === 0 ? "space-y-2" : undefined}>
-                      {/* ข้อความแรก (คำทักทายอาแป๊ะ) แตกเป็นหลาย speech bubble ตาม \n\n —
-                          ให้ความรู้สึก "อาแป๊ะพิมพ์มาทีละใบ" ไม่ใช่กำแพงข้อความก้อนเดียว.
+                      {/* ข้อความแรก (คำทักทายกร๊วก) แตกเป็นหลาย speech bubble ตาม \n\n —
+                          ให้ความรู้สึก "กร๊วกพิมพ์มาทีละใบ" ไม่ใช่กำแพงข้อความก้อนเดียว.
                           ไม่แตะ chatMessages state (แตกตอน render เท่านั้น) = chat backend ไม่กระทบ */}
                       {index === 0 ? (
                         message.content
@@ -320,13 +320,13 @@ export function TravelDashboard({
                         >
                           <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
                             {message.role === "assistant" ? <Bot className="h-3.5 w-3.5" aria-hidden /> : <Compass className="h-3.5 w-3.5" aria-hidden />}
-                            {message.role === "assistant" ? "อาแป๊ะ" : "คุณ"}
+                            {message.role === "assistant" ? "กร๊วก" : "คุณ"}
                           </div>
                           <p className="whitespace-pre-line text-sm leading-7 text-[var(--foreground)]">{message.content}</p>
                         </div>
                       )}
 
-                      {/* delight: อาแป๊ะชะโงกดู webcam ให้ — bubble หลักฐานสด ต่อจากคำทักทาย
+                      {/* delight: กร๊วกชะโงกดู webcam ให้ — bubble หลักฐานสด ต่อจากคำทักทาย
                           (เฉพาะข้อความแรก + มี webcam) แปลง data feed เป็นพฤติกรรมตัวละคร */}
                       {index === 0 && webcam.available && activeWebcam?.previewImage ? (
                         <button
@@ -341,7 +341,7 @@ export function TravelDashboard({
                             <span className="absolute left-3 top-3 nb-pill nb-pill-alert">● สดตอนนี้</span>
                           </div>
                           <p className="px-4 py-3 text-sm leading-6 text-[var(--foreground)]">
-                            แป๊ะเพิ่งชะโงกดูให้ — นี่สภาพ {city.name} ตอนนี้เลย กดดูเต็ม ๆ ได้
+                            กร๊วกเพิ่งชะโงกดูให้ — นี่สภาพ {city.name} ตอนนี้เลย กดดูเต็ม ๆ ได้
                           </p>
                         </button>
                       ) : null}
@@ -372,7 +372,7 @@ export function TravelDashboard({
                   <textarea
                     value={chatInput}
                     onChange={(event) => setChatInput(event.target.value)}
-                    placeholder="ถามอาแป๊ะ เช่น ถ้าฝน 70% ควรสลับไปย่านไหนก่อน"
+                    placeholder="ถามกร๊วก เช่น ถ้าฝน 70% ควรสลับไปย่านไหนก่อน"
                     maxLength={300}
                     rows={2}
                     className="nb-flat w-full px-4 py-3 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--ink-muted)] focus:shadow-[3px_3px_0_0_var(--nb-ink)]"
@@ -380,7 +380,7 @@ export function TravelDashboard({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     {chatError ? <p className="text-sm font-medium text-[var(--nb-vermilion)]">{chatError}</p> : <span className="text-xs text-[var(--ink-muted)]">ตอบจากข้อมูลล่าสุดของหน้านี้</span>}
                     <button type="submit" disabled={isPending} className="nb-btn px-5 py-2.5 text-sm">
-                      {isPending ? "กำลังคิด..." : "ถามอาแป๊ะ"}
+                      {isPending ? "กำลังคิด..." : "ถามกร๊วก"}
                     </button>
                   </div>
                 </form>
@@ -410,7 +410,7 @@ export function TravelDashboard({
             <SectionIntro
               eyebrow="Today's plan"
               title="แผนวันนี้แบบจัดให้"
-              description="จัดจากฝนรายช่วงเวลา ประกาศเตือน และจุดคัดมือของเมือง — อยากปรับแผน ถามอาแป๊ะด้านบนได้เลย"
+              description="จัดจากฝนรายช่วงเวลา ประกาศเตือน และจุดคัดมือของเมือง — อยากปรับแผน ถามกร๊วกด้านบนได้เลย"
             />
             <div className="nb-flat hidden shrink-0 p-3 text-[var(--nb-ink)] md:block">
               <SearchCheck className="h-5 w-5" aria-hidden />
