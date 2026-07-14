@@ -293,23 +293,44 @@ export function TravelDashboard({
               <div className="mt-4 space-y-3">
                 <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
                   {chatMessages.map((message, index) => (
-                    <div
-                      key={`${message.role}-${index}`}
-                      className={
-                        message.role === "assistant"
-                          ? index === 0
-                            ? "rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-vermilion-soft)] p-4 shadow-[3px_3px_0_0_var(--nb-ink)]"
-                            : "mr-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--surface-soft)] p-4"
-                          : "ml-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-indigo-soft)] p-4"
-                      }
-                    >
-                      {index !== 0 ? (
-                        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
-                          {message.role === "assistant" ? <Bot className="h-3.5 w-3.5" aria-hidden /> : <Compass className="h-3.5 w-3.5" aria-hidden />}
-                          {message.role === "assistant" ? "อาแป๊ะ" : "คุณ"}
-                        </div>
+                    <div key={`${message.role}-${index}`}>
+                      <div
+                        className={
+                          message.role === "assistant"
+                            ? index === 0
+                              ? "rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-vermilion-soft)] p-4 shadow-[3px_3px_0_0_var(--nb-ink)]"
+                              : "mr-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--surface-soft)] p-4"
+                            : "ml-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-indigo-soft)] p-4"
+                        }
+                      >
+                        {index !== 0 ? (
+                          <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+                            {message.role === "assistant" ? <Bot className="h-3.5 w-3.5" aria-hidden /> : <Compass className="h-3.5 w-3.5" aria-hidden />}
+                            {message.role === "assistant" ? "อาแป๊ะ" : "คุณ"}
+                          </div>
+                        ) : null}
+                        <p className="whitespace-pre-line text-sm leading-7 text-[var(--foreground)]">{message.content}</p>
+                      </div>
+
+                      {/* delight: อาแป๊ะชะโงกดู webcam ให้ — bubble หลักฐานสด ต่อจากคำทักทาย
+                          (เฉพาะข้อความแรก + มี webcam) แปลง data feed เป็นพฤติกรรมตัวละคร */}
+                      {index === 0 && webcam.available && activeWebcam?.previewImage ? (
+                        <button
+                          type="button"
+                          onClick={() => setWebcamOpen(true)}
+                          className="mt-3 block w-full overflow-hidden rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--surface)] text-left shadow-[3px_3px_0_0_var(--nb-ink)] transition hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_var(--nb-ink)]"
+                        >
+                          <div className="relative aspect-[16/9] overflow-hidden">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={activeWebcam.previewImage} alt={activeWebcam.title ?? `${city.name} live`} className="h-full w-full object-cover" />
+                            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(31,36,48,0.55))]" />
+                            <span className="absolute left-3 top-3 nb-pill nb-pill-alert">● สดตอนนี้</span>
+                          </div>
+                          <p className="px-4 py-3 text-sm leading-6 text-[var(--foreground)]">
+                            แป๊ะเพิ่งชะโงกดูให้ — นี่สภาพ {city.name} ตอนนี้เลย กดดูเต็ม ๆ ได้
+                          </p>
+                        </button>
                       ) : null}
-                      <p className="whitespace-pre-line text-sm leading-7 text-[var(--foreground)]">{message.content}</p>
                     </div>
                   ))}
                 </div>
