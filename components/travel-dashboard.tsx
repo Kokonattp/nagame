@@ -29,6 +29,7 @@ import {
   type CityStamps,
   type StampKey,
 } from "@/lib/game/journal";
+import { isInTrip, toggleTrip } from "@/lib/game/trip";
 import { CitySearch } from "@/components/city-search";
 import type { Recommendation } from "@/lib/cities/city-configs";
 import type { CityDrive } from "@/lib/cities/drive-spots";
@@ -572,7 +573,7 @@ export function TravelDashboard({
 
         {/* ─── Tier 3 — ของฝากจากกร๊วก (loot) + ประกาศจากศาลเจ้า (เตือนภัย) ─── */}
         <section className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <KruakPicksCard citySlug={city.slug} recommendations={recommendations} onClaim={() => claimStamp("recs")} />
+          <KruakPicksCard citySlug={city.slug} cityName={city.name} recommendations={recommendations} onClaim={() => claimStamp("recs")} />
 
           <PaperCard
             eyebrow="ประกาศจากศาลเจ้า · shrine notice"
@@ -747,21 +748,88 @@ export function TravelDashboard({
   );
 }
 
+// แถวหนึ่งในการ์ดของฝาก — สถานที่ + ปุ่ม 📍แผนที่ (deep-link map tab) + ＋ทริป (localStorage).
+// inTrip อ่านผ่าน useEffect เท่านั้น (localStorage = client-only → กัน SSR/hydration mismatch).
+function PickRow({
+  pick,
+  citySlug,
+  cityName,
+}: {
+  pick: { emoji: string; label: string; kind: string; item?: RecommendationWithImage };
+  citySlug: string;
+  cityName: string;
+}) {
+  const item = pick.item!;
+  const tripId = `${pick.kind}-${item.title}`;
+  const [inTrip, setInTrip] = useState<boolean | null>(null); // null = ยังไม่อ่าน (SSR)
+
+  useEffect(() => {
+    setInTrip(isInTrip(tripId));
+  }, [tripId]);
+
+  return (
+    <div className="flex items-start gap-3 rounded-[14px] border-2 border-[var(--nb-ink)] bg-[var(--surface-soft)] px-3.5 py-3">
+      <span className="text-xl leading-none" aria-hidden>{pick.emoji}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-warm)]">{pick.label}</p>
+        <p className="truncate text-sm font-semibold text-[var(--foreground)]">{item.title}</p>
+        {item.note ? <p className="truncate text-xs leading-5 text-[var(--ink-muted)]">{item.note}</p> : null}
+      </div>
+      <div className="flex shrink-0 flex-col gap-1.5 self-center">
+        {item.area ? (
+          <Link
+            href={`/city/${citySlug}?tab=map&area=${encodeURIComponent(item.area)}`}
+            scroll={false}
+            className="nb-pill px-2.5 py-1.5 text-[11px]"
+            title={`ดู ${item.area} บนแผนที่`}
+          >
+            📍 แผนที่
+          </Link>
+        ) : null}
+        <button
+          type="button"
+          onClick={() =>
+            setInTrip(
+              toggleTrip({
+                id: tripId,
+                citySlug,
+                cityName,
+                title: item.title,
+                area: item.area,
+                kind: pick.kind,
+                emoji: pick.emoji,
+              }).added,
+            )
+          }
+          aria-pressed={inTrip === true}
+          className={`rounded-[10px] border-2 border-[var(--nb-ink)] px-2.5 py-1.5 text-[11px] font-bold transition ${
+            inTrip ? "bg-[var(--nb-matcha-soft)] text-[var(--nb-ink)]" : "bg-[var(--surface)] text-[var(--foreground)] hover:-translate-y-px"
+          }`}
+        >
+          {inTrip ? "✓ ในทริป" : "＋ ทริป"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // การ์ด "ของฝากจากกร๊วก" (loot drop) — โชว์ 1 อันต่อหมวด (พัก/กิน/เที่ยว) เท่านั้น.
 // กฎกันหลุดเป็น dashboard: หน้าหลักโชว์ index 0 ของแต่ละหมวด อยากได้มากกว่านั้น = ไป /around.
 function KruakPicksCard({
   citySlug,
+  cityName,
   recommendations,
   onClaim,
 }: {
   citySlug: string;
+  cityName: string;
   recommendations: DashboardProps["recommendations"];
   onClaim: () => void;
 }) {
   const picks = [
-    { emoji: "🛏", label: "พัก", item: recommendations.sleep[0] },
-    { emoji: "🍜", label: "กิน", item: recommendations.eat[0] },
-    { emoji: "⛩", label: "เที่ยว", item: recommendations.see[0] },
+    { emoji: "🛏", label: "พัก", kind: "sleep", item: recommendations.sleep[0] },
+    { emoji: "🍜", label: "กิน", kind: "eat", item: recommendations.eat[0] },
+    { emoji: "⛩", label: "เที่ยว", kind: "see", item: recommendations.see[0] },
   ].filter((pick) => pick.item);
 
   return (
@@ -772,24 +840,7 @@ function KruakPicksCard({
 
       <div className="mt-4 space-y-2.5">
         {picks.map((pick) => (
-          <div key={pick.label} className="flex items-start gap-3 rounded-[14px] border-2 border-[var(--nb-ink)] bg-[var(--surface-soft)] px-3.5 py-3">
-            <span className="text-xl leading-none" aria-hidden>{pick.emoji}</span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-warm)]">{pick.label}</p>
-              <p className="truncate text-sm font-semibold text-[var(--foreground)]">{pick.item!.title}</p>
-              {pick.item!.note ? <p className="truncate text-xs leading-5 text-[var(--ink-muted)]">{pick.item!.note}</p> : null}
-            </div>
-            {pick.item!.area ? (
-              <Link
-                href={`/city/${citySlug}?tab=map&area=${encodeURIComponent(pick.item!.area)}`}
-                scroll={false}
-                className="nb-pill shrink-0 self-center px-2.5 py-1.5 text-[11px]"
-                title={`ดู ${pick.item!.area} บนแผนที่`}
-              >
-                📍 แผนที่
-              </Link>
-            ) : null}
-          </div>
+          <PickRow key={pick.label} pick={pick} citySlug={citySlug} cityName={cityName} />
         ))}
       </div>
 

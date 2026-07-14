@@ -34,21 +34,9 @@ const WashiMap = dynamic(() => import("@/components/map/washi-map").then((m) => 
 const ManholeBook = dynamic(() => import("@/components/book/manhole-book").then((m) => m.ManholeBook), {
   ssr: false,
 });
-
-function TripStub({ cityName }: { cityName: string }) {
-  return (
-    <div className="flex h-full min-h-[420px] flex-col items-center justify-center gap-3 p-8 text-center">
-      <div className="text-5xl" aria-hidden>
-        🧳
-      </div>
-      <h2 className="font-serif text-2xl">ทริป {cityName}</h2>
-      <p className="max-w-[40ch] text-sm leading-6 text-[var(--ink-muted)]">
-        สิ่งที่คุยกับกร๊วกจะมากองที่นี่ — ตั๋วบิน ที่พักที่จองแล้ว ย่านที่จะไป
-        และฝาท่อที่ยังเก็บได้ (ก้าวถัดไป)
-      </p>
-    </div>
-  );
-}
+const TripPanel = dynamic(() => import("@/components/trip/trip-panel").then((m) => m.TripPanel), {
+  ssr: false,
+});
 
 function CityShellInner({ city, pois, children }: { city: CityLite; pois: MapPoi[]; children: ReactNode }) {
   const params = useSearchParams();
@@ -79,7 +67,7 @@ function CityShellInner({ city, pois, children }: { city: CityLite; pois: MapPoi
         />
       }
       book={<ManholeBook citySlug={city.slug} cityName={city.name} />}
-      trip={<TripStub cityName={city.name} />}
+      trip={<TripPanel citySlug={city.slug} cityName={city.name} />}
     />
   );
 }
