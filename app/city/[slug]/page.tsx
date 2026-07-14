@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { TravelDashboard } from "@/components/travel-dashboard";
+import { CityShell } from "@/components/city-shell";
 import { japanMajorCities } from "@/lib/cities/japan-major-cities";
 import { getCityConfigBySlug } from "@/lib/cities/city-configs";
 import { getCityMeta, getRecommendationSets } from "@/lib/cities/travel-meta";
@@ -83,23 +84,33 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
   const recommendations = await attachPlaceImages(recommendationsBase, city.name);
 
   return (
-    <TravelDashboard
-      key={city.slug}
-      city={city}
-      cityMeta={cityMeta}
-      weather={weather}
-      aqi={aqi}
-      webcam={webcam}
-      events={events}
-      quakes={quakes}
-      fx={fx}
-      warnings={warnings}
-      verdict={verdict}
-      transit={getCityTransit(city.slug)}
-      drive={getCityDrive(city.slug)}
-      recommendations={recommendations}
-      seeds={japanMajorCities}
-    />
+    <CityShell
+      city={{
+        slug: city.slug,
+        name: city.name,
+        japaneseName: city.japaneseName,
+        lat: city.lat,
+        lon: city.lon,
+      }}
+    >
+      <TravelDashboard
+        key={city.slug}
+        city={city}
+        cityMeta={cityMeta}
+        weather={weather}
+        aqi={aqi}
+        webcam={webcam}
+        events={events}
+        quakes={quakes}
+        fx={fx}
+        warnings={warnings}
+        verdict={verdict}
+        transit={getCityTransit(city.slug)}
+        drive={getCityDrive(city.slug)}
+        recommendations={recommendations}
+        seeds={japanMajorCities}
+      />
+    </CityShell>
   );
 }
 

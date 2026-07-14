@@ -31,9 +31,17 @@ export type AppShellProps = {
   trip: ReactNode;
   /** ชื่อเมือง/หัวข้อที่โชว์บนแถบซ้าย (เช่น "โตเกียว 東京") */
   title?: ReactNode;
+  /**
+   * "rail" (ค่าเริ่มต้น) = desktop 2-pane แชทซ้ายค้าง — ใช้เมื่อมี chat UI จริงในแพนแคบได้
+   * "tabs" = desktop เหมือน mobile: พื้นผิวเดียว + แท็บบน, แชทเป็น document-flow เต็มจอ
+   *   (ใช้กับหน้าเมืองจริงตอนนี้ที่ chat คือ TravelDashboard เต็มจอ scroll — ตาม Fable:
+   *   ห้ามยัด dashboard 1380px เข้าแพน 384px, และห้ามครอบ overflow ไม่งั้น sticky/anchor/
+   *   stamp/webcam พัง เพราะ window ต้องเป็น scroll container)
+   */
+  layout?: "rail" | "tabs";
 };
 
-function AppShellInner({ chat, map, book, trip, title }: AppShellProps) {
+function AppShellInner({ chat, map, book, trip, title, layout = "rail" }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -58,6 +66,47 @@ function AppShellInner({ chat, map, book, trip, title }: AppShellProps) {
   // เวทีขวา (desktop) / เนื้อหาแท็บที่ไม่ใช่แชท (mobile)
   const stageTab: Exclude<ShellTab, "chat"> = tab === "chat" ? "map" : tab;
   const stageBody = stageTab === "map" ? map : stageTab === "book" ? book : trip;
+
+  // ── โหมด "tabs": พื้นผิวเดียว + แท็บบน (desktop เหมือน mobile). แชท = document flow
+  //    (window เป็น scroll container → sticky/anchor/stamp/webcam ของ dashboard ทำงานเหมือนเดิม)
+  if (layout === "tabs") {
+    const onChat = tab === "chat";
+    return (
+      <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+        {/* แท็บบาร์บน — sticky, top-level surface switcher */}
+        <div className="sticky top-0 z-50 flex items-center gap-2 overflow-x-auto border-b-[2.5px] border-[var(--nb-ink)] bg-[var(--surface)] px-3 py-2.5">
+          {MOBILE_TABS.map((t) => {
+            const Icon = t.icon;
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                aria-pressed={active}
+                className={`flex shrink-0 items-center gap-1.5 rounded-[10px] border-[2px] border-[var(--nb-ink)] px-3.5 py-2 text-[13px] font-bold shadow-[var(--nb-shadow-press)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--nb-vermilion)] ${
+                  active
+                    ? "bg-[var(--nb-vermilion)] text-white"
+                    : "bg-[var(--surface)] text-[var(--foreground)] hover:-translate-y-px"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" aria-hidden />
+                {t.label}
+              </button>
+            );
+          })}
+          {title ? <span className="ml-auto shrink-0 pr-1 text-sm font-bold">{title}</span> : null}
+        </div>
+
+        {/* แชท = document flow (ไม่ครอบ overflow). map/book/trip = contained pane สูงเต็มจอ */}
+        {onChat ? (
+          <div>{chat}</div>
+        ) : (
+          <div className="h-[calc(100vh-57px)] overflow-auto">{stageBody}</div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
