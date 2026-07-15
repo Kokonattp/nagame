@@ -1,33 +1,30 @@
 "use client";
 
-// AppShell — เปลือกของ nagame ที่ "ไม่รู้เนื้อหา" (shell-agnostic): รับ 4 พื้นผิวเป็น slot
-// แล้วจัดวางเอง — desktop = 2 แพน (แชทซ้ายค้างตลอด + เวที map/book/trip ขวา),
-// mobile = แท็บล่าง 4 ปุ่ม (แชทเป็นค่าเริ่มต้น). tab อยู่ใน ?tab= เพื่อ deep-link ข้ามแท็บได้
+// AppShell — เปลือกของ nagame ที่ "ไม่รู้เนื้อหา" (shell-agnostic): รับ 3 พื้นผิวเป็น slot
+// แล้วจัดวางเอง — desktop = 2 แพน (แชทซ้ายค้างตลอด + เวที map/trip ขวา),
+// mobile = แท็บล่าง 3 ปุ่ม (แชทเป็นค่าเริ่มต้น). tab อยู่ใน ?tab= เพื่อ deep-link ข้ามแท็บได้
 // (แชทเป็น router: กร๊วกแนะ → ลิงก์เปิดแผนที่ที่กรองไว้). ตาม [[nagame-v2-direction]].
 
 import { Suspense, useCallback, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { MessageCircle, Map as MapIcon, BookMarked, Luggage } from "lucide-react";
+import { MessageCircle, Map as MapIcon, Luggage } from "lucide-react";
 
-export type ShellTab = "chat" | "map" | "book" | "trip";
+export type ShellTab = "chat" | "map" | "trip";
 
 const STAGE_TABS: { key: Exclude<ShellTab, "chat">; label: string; jp: string; icon: typeof MapIcon }[] = [
   { key: "map", label: "แผนที่", jp: "地図", icon: MapIcon },
-  { key: "book", label: "สมุดตรา", jp: "御朱印", icon: BookMarked },
   { key: "trip", label: "ทริป", jp: "旅程", icon: Luggage },
 ];
 
 const MOBILE_TABS: { key: ShellTab; label: string; icon: typeof MapIcon }[] = [
   { key: "chat", label: "แชท", icon: MessageCircle },
   { key: "map", label: "แผนที่", icon: MapIcon },
-  { key: "book", label: "สมุดตรา", icon: BookMarked },
   { key: "trip", label: "ทริป", icon: Luggage },
 ];
 
 export type AppShellProps = {
   chat: ReactNode;
   map: ReactNode;
-  book: ReactNode;
   trip: ReactNode;
   /** ชื่อเมือง/หัวข้อที่โชว์บนแถบซ้าย (เช่น "โตเกียว 東京") */
   title?: ReactNode;
@@ -41,13 +38,13 @@ export type AppShellProps = {
   layout?: "rail" | "tabs";
 };
 
-function AppShellInner({ chat, map, book, trip, title, layout = "rail" }: AppShellProps) {
+function AppShellInner({ chat, map, trip, title, layout = "rail" }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 
   const rawTab = params.get("tab");
-  const tab: ShellTab = (["chat", "map", "book", "trip"] as const).includes(rawTab as ShellTab)
+  const tab: ShellTab = (["chat", "map", "trip"] as const).includes(rawTab as ShellTab)
     ? (rawTab as ShellTab)
     : "chat";
 
@@ -65,7 +62,7 @@ function AppShellInner({ chat, map, book, trip, title, layout = "rail" }: AppShe
 
   // เวทีขวา (desktop) / เนื้อหาแท็บที่ไม่ใช่แชท (mobile)
   const stageTab: Exclude<ShellTab, "chat"> = tab === "chat" ? "map" : tab;
-  const stageBody = stageTab === "map" ? map : stageTab === "book" ? book : trip;
+  const stageBody = stageTab === "map" ? map : trip;
 
   // ── โหมด "tabs": พื้นผิวเดียว + แท็บบน (desktop เหมือน mobile). แชท = document flow
   //    (window เป็น scroll container → sticky/anchor/stamp/webcam ของ dashboard ทำงานเหมือนเดิม)
@@ -151,10 +148,10 @@ function AppShellInner({ chat, map, book, trip, title, layout = "rail" }: AppShe
       {/* ===== MOBILE: single surface + bottom tab bar ===== */}
       <div className="flex min-h-screen flex-col lg:hidden">
         <div className="min-h-0 flex-1 overflow-auto pb-24">
-          {tab === "chat" ? chat : tab === "map" ? map : tab === "book" ? book : trip}
+          {tab === "chat" ? chat : tab === "map" ? map : trip}
         </div>
         <nav className="fixed inset-x-0 bottom-3 z-40 mx-auto max-w-[430px] px-4">
-          <div className="grid grid-cols-4 items-center rounded-[2rem] border-[2.5px] border-[var(--nb-ink)] bg-[var(--surface)] px-2 py-1.5 shadow-[var(--nb-shadow)]">
+          <div className="grid grid-cols-3 items-center rounded-[2rem] border-[2.5px] border-[var(--nb-ink)] bg-[var(--surface)] px-2 py-1.5 shadow-[var(--nb-shadow)]">
             {MOBILE_TABS.map((t) => {
               const Icon = t.icon;
               const active = tab === t.key;

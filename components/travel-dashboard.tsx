@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUp,
   Bot,
@@ -19,16 +19,6 @@ import {
 } from "lucide-react";
 import { getKruakMood } from "@/lib/game/mood";
 import { KruakAvatar } from "@/components/kruak-avatar";
-import {
-  countStamps,
-  earnStamp,
-  getCityStamps,
-  STAMP_KEYS,
-  STAMP_META,
-  STAMPS_PER_CITY,
-  type CityStamps,
-  type StampKey,
-} from "@/lib/game/journal";
 import { isInTrip, toggleTrip } from "@/lib/game/trip";
 import { CitySearch } from "@/components/city-search";
 import type { Recommendation } from "@/lib/cities/city-configs";
@@ -126,48 +116,11 @@ export function TravelDashboard({
   const [showBackToTop, setShowBackToTop] = useState(false);
   const severeWarnings = warnings.items.filter((item) => item.level !== "advisory");
 
-  // ── เกม: 御朱印帳 สมุดตราประทับของกร๊วก (localStorage, per-เมือง) ──
-  const [stamps, setStamps] = useState<CityStamps>({});
-  const [journalOpen, setJournalOpen] = useState(false);
-  const [slammingStamp, setSlammingStamp] = useState<StampKey | null>(null);
-  const [justCompleted, setJustCompleted] = useState(false);
-  const stampCount = countStamps(stamps);
-
   // NPC มู้ด — pure จากสัญญาณที่มีอยู่แล้ว ไม่ fetch ใหม่
   const mood = useMemo(
     () => getKruakMood({ hasSevereWarning: severeWarnings.length > 0, rainChance: weather.rainChance, aqi: aqi.aqi }),
     [severeWarnings.length, weather.rainChance, aqi.aqi],
   );
-
-  // ประทับตรา: idempotent, ยิง animation เฉพาะครั้งที่ได้ใหม่, เช็คครบ 5/5 เพื่อคำชมของกร๊วก
-  const claimStamp = useCallback(
-    (key: StampKey) => {
-      const { earned, stamps: next } = earnStamp(city.slug, key);
-      if (!earned) return;
-      setStamps(next);
-      setSlammingStamp(key);
-      window.setTimeout(() => setSlammingStamp((cur) => (cur === key ? null : cur)), 450);
-      if (countStamps(next) === STAMPS_PER_CITY) {
-        setJustCompleted(true);
-        setChatMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: "ครบทุกตราของเมืองนี้แล้ว! กร๊วกภูมิใจนะ 🎉 ไปเก็บเมืองอื่นต่อกันเลย" },
-        ]);
-      }
-    },
-    [city.slug],
-  );
-
-  // โหลดตราของเมืองนี้ + ประทับ "เยือนเมือง" อัตโนมัติเมื่อเปิดหน้า (ครั้งแรกของเมืองนั้น)
-  useEffect(() => {
-    const existing = getCityStamps(city.slug);
-    setStamps(existing);
-    setJustCompleted(false);
-    if (!existing.visit) {
-      const { stamps: next } = earnStamp(city.slug, "visit");
-      setStamps(next);
-    }
-  }, [city.slug]);
 
   useEffect(() => {
     const onScroll = () => setShowBackToTop(window.scrollY > 900);
@@ -175,24 +128,6 @@ export function TravelDashboard({
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  // ประทับ "ดูแผนวันนี้" เมื่อ #day-plan โผล่เข้ามาในจอ
-  const dayPlanRef = useRef<HTMLElement | null>(null);
-  useEffect(() => {
-    const node = dayPlanRef.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          claimStamp("dayplan");
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.4 },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [claimStamp]);
 
   // แผนวันนี้โหลดฝั่ง client — หน้าเพจไม่ต้องรอ AI ตอน server render
   const [dayPlan, setDayPlan] = useState<DayPlanSignal | null | undefined>(undefined);
@@ -240,7 +175,6 @@ export function TravelDashboard({
     setChatError("");
     setChatMessages((prev) => [...prev, { role: "user", content: value }]);
     setIsPending(true);
-    claimStamp("chat"); // ตรา 💬 — ทักกร๊วกแล้ว
 
     void (async () => {
       try {
@@ -367,28 +301,16 @@ export function TravelDashboard({
                     {mood.tone ?? "ผู้ช่วยเที่ยวประจำเมือง"}
                   </p>
                 </div>
-                {/* pill row เกม: กล้องสด + ตราประทับ 朱 x/5 (พื้นผิวเกมบนหน้า = แค่นี้) */}
                 <div className="ml-auto flex shrink-0 items-center gap-2">
                   {webcam.available && activeWebcam?.previewImage ? (
                     <button
                       type="button"
-                      onClick={() => {
-                        setWebcamOpen(true);
-                        claimStamp("webcam");
-                      }}
+                      onClick={() => setWebcamOpen(true)}
                       className="nb-pill transition hover:bg-[var(--nb-gold)]/30"
                     >
                       📷 กล้องสด
                     </button>
                   ) : null}
-                  <button
-                    type="button"
-                    onClick={() => setJournalOpen(true)}
-                    className={`nb-pill transition hover:bg-[var(--nb-gold)]/30 ${slammingStamp ? "kruak-stamp-slam" : ""} ${stampCount === STAMPS_PER_CITY ? "nb-pill-gold" : ""}`}
-                    aria-label={`สมุดตราประทับ ได้ ${stampCount} จาก ${STAMPS_PER_CITY} ตรา`}
-                  >
-                    朱 {stampCount}/{STAMPS_PER_CITY}
-                  </button>
                 </div>
               </div>
 
@@ -434,10 +356,7 @@ export function TravelDashboard({
                       {index === 0 && webcam.available && activeWebcam?.previewImage ? (
                         <button
                           type="button"
-                          onClick={() => {
-                            setWebcamOpen(true);
-                            claimStamp("webcam"); // ตรา 📷 — ชะโงกดูเมืองแล้ว
-                          }}
+                          onClick={() => setWebcamOpen(true)}
                           className="mt-3 block w-full overflow-hidden rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--surface)] text-left shadow-[3px_3px_0_0_var(--nb-ink)] transition hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_var(--nb-ink)]"
                         >
                           <div className="relative aspect-[16/9] overflow-hidden">
@@ -511,7 +430,7 @@ export function TravelDashboard({
         </section>
 
         {/* ─── Tier 2 — เควสต์วันนี้: แผนวันนี้ ─── */}
-        <section id="day-plan" ref={dayPlanRef} className="nb-card p-5 md:p-7">
+        <section id="day-plan" className="nb-card p-5 md:p-7">
           <div className="flex items-start justify-between gap-4">
             <SectionIntro
               eyebrow="เควสต์วันนี้ · today's quest"
@@ -573,7 +492,7 @@ export function TravelDashboard({
 
         {/* ─── Tier 3 — ของฝากจากกร๊วก (loot) + ประกาศจากศาลเจ้า (เตือนภัย) ─── */}
         <section className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <KruakPicksCard citySlug={city.slug} cityName={city.name} recommendations={recommendations} onClaim={() => claimStamp("recs")} />
+          <KruakPicksCard citySlug={city.slug} cityName={city.name} recommendations={recommendations} />
 
           <PaperCard
             eyebrow="ประกาศจากศาลเจ้า · shrine notice"
@@ -736,14 +655,6 @@ export function TravelDashboard({
         </div>
       ) : null}
 
-      {journalOpen ? (
-        <KruakJournalModal
-          cityName={city.name}
-          stamps={stamps}
-          justCompleted={justCompleted}
-          onClose={() => setJournalOpen(false)}
-        />
-      ) : null}
     </main>
   );
 }
@@ -819,12 +730,10 @@ function KruakPicksCard({
   citySlug,
   cityName,
   recommendations,
-  onClaim,
 }: {
   citySlug: string;
   cityName: string;
   recommendations: DashboardProps["recommendations"];
-  onClaim: () => void;
 }) {
   const picks = [
     { emoji: "🛏", label: "พัก", kind: "sleep", item: recommendations.sleep[0] },
@@ -846,84 +755,14 @@ function KruakPicksCard({
 
       <Link
         href={`/city/${citySlug}/around`}
-        onClick={onClaim}
         className="mt-4 flex items-center justify-between gap-3 rounded-[var(--nb-radius-sm)] border-[2.5px] border-[var(--nb-ink)] bg-[var(--nb-indigo)] p-4 text-white shadow-[var(--nb-shadow-sm)] transition hover:-translate-y-0.5 hover:shadow-[var(--nb-shadow)]"
       >
         <div>
           <p className="text-sm font-semibold">ดูที่พัก / ที่กิน / ที่เที่ยวทั้งหมด</p>
-          <p className="mt-1 text-xs text-white/70">รับตรา 🍜 + จุดคัดมือทั้งเมืองที่หน้ารอบเมือง</p>
+          <p className="mt-1 text-xs text-white/70">จุดคัดมือทั้งเมืองที่หน้ารอบเมือง</p>
         </div>
         <Compass className="h-5 w-5 shrink-0" aria-hidden />
       </Link>
-    </div>
-  );
-}
-
-// สมุด 御朱印帳 — เปิดจาก pill 朱 เท่านั้น (ไม่ render บนหน้า). โชว์ 5 ช่องตรา: ได้=ประทับสีชาด, ยังไม่ได้=เส้นจาง
-function KruakJournalModal({
-  cityName,
-  stamps,
-  justCompleted,
-  onClose,
-}: {
-  cityName: string;
-  stamps: CityStamps;
-  justCompleted: boolean;
-  onClose: () => void;
-}) {
-  const earned = countStamps(stamps);
-  return (
-    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-[rgba(23,24,27,0.72)] backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
-      <div
-        className="flex h-full w-full flex-col overflow-hidden bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--nb-shadow)] sm:h-auto sm:max-h-[92vh] sm:max-w-md sm:rounded-[var(--nb-radius)] sm:border-[2.5px] sm:border-[var(--nb-ink)]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b-[2.5px] border-[var(--nb-ink)] px-5 py-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-warm)]">御朱印帳 · สมุดตราประทับ</p>
-            <h3 className="mt-1 font-serif text-xl text-[var(--foreground)]">{cityName} · {earned}/{STAMPS_PER_CITY}</h3>
-          </div>
-          <button type="button" onClick={onClose} className="nb-pill shrink-0 px-4 py-2">ปิด</button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-5">
-          {justCompleted ? (
-            <p className="mb-4 rounded-[14px] border-2 border-[var(--nb-ink)] bg-[var(--nb-gold)]/30 px-4 py-3 text-center text-sm font-semibold text-[var(--foreground)]">
-              🎉 ครบทุกตราของ {cityName} แล้ว! กร๊วกภูมิใจนะ
-            </p>
-          ) : (
-            <p className="mb-4 text-sm leading-6 text-[var(--ink-muted)]">เก็บตราครบทั้ง {STAMPS_PER_CITY} ดวงของเมืองนี้ — ตราได้จากการเที่ยวไปกับกร๊วกในแอป</p>
-          )}
-          <div className="grid grid-cols-1 gap-3">
-            {STAMP_KEYS.map((key) => {
-              const has = Boolean(stamps[key]);
-              const meta = STAMP_META[key];
-              return (
-                <div
-                  key={key}
-                  className={`flex items-center gap-3 rounded-[14px] border-2 px-4 py-3 transition ${
-                    has
-                      ? "border-[var(--nb-ink)] bg-[var(--nb-vermilion-soft)]"
-                      : "border-dashed border-[var(--line-strong)] bg-transparent opacity-70"
-                  }`}
-                >
-                  <span
-                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 text-xl ${
-                      has ? "border-[var(--nb-vermilion)] bg-[var(--surface)]" : "border-[var(--line-strong)] grayscale"
-                    }`}
-                    aria-hidden
-                  >
-                    {has ? meta.emoji : "○"}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[var(--foreground)]">{meta.label}</p>
-                    <p className="text-xs leading-5 text-[var(--ink-muted)]">{has ? "ได้แล้ว ✓" : meta.hint}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
