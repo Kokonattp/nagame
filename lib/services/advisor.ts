@@ -1,6 +1,6 @@
-import { getCityConfigBySlug } from "@/lib/cities/city-configs";
+import { getCityConfigBySlug, type Recommendation as CityRecommendation } from "@/lib/cities/city-configs";
 import { japanHolidayWindows, windowStatus } from "@/lib/cities/holidays";
-import { getCitySeasons } from "@/lib/cities/seasons";
+import { getCitySeasonCalendar, getCitySeasons } from "@/lib/cities/seasons";
 import { getCityTransit } from "@/lib/cities/transit";
 import { getRecommendationSets } from "@/lib/cities/travel-meta";
 import { getAqi } from "@/lib/services/aqi";
@@ -36,6 +36,8 @@ type AdvisorContext = {
   events: Awaited<ReturnType<typeof getEvents>>;
   warnings: Awaited<ReturnType<typeof getWarnings>>;
   activeSeasons: string[];
+  /** ฤดูทั้งปีของเมืองนี้ (ไม่ใช่แค่ที่กำลังเกิด) — ให้ตอบ "ใบไม้แดงเมื่อไหร่" ได้ทุกเดือน */
+  seasonCalendar: { name: string; kind: string; window: string; note: string }[];
   holidayName: string | null;
   stationName?: string;
   recommendations: {
@@ -144,8 +146,15 @@ async function gatherContext(citySlug: string): Promise<AdvisorContext | null> {
   const holidayName =
     japanHolidayWindows.find((window) => windowStatus(window.from, window.to).state === "active")?.name ?? null;
 
-  const compact = (items: { title: string; note: string }[]) =>
-    items.slice(0, 6).map((item) => ({ title: item.title, note: item.note.slice(0, 120) }));
+  // ⚠ กันของปลอม: รายการ generic เป็นชื่อที่ระบบแต่งเอง (เช่น "Otaru cafe street")
+  // ไม่มีอยู่จริง — เดิมถูกส่งเข้า LLM เหมือนของจริง ทำให้กร๊วกแนะนำร้านที่ไม่มีอยู่
+  // ได้ทั้งที่ system prompt สั่งห้ามแต่งข้อมูล (ความจริงรั่วที่ชั้น context ไม่ใช่ที่โมเดล).
+  // ตอนนี้กรองทิ้งก่อนถึงกร๊วก → เมืองไม่มีของจริงก็ตอบน้อยลง ดีกว่าตอบผิด.
+  const compact = (items: CityRecommendation[]) =>
+    items
+      .filter((item) => !item.generic)
+      .slice(0, 6)
+      .map((item) => ({ title: item.title, note: item.note.slice(0, 120) }));
 
   return {
     cityName: city.name,
@@ -155,6 +164,12 @@ async function gatherContext(citySlug: string): Promise<AdvisorContext | null> {
     events,
     warnings,
     activeSeasons,
+    seasonCalendar: getCitySeasonCalendar(city.slug).map((season) => ({
+      name: season.name,
+      kind: season.kind,
+      window: season.window,
+      note: season.note.slice(0, 120),
+    })),
     holidayName,
     stationName: getCityTransit(city.slug)?.station.name,
     recommendations: {
@@ -166,8 +181,17 @@ async function gatherContext(citySlug: string): Promise<AdvisorContext | null> {
 }
 
 const MAX_OUTPUT_TOKENS = 220;
-const SYSTEM_PROMPT =
-  "You are กร๊วก, a warm but concise Thai travel advisor for Japan. Use only the provided context. Never invent current facts, timings, prices, or operating hours. Give ONE clear recommendation the traveller can act on, in Thai within 120 words. If a weather warning is active, lead with it.";
+const SYSTEM_PROMPT = [
+  "You are กร๊วก, a warm but concise Thai travel advisor for Japan.",
+  "Use ONLY the provided context. Never invent current facts, timings, prices, operating hours, or place names.",
+  "Give ONE clear recommendation the traveller can act on, in Thai within 120 words.",
+  "If a weather warning is active, lead with it.",
+  // ข้อมูลใหม่ที่เพิ่งต่อเข้ามา — บอกโมเดลว่ามีอะไรใช้ได้บ้าง ไม่งั้นมันไม่รู้ว่ามี
+  "dailyOutlook = per-day forecast up to 16 days ahead (date/high/low/rainChance). Use it for questions about tomorrow or the coming days. Do NOT answer beyond the last date it contains.",
+  "seasonCalendar = this city's seasonal highlights for the WHOLE year with their date windows. Use it to answer when-to-visit questions (e.g. autumn leaves, cherry blossoms) even if that season is not active now. These windows are multi-year averages, not a forecast — say so when it matters.",
+  // ปิดช่องที่เคยรั่ว: ถ้าไม่มีข้อมูล ให้บอกว่าไม่รู้ ห้ามเดา
+  "If the context has no recommendation for what is asked, say plainly that you don't have one for this city yet and suggest asking about something you do have. Never fill the gap with a plausible-sounding place name.",
+].join(" ");
 
 async function composeAiReply(context: AdvisorContext | null, intent: AdvisorIntent, prompt: string): Promise<string | null> {
   if (!context) return null;
@@ -195,6 +219,10 @@ async function composeAiReply(context: AdvisorContext | null, intent: AdvisorInt
       aqi: context.aqi.available ? { label: context.aqi.label, aqi: context.aqi.aqi } : null,
       activeWarnings: context.warnings.items.map((item) => item.label),
       activeSeasons: context.activeSeasons,
+      // ฤดูทั้งปี — ตอบ "ใบไม้แดงเมื่อไหร่ / ไปเดือนไหนดี" ได้แม้ตอนนี้ยังไม่ถึงฤดูนั้น
+      seasonCalendar: context.seasonCalendar,
+      // พยากรณ์ล่วงหน้าถึง 16 วัน — ตอบ "พรุ่งนี้/สุดสัปดาห์นี้ฝนไหม" ได้
+      dailyOutlook: context.weather.outlook.slice(0, 16),
       holiday: context.holidayName,
       events: context.events.items.slice(0, 3).map((item) => item.title),
       recommendations: context.recommendations,
@@ -316,17 +344,34 @@ function buildFallbackReply(context: AdvisorContext | null, intent: AdvisorInten
 
   const indoorish = (item: Recommendation) => /museum|cultural|indoor|canal|ในร่ม|ปลอดฝน|สำรองวันฝน|ตลาด|ช้อป/i.test(`${item.title} ${item.note}`);
   const bullet = (items: Recommendation[]) => items.slice(0, 3).map((item) => `- ${item.title}: ${item.note}`);
+  // context กรอง generic ออกแล้ว → เมืองที่ไม่มีของคัดมือจะได้ลิสต์ว่าง
+  // ต้องบอกตรง ๆ ว่ายังไม่มี ห้ามเงียบแล้วปล่อยหัวข้อลอย (เดิมของปลอมถมช่องนี้ให้)
+  const section = (label: string, items: Recommendation[], empty: string) =>
+    items.length ? [label, ...bullet(items)] : [empty];
+
+  // ถามอะไรต้องได้เรื่องนั้น — หัวข้อที่ถาม (กิน/นอน) มาก่อนสภาพอากาศเสมอ.
+  // เดิมฝน >= 60% จะปล้น branch ไปตอบ "ที่เที่ยวในร่ม" ทั้งที่ผู้ใช้ถามเรื่องกิน
+  // (เมืองฝนตกถามหาร้าน แล้วได้คลองมาแทน) → ฝนเป็นหมายเหตุต่อท้าย ไม่ใช่ตัวเปลี่ยนหัวข้อ
+  const askedEat = lower.includes("กิน") || lower.includes("eat") || lower.includes("อาหาร") || lower.includes("ร้าน");
+  const askedSleep = lower.includes("นอน") || lower.includes("พัก") || lower.includes("hotel") || lower.includes("sleep");
+  const rainNote = rainHigh ? "(ฝนช่วงนี้มีสิทธิ์มา พกร่มไปด้วยนะครับ)" : "";
 
   let body: string[];
-  if (lower.includes("กิน") || lower.includes("eat") || lower.includes("อาหาร")) {
-    body = ["ถ้าจะโฟกัสเรื่องกิน เริ่มจากนี่ก่อน:", ...bullet(eat)];
-  } else if (lower.includes("นอน") || lower.includes("พัก") || lower.includes("hotel") || lower.includes("sleep")) {
-    body = ["ถ้าจะเลือกย่านพัก ดูตัวเลือกนี้ก่อน:", ...bullet(sleep)];
+  if (askedEat) {
+    body = [
+      ...section("ถ้าจะโฟกัสเรื่องกิน เริ่มจากนี่ก่อน:", eat, `ร้านใน ${context.cityName} กร๊วกยังไม่มีที่คัดไว้ให้ครับ ลองถามเรื่องที่เที่ยวหรือย่านพักแทนได้`),
+      rainNote,
+    ];
+  } else if (askedSleep) {
+    body = [
+      ...section("ถ้าจะเลือกย่านพัก ดูตัวเลือกนี้ก่อน:", sleep, `ย่านพักใน ${context.cityName} กร๊วกยังไม่มีที่คัดไว้ให้ครับ`),
+      rainNote,
+    ];
   } else if (rainHigh || lower.includes("ฝน") || lower.includes("rain")) {
     const picks = see.filter(indoorish);
-    body = ["ฝนช่วงนี้มีสิทธิ์มา เริ่มจากจุดที่เปลี่ยนแผนง่าย/อยู่ในร่มก่อน:", ...bullet(picks.length ? picks : see)];
+    body = section("ฝนช่วงนี้มีสิทธิ์มา เริ่มจากจุดที่เปลี่ยนแผนง่าย/อยู่ในร่มก่อน:", picks.length ? picks : see, `จุดใน ${context.cityName} กร๊วกยังไม่มีที่คัดไว้ให้ครับ`);
   } else {
-    body = ["จุดที่เข้ากับจังหวะวันนี้:", ...bullet(see)];
+    body = section("จุดที่เข้ากับจังหวะวันนี้:", see, `${context.cityName} กร๊วกยังไม่มีจุดที่คัดไว้ให้ครับ — ถามเรื่องอากาศหรือช่วงเวลาที่ควรไปได้นะ`);
   }
 
   return [...lead, weatherLine, ...body].filter(Boolean).join("\n");
