@@ -40,16 +40,31 @@ export type WashiMapProps = {
   manholes?: ManholePin[];
 };
 
-// สไตล์หมุด washi-tag (สร้างเป็น HTML string ให้ Leaflet divIcon)
+// escape ค่าที่มาจากข้อมูล (title) ก่อนยัดลง innerHTML ของ divIcon — กัน HTML แตก
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// แยก emoji นำหน้า ("🍜 ราเมง") ออกจากชื่อ → หมุดปกติโชว์แค่ emoji, ชื่อกางตอน hover.
+// รองรับ label ไม่มี emoji (เช่น focus "📍 …") ด้วยการ fallback อักษรตัวแรก.
+function splitLabel(label: string): { glyph: string; name: string } {
+  const m = label.match(/^(\p{Extended_Pictographic}(?:️)?)\s*(.*)$/u);
+  if (m) return { glyph: m[1], name: m[2].trim() };
+  return { glyph: label.slice(0, 2), name: label };
+}
+
+// สไตล์หมุด washi-tag: หมุดเล็ก (emoji ในวงตราประทับ) โชว์เสมอ + ชื่อกางตอน hover/tap
+// (แก้ปัญหาหมุดย่านเดียวกัน jitter ใกล้กันจน label เต็มเกยกันตอน zoom ระดับเมือง —
+//  verify browser 2026-07-15). กลุ่ม CSS .washi-poi/.washi-poi__name อยู่ใน globals.css.
 function poiHtml(p: MapPoi): string {
   const bg = p.selected ? "var(--nb-vermilion)" : p.kind === "eat" ? "var(--nb-matcha-soft)" : "var(--surface)";
   const color = p.selected ? "#fff" : "var(--nb-ink)";
-  const radius = p.kind === "eat" ? "999px" : "5px";
-  return `<div style="
-    border:2px solid var(--nb-ink);background:${bg};color:${color};
-    border-radius:${radius};padding:3px 8px;font-size:11px;font-weight:700;
-    white-space:nowrap;box-shadow:2px 2px 0 0 var(--nb-ink);font-family:inherit;
-  ">${p.label}</div>`;
+  const { glyph, name } = splitLabel(p.label);
+  const selCls = p.selected ? " washi-poi--sel" : "";
+  return `<div class="washi-poi${selCls}" style="--poi-bg:${bg};--poi-fg:${color};">
+    <span class="washi-poi__dot">${esc(glyph)}</span>
+    <span class="washi-poi__name">${esc(name)}</span>
+  </div>`;
 }
 
 // หมุดฝาท่อ 御朱印 — วงกลมลายท่อเล็ก. เก็บแล้ว=สีชาด+เงาแข็ง, ghost=เทาจาง.
@@ -117,7 +132,7 @@ export function WashiMap({ center, zoom = 14, pois, kruak, focus, manholes = [] 
           html: poiHtml(p),
           className: "", // เลี่ยง default leaflet styling
           iconSize: undefined as unknown as [number, number],
-          iconAnchor: [0, 0],
+          iconAnchor: [13, 13], // กึ่งกลาง dot 26px อยู่ตรงพิกัดเป๊ะ (ชื่อกางไปทางขวาตอน hover)
         });
         L.marker([p.lat, p.lon], { icon }).addTo(map);
       }
@@ -175,7 +190,7 @@ export function WashiMap({ center, zoom = 14, pois, kruak, focus, manholes = [] 
         html: poiHtml({ id: "focus", kind: "stay", lat: focus.lat, lon: focus.lon, label: `📍 ${focus.label}`, selected: true }),
         className: "",
         iconSize: undefined as unknown as [number, number],
-        iconAnchor: [0, 0],
+        iconAnchor: [13, 13], // กึ่งกลาง dot ตรงพิกัด (สอดคล้องกับหมุด POI)
       });
       focusMarkerRef.current = L.marker([focus.lat, focus.lon], { icon, zIndexOffset: 900 }).addTo(map);
     })();

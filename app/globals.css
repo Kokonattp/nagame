@@ -107,6 +107,55 @@ iframe {
   filter: invert(0.92) hue-rotate(180deg) saturate(0.55) brightness(0.9) contrast(0.95);
 }
 
+/* หมุด POI washi-tag — dot (emoji ในตราประทับ) โชว์เสมอ, ชื่อกางตอน hover/tap.
+   กันหมุดย่านเดียวกัน (jitter ~150m) แสดง label เต็มเกยกันตอน zoom ระดับเมือง. */
+.washi-poi {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+.washi-poi__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  line-height: 1;
+  border: 2px solid var(--nb-ink);
+  border-radius: 999px;
+  background: var(--poi-bg);
+  box-shadow: 2px 2px 0 0 var(--nb-ink);
+  flex: 0 0 auto;
+}
+.washi-poi__name {
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  margin-left: 0;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--poi-fg);
+  background: var(--poi-bg);
+  border: 2px solid var(--nb-ink);
+  border-left: none;
+  border-radius: 0 5px 5px 0;
+  box-shadow: 2px 2px 0 0 var(--nb-ink);
+  transition: max-width 0.18s ease, opacity 0.14s ease, padding 0.18s ease;
+}
+/* กางชื่อออกเมื่อ hover หมุด, หรือหมุดที่ถูกเลือก (focus/selected) แสดงชื่อค้างไว้ */
+.washi-poi:hover .washi-poi__name,
+.washi-poi--sel .washi-poi__name {
+  max-width: 220px;
+  opacity: 1;
+  padding: 3px 8px;
+}
+.washi-poi:hover {
+  z-index: 800 !important;
+}
+
 ::selection {
   background: rgba(139, 90, 60, 0.18);
 }
