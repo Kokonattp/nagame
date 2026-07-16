@@ -23,6 +23,22 @@ create index if not exists trips_device_idx on trips (device_id);
 -- แตะตารางตรง จึงไม่ต้องพึ่ง RLS policy. ถ้าวันหน้าจะให้ client แตะตรง ต้องเปิด RLS + policy
 -- ที่กรอง device_id/line_user_id ให้ถูกก่อน.
 
+-- ── click-out: ทุกลิงก์ที่ผู้ใช้กดออกนอกแอป (จอง/ตั๋ว/นำทาง) ──
+-- platform ไม่รับเงิน → conversion ออกทาง deep-link. นับ click-out = ตัววัดรายได้ล่วงหน้า
+-- ตั้งแต่วันแรก + วันหน้าเสียบ affiliate id ที่จุดเดียว. เขียนผ่าน /api/outbound (service key).
+create table if not exists clickouts (
+  id        bigint generated always as identity primary key,
+  device_id text,               -- anonymous device id (อาจ null ถ้า client ไม่ส่ง)
+  kind      text not null,       -- stay | eat | flight | nav | webcam | place | other
+  url       text not null,       -- ปลายทางที่กดออก
+  label     text,                -- ป้ายที่คลิก เช่น "อาซากุสะ ฿1,650"
+  city_slug text,
+  ts        bigint not null      -- epoch ms
+);
+
+create index if not exists clickouts_kind_idx on clickouts (kind);
+create index if not exists clickouts_ts_idx on clickouts (ts);
+
 -- ── (เผื่ออนาคต) ตรา 御朱印帳 — ยังใช้ localStorage อยู่ ตารางนี้เตรียมไว้ตอน migrate ──
 -- create table if not exists stamps (
 --   device_id text not null,

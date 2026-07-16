@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nagame — pitch + บทวิเคราะห์ทั้งหมด</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #EDE6D6; --fg: #1B1A17; --card: #F7F2E6;
+    --line: #CFC5AE; --mute: #7D7466;
+    --seal: #C0392B; --moss: #3E5C4B; --indigo: #2E4A6B;
+    --shadow: rgba(27,26,23,.14); --grain: rgba(27,26,23,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15140E; --fg: #EAE3D1; --card: #201E15;
+      --line: #453F2E; --mute: #968C7A;
+      --seal: #E46353; --moss: #82AC90; --indigo: #7FA3CC;
+      --shadow: rgba(0,0,0,.55); --grain: rgba(255,250,235,.035);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15140E; --fg: #EAE3D1; --card: #201E15;
+    --line: #453F2E; --mute: #968C7A;
+    --seal: #E46353; --moss: #82AC90; --indigo: #7FA3CC;
+    --shadow: rgba(0,0,0,.55); --grain: rgba(255,250,235,.035);
+  }
+  :root[data-theme="light"] {
+    --bg: #EDE6D6; --fg: #1B1A17; --card: #F7F2E6;
+    --line: #CFC5AE; --mute: #7D7466;
+    --seal: #C0392B; --moss: #3E5C4B; --indigo: #2E4A6B;
+    --shadow: rgba(27,26,23,.14); --grain: rgba(27,26,23,.05);
+  }
+
+  body {
+    background-color: var(--bg);
+    background-image:
+      repeating-linear-gradient(90deg, transparent 0 3px, var(--grain) 3px 4px),
+      repeating-linear-gradient(0deg, transparent 0 5px, var(--grain) 5px 6px);
+    color: var(--fg);
+    font-family: "IBM Plex Sans Thai", "Leelawadee UI", Tahoma, sans-serif;
+    font-size: 16px; line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    padding: clamp(1.25rem, 4vw, 3rem) 1.1rem 5rem;
+  }
+  .wrap { max-width: 62rem; margin: 0 auto; display: flex; flex-direction: column; gap: clamp(2.5rem, 6vw, 4rem); }
+
+  /* ── mast ── */
+  .mast { border-bottom: 3px solid var(--fg); padding-bottom: 1rem; }
+  .kicker { font-size: .72rem; letter-spacing: .18em; text-transform: uppercase; color: var(--seal); font-weight: 700; }
+  h1 { font-size: clamp(1.9rem, 5vw, 3rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.12; margin: .4rem 0 .5rem; text-wrap: balance; }
+  .sub { color: var(--mute); font-size: clamp(.95rem, 2vw, 1.1rem); max-width: 55ch; }
+  .meta { font-size: .75rem; color: var(--mute); margin-top: .8rem; display: flex; gap: 1.2rem; flex-wrap: wrap; }
+  .meta b { color: var(--fg); }
+
+  /* ── hero line ── */
+  .hero {
+    border: 2.5px solid var(--fg); border-radius: .6rem;
+    background: var(--card); box-shadow: 5px 5px 0 var(--shadow);
+    padding: clamp(1.1rem, 3vw, 1.75rem);
+  }
+  .hero .lbl { font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--seal); font-weight: 700; margin-bottom: .5rem; }
+  .hero p { font-size: clamp(1.05rem, 2.4vw, 1.35rem); font-weight: 600; line-height: 1.55; }
+  .hero .kill { margin-top: .9rem; padding-top: .9rem; border-top: 1.5px solid var(--line); font-size: .92rem; font-weight: 400; color: var(--mute); }
+  .hero .kill b { color: var(--fg); }
+
+  /* ── sections ── */
+  section { display: flex; flex-direction: column; gap: 1.1rem; }
+  .sec-head { display: flex; flex-direction: column; gap: .2rem; }
+  .eyebrow { font-size: .7rem; letter-spacing: .16em; text-transform: uppercase; color: var(--seal); font-weight: 600; }
+  h2 { font-size: clamp(1.35rem, 3vw, 1.9rem); font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
+  .sec-note { color: var(--mute); font-size: .92rem; max-width: 62ch; }
+  h3 { font-size: 1.05rem; font-weight: 700; }
+
+  p + p { margin-top: .6rem; }
+
+  /* ── quote ── */
+  blockquote {
+    border-left: 4px solid var(--seal);
+    background: var(--card);
+    padding: .85rem 1.1rem; border-radius: 0 .35rem .35rem 0;
+    break-inside: avoid;
+  }
+  blockquote p { font-size: .95rem; }
+
+  /* ── phases ── */
+  .phase {
+    border: 2px solid var(--fg); border-radius: .55rem;
+    background: var(--card); box-shadow: 4px 4px 0 var(--shadow);
+    padding: 1.1rem 1.25rem; break-inside: avoid;
+  }
+  .phase-head { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .3rem; }
+  .medal { font-size: 1.3rem; }
+  .phase-head h3 { font-size: 1.15rem; }
+  .wk { margin-left: auto; font-family: ui-monospace, monospace; font-size: .72rem; color: var(--mute); border: 1px solid var(--line); border-radius: 999px; padding: .1rem .55rem; white-space: nowrap; }
+  .task { border-top: 1px solid var(--line); padding-top: .75rem; margin-top: .75rem; }
+  .task-top { display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap; margin-bottom: .35rem; }
+  .task-top h4 { font-size: .95rem; font-weight: 700; }
+  .size { font-size: .65rem; font-weight: 700; letter-spacing: .05em; padding: .08rem .45rem; border-radius: 999px; white-space: nowrap; }
+  .size.s { background: var(--moss); color: var(--bg); }
+  .size.m { background: var(--indigo); color: var(--bg); }
+  .task dl { display: grid; grid-template-columns: auto 1fr; gap: .3rem .7rem; font-size: .87rem; }
+  .task dt { font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); font-weight: 600; padding-top: .28rem; white-space: nowrap; }
+  .task dd { color: var(--fg); }
+  .task dd.why { color: var(--mute); }
+  .task dd.why b { color: var(--fg); }
+  code { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: .82em; background: var(--bg); border: 1px solid var(--line); border-radius: .2rem; padding: .05rem .3rem; }
+
+  .thorn {
+    border: 2px dashed var(--seal); border-radius: .4rem;
+    padding: .8rem 1rem; margin-top: .9rem;
+    font-size: .89rem; background: var(--bg);
+  }
+  .thorn b { color: var(--seal); }
+
+  .nope { border-left: 4px solid var(--mute); background: var(--bg); padding: .6rem .9rem; border-radius: 0 .3rem .3rem 0; font-size: .87rem; color: var(--mute); margin-top: .75rem; }
+  .nope b { color: var(--fg); }
+
+  /* ── weapon ── */
+  .weapons { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .9rem; }
+  .weapon {
+    border: 1.5px solid var(--line); border-left: 4px solid var(--indigo);
+    border-radius: .4rem; background: var(--card); padding: 1rem;
+    display: flex; flex-direction: column; gap: .4rem; break-inside: avoid;
+  }
+  .weapon .n { font-family: ui-monospace, monospace; font-size: .7rem; color: var(--indigo); font-weight: 700; letter-spacing: .1em; }
+  .weapon h4 { font-size: 1rem; font-weight: 700; }
+  .weapon p { font-size: .87rem; color: var(--mute); }
+  .weapon p b { color: var(--fg); }
+
+  /* ── table ── */
+  .tw { overflow-x: auto; border: 2px solid var(--fg); border-radius: .45rem; box-shadow: 4px 4px 0 var(--shadow); }
+  table { border-collapse: collapse; width: 100%; background: var(--card); font-size: .87rem; min-width: 30rem; }
+  th { text-align: left; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); font-weight: 600; padding: .6rem .85rem; border-bottom: 2px solid var(--fg); white-space: nowrap; }
+  td { padding: .55rem .85rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.yes { color: var(--moss); font-weight: 600; }
+  td.no { color: var(--seal); font-weight: 600; }
+
+  /* ── traps ── */
+  .traps { display: flex; flex-direction: column; gap: .7rem; counter-reset: t; }
+  .trap {
+    counter-increment: t; position: relative;
+    border: 1.5px solid var(--line); border-left: 4px solid var(--seal);
+    background: var(--card); border-radius: .35rem;
+    padding: .8rem 1rem .8rem 2.9rem; font-size: .89rem; break-inside: avoid;
+  }
+  .trap::before {
+    content: counter(t); position: absolute; left: .85rem; top: .8rem;
+    width: 1.3rem; height: 1.3rem; border-radius: 50%;
+    background: var(--seal); color: #fff; font-size: .7rem; font-weight: 700;
+    display: grid; place-items: center;
+  }
+  .trap b { font-weight: 700; }
+
+  /* ── mascot verdict ── */
+  .verdict-box {
+    border: 2px solid var(--seal); border-radius: .5rem;
+    background: var(--card); padding: 1.1rem 1.25rem;
+    display: flex; flex-direction: column; gap: .6rem;
+  }
+  .verdict-box .stamp {
+    align-self: flex-start; font-size: .68rem; font-weight: 700; letter-spacing: .1em;
+    background: var(--seal); color: #fff; padding: .15rem .6rem; border-radius: 999px;
+  }
+  ul.clean { list-style: none; display: flex; flex-direction: column; gap: .45rem; }
+  ul.clean li { display: flex; gap: .55rem; align-items: baseline; font-size: .9rem; }
+  ul.clean li::before { content: "▸"; color: var(--seal); flex: none; font-size: .7rem; }
+
+  /* ── ending ── */
+  .ending {
+    border: 2.5px solid var(--fg); border-radius: .6rem;
+    background: var(--card); box-shadow: 5px 5px 0 var(--shadow);
+    padding: clamp(1.1rem, 3vw, 1.75rem);
+    display: flex; flex-direction: column; gap: .8rem;
+  }
+  .scene { font-size: .95rem; line-height: 1.8; }
+  .scene em { color: var(--seal); font-style: normal; font-weight: 600; }
+  .punch { font-size: clamp(1rem, 2.2vw, 1.2rem); font-weight: 700; line-height: 1.5; border-top: 2px solid var(--line); padding-top: .8rem; }
+  .cta { font-family: ui-monospace, monospace; font-size: .8rem; color: var(--seal); font-weight: 700; letter-spacing: .04em; }
+
+  footer { border-top: 2.5px solid var(--fg); padding-top: .9rem; font-size: .75rem; color: var(--mute); display: flex; flex-direction: column; gap: .5rem; }
+  .sig { align-self: flex-start; border: 1.5px dashed var(--line); border-radius: .25rem; padding: .35rem .65rem; font-family: ui-monospace, monospace; font-size: .7rem; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .phase, .hero, .ending, .tw { box-shadow: none; }
+    section { break-inside: avoid-page; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <div class="kicker">pitch + บทวิเคราะห์สะสม · Claude Fable 5</div>
+    <h1>nagame</h1>
+    <p class="sub">แผนที่ญี่ปุ่นที่มีแมวยืนอยู่ — สรุปทุกฟังก์ชันที่จะทำ พร้อมเหตุผลว่าทำไมมันขายได้</p>
+    <div class="meta">
+      <span><b>15 ก.ค. 2026</b></span>
+      <span>ปรึกษา Fable <b>3 รอบ</b></span>
+      <span>branch <b>remove-manhole-pwa</b></span>
+      <span>~<b>7 สัปดาห์</b> · 3 ก้อน</span>
+    </div>
+  </header>
+
+  <!-- ═══ hero ═══ -->
+  <div class="hero">
+    <div class="lbl">nagame คืออะไร — หนึ่งประโยค</div>
+    <p>nagame คือแผนที่ญี่ปุ่นที่มีแมวชื่อกร๊วกยืนอยู่ — มันรู้ว่าวันนี้เมืองนี้กำลังเกิดอะไร เพราะมีคนไทยคนนึงนั่งเขียนไว้ให้ 43 เมือง แล้วอากาศจริงคอยยืนยันว่ายังจริงอยู่</p>
+    <div class="kill">
+      Google Maps มีข้อมูล เราไม่มีทางชนะ · ChatGPT ตอบได้ทุกอย่าง เราไม่มีทางชนะ<br>
+      <b>แต่ไม่มีใครมีแมวที่ยืนอยู่โคยะซังตอนเมษา แล้วบอกว่า “ที่นี่บานช้าเพราะสูง 800 เมตร — คันไซโรยหมดแล้วแต่ที่นี่ยังทัน”</b><br>
+      นั่นไม่ใช่ข้อมูล นั่นคือ<b>ความรู้ที่มีเสียง</b> และมันเลียนแบบไม่ได้
+    </div>
+  </div>
+
+  <!-- ═══ แผน ═══ -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">แผน</span>
+      <h2>ทุกฟังก์ชันที่จะทำ เรียงตามลำดับ</h2>
+      <p class="sec-note">เจ้าของเลือกแล้วว่าแผนที่มาก่อน — Fable เห็นด้วย แต่มีกับดักที่ต้องรู้</p>
+    </div>
+
+    <!-- ก้อน 1 -->
+    <div class="phase">
+      <div class="phase-head">
+        <span class="medal">🥇</span>
+        <h3>ก้อนที่ 1 — แผนที่มีชีวิต</h3>
+        <span class="wk">2–3 สัปดาห์</span>
+      </div>
+
+      <div class="task">
+        <div class="task-top"><h4>1.1 เอียงแผนที่ washi ให้เป็น 2.5D</h4><span class="size s">เล็ก</span></div>
+        <dl>
+          <dt>ทำอะไร</dt><dd>ครอบ Leaflet ด้วย CSS <code>perspective</code> + <code>rotateX(~50deg)</code> · ลาก/pinch เพื่อ <code>rotateZ</code> (หมุน) — Leaflet ทำงานเหมือนเดิมทุกอย่างข้างใต้</dd>
+          <dt>ใช้ของที่มี</dt><dd><code>washi-map.tsx</code> ทั้งดุ้น ไม่ต้องเขียนใหม่ · 0 dependency</dd>
+          <dt>ทำไมขายได้</dt><dd class="why">washi ตอนนี้สวยแต่<b>แบน</b> — พอเอียง มันกลายเป็น “โลก” ทันที ไม่มีเว็บเที่ยวญี่ปุ่นเจ้าไหนหน้าตาแบบนี้ <b>นี่คือ 3 วินาทีแรกที่ตัดสินว่าคนจะอยู่หรือปิด</b></dd>
+        </dl>
+      </div>
+
+      <div class="task">
+        <div class="task-top"><h4>1.2 แมว 2.5D ยืนบนแผนที่</h4><span class="size m">เล็ก–กลาง</span></div>
+        <dl>
+          <dt>ทำอะไร</dt><dd>กร๊วกยืนกลางเมือง — counter-rotate ให้ตั้งฉากกับพื้นเสมอ (เอียงแผนที่ แมวไม่นอน), เงารีทอดบนพื้นเอียง, ลอยขึ้นลงเบาๆ, หมุนแผนที่แล้วแมวหันตาม</dd>
+          <dt>ใช้ของที่มี</dt><dd>PNG 5 ท่า + <code>kruak.ts</code> + <code>mood.ts</code> + อากาศจริง</dd>
+          <dt>ทำไมขายได้</dt><dd class="why"><b>นี่คืออาวุธ ไม่ใช่ของเล่น</b> — ดูหัวข้อถัดไป</dd>
+        </dl>
+      </div>
+
+      <div class="task">
+        <div class="task-top"><h4>1.3 Particle ผูกกับฤดูจริง</h4><span class="size s">เล็ก</span></div>
+        <dl>
+          <dt>ทำอะไร</dt><dd><code>snow</code>→หิมะ · <code>bloom</code>→กลีบซากุระ · <code>foliage</code>→ใบไม้แดง · <code>event</code>→ไม่มี<br><b>CSS animation ล้วน ไม่ใช่ canvas</b> — จำนวนน้อย โปร่ง ช้า</dd>
+          <dt>ใช้ของที่มี</dt><dd><code>windowStatus()</code> + <code>seasons.ts.kind</code> — มันบอกได้อยู่แล้วว่าวันนี้เมืองนี้อยู่ฤดูไหน ต่อสายเดียวจบ</dd>
+          <dt>ทำไมขายได้</dt><dd class="why">หิมะที่ตกบนแผนที่ซัปโปโรเดือนกุมภา <b>ไม่ใช่เอฟเฟกต์ — มันคือข้อมูล</b> คนอื่นทำ particle เพราะสวย เราทำเพราะมันจริง <b>นี่คือความต่างทั้งหมด</b></dd>
+        </dl>
+      </div>
+
+      <div class="thorn">
+        ⚠ <b>หนามที่ต้องรู้ก่อนเริ่ม:</b> พอเอียงแผนที่ หมุด POI จะเอียงตาม + hover label จะเพี้ยน — ต้อง counter-rotate หมุดทุกตัวเหมือนแมว <b>นี่คืองานจริงที่ซ่อนอยู่ ไม่ใช่ CSS 3 บรรทัด ใครบอกว่าง่ายกว่านี้คือโกหก</b>
+      </div>
+    </div>
+
+    <!-- ก้อน 2 -->
+    <div class="phase">
+      <div class="phase-head">
+        <span class="medal">🥈</span>
+        <h3>ก้อนที่ 2 — เปิดคลังสมบัติให้โลกเห็น</h3>
+        <span class="wk">2 สัปดาห์</span>
+      </div>
+
+      <div class="task">
+        <div class="task-top"><h4>2.1 หน้า HTML ฤดูรายเมือง — 43 หน้า</h4><span class="size m">กลาง</span></div>
+        <dl>
+          <dt>ทำอะไร</dt><dd><code>/city/[slug]/seasons</code> เรนเดอร์ปฏิทินทั้งปี + note ไทยทุกบรรทัด เป็น HTML จริง ไม่ใช่ LLM context</dd>
+          <dt>ใช้ของที่มี</dt><dd><code>getCitySeasonCalendar()</code> <b>เขียนเสร็จรออยู่แล้ว</b> — งานคือ UI ล้วน</dd>
+          <dt>ทำไมขายได้</dt><dd class="why"><b>ตอนนี้สินทรัพย์ที่ดีที่สุดที่คุณมี ถูกขังอยู่ใน prompt — Google มองไม่เห็นสักตัวอักษร</b> นี่ไม่ใช่ฟีเจอร์ นี่คือแก้บั๊กระดับธุรกิจ · 120 หน้า long-tail ที่ไม่มีคู่แข่ง (ไม่มีใครเขียนถึงอาซาฮิกาวะ/อาตามิ)</dd>
+        </dl>
+      </div>
+
+      <div class="task">
+        <div class="task-top"><h4>2.2 OG image + หน้าแชร์</h4><span class="size s">เล็ก</span></div>
+        <dl>
+          <dt>ทำอะไร</dt><dd>แชร์ลง LINE แล้วขึ้นการ์ด — แมวท่าตามอากาศจริง + ชื่อเมือง + “เมษายังทันซากุระ”</dd>
+          <dt>ทำไมขายได้</dt><dd class="why">คนไทยวางทริปกันใน LINE กลุ่มเสมอ <b>1 คนแปะ = 5 คนเห็น โดยไม่ผ่าน Google เลย</b> — ช่องเดียวที่ได้ผลทันที ไม่ต้องรอ 6 เดือน</dd>
+          <dt>หมายเหตุ</dt><dd class="why"><b>ผลตอบแทนสูงสุดต่อบรรทัดโค้ดในแผนนี้</b></dd>
+        </dl>
+      </div>
+    </div>
+
+    <!-- ก้อน 3 -->
+    <div class="phase">
+      <div class="phase-head">
+        <span class="medal">🥉</span>
+        <h3>ก้อนที่ 3 — ปิดวงจร (เงินอยู่ตรงนี้)</h3>
+        <span class="wk">2 สัปดาห์</span>
+      </div>
+
+      <div class="task">
+        <div class="task-top"><h4>3.1 note ที่พัก + อาหาร เขียนมือ + deep-link</h4><span class="size m">กลาง</span></div>
+        <dl>
+          <dt>ทำอะไร</dt><dd>1–2 บรรทัดต่อเมือง — <b>“พักย่านไหน ทำไม กับดักคืออะไร”</b> ไม่ใช่ลิสต์โรงแรม → ปุ่ม Rakuten/Agoda ต่อท้าย<br>อาหาร = “เมืองนี้กินอะไร” ไม่ใช่ “ร้านไหนดี”</dd>
+          <dt>ทำไมขายได้</dt><dd class="why">คนที่เพิ่งรู้ว่าโคยะซังทัน <b>คำถามถัดไปคือ “แล้วพักไหน” ทันที</b> ถ้าต้องออกไปเปิดแอปอื่น เราเสียเขาตอนที่เขาตื่นเต้นที่สุด<br>“โคยะซังไม่มีโรงแรม มีแต่วัดให้พัก จองล่วงหน้า 2 เดือน อาหารเจล้วน” <b>มีค่ากว่าลิสต์ 20 โรงแรม</b> · ไม่ผิดกฎ mock เพราะเราไม่เคยอ้างว่ามี inventory</dd>
+        </dl>
+        <div class="nope">❌ <b>ตั๋วเครื่องบิน — ไม่ทำ</b> · ไม่มีแหล่งถูกกฎ · ราคาเก่า = โกหก · และคนจองตั๋ว<b>ก่อน</b>เลือกเมือง มันไม่อยู่ในบริบทเราตั้งแต่แรก</div>
+      </div>
+
+      <div class="task">
+        <div class="task-top"><h4>3.2 ลดแหล่งข้อมูล 15 → 7</h4><span class="size s">เล็ก · บ่ายเดียว</span></div>
+        <dl>
+          <dt>ตาย</dt><dd>OpenAQ · air-quality (ซ้ำ) · p2pquake (JMA ครอบแล้ว) · webcam · News · YouTube · FX · LLM ที่เหลือ 2 ตัว</dd>
+          <dt>ทำไม</dt><dd class="why">ทุกตัวคือ dependency ที่พังได้และไม่มีใครใช้ — <b>ทีมคนเดียวจ่ายค่าดูแลของที่ไม่มีคนต้องการไม่ไหว</b></dd>
+        </dl>
+      </div>
+    </div>
+
+    <blockquote>
+      <p><b>ลำดับนี้มีกับดักไหม? — มี 1 อัน:</b> ก้อนที่ 1 <b>ไม่พาคนเข้ามาสักคน</b> มันทำให้คนที่<b>มาแล้ว</b>ประทับใจ · ก้อนที่ 2 ต่างหากที่พาคนมา<br>
+      <b>ถ้าติดหล่มขัดแผนที่ให้เนียนแล้วไม่ได้ทำก้อน 2 = เราได้ของสวยที่ไม่มีคนดู</b> — ยอมรับกันตรงนี้ว่าก้อน 1 คือ 3 สัปดาห์ ไม่ใช่ 3 เดือน แล้วเดินต่อ</p>
+    </blockquote>
+  </section>
+
+  <!-- ═══ แมว = อาวุธ ═══ -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">คำถามที่แหลมที่สุด</span>
+      <h2>แมว 2.5D — ของเล่น หรือ อาวุธ?</h2>
+      <p class="sec-note">Fable เปลี่ยนใจหลังรู้ว่ามีอาร์ตแมววาดเสร็จแล้ว 5 ท่า</p>
+    </div>
+
+    <blockquote>
+      <p><b>อาวุธ — และมันคือของที่คุณมีอยู่แล้วโดยไม่รู้ตัวว่ามันแพงแค่ไหน</b><br>
+      รอบที่แล้วผมเชียร์ “หน้าที่แชร์ลง LINE ได้” ตอนนั้นผมยังไม่รู้ว่ามีแมววาดเสร็จ 5 ท่า ผมจึงคิดว่าต้องเอา typography มาสู้ — <b>ตอนนี้ผมเปลี่ยนใจ: แมวคือคำตอบของขานั้นพอดีเป๊ะ</b></p>
+    </blockquote>
+
+    <div class="weapons">
+      <div class="weapon">
+        <span class="n">อาวุธ 01</span>
+        <h4>ยิงใส่ 3 วินาทีแรก</h4>
+        <p>เว็บเที่ยวทุกเจ้าหน้าตาเหมือนกันหมด แมว washi ตากลมโตยืนบนแผนที่เอียงมีหิมะตก <b>ไม่มีใครเคยเห็น</b><br>เราชนะได้จริงเพราะ<b>บริษัทใหญ่ทำแบบนี้ไม่ได้ — มัน “ไม่โปรฯ” เกินไปสำหรับพวกเขา</b></p>
+      </div>
+      <div class="weapon">
+        <span class="n">อาวุธ 02</span>
+        <h4>ยิงใส่ LINE</h4>
+        <p>สิ่งที่คนแชร์คือ<b>ภาพ</b> ไม่ใช่ข้อมูล<br>“โคยะซังยังทันซากุระ” ไม่มีใครแปะ — <b>แต่แมวยืนใต้ซากุระที่โคยะซัง มีคนแปะ</b><br>ต่างกันตรงนี้ทั้งหมด และไม่ต้องใช้เงินโฆษณาสักบาท</p>
+      </div>
+      <div class="weapon">
+        <span class="n">อาวุธ 03</span>
+        <h4>ยิงใส่ต้นทุน LLM</h4>
+        <p>ข้อที่ไม่มีใครคิดถึง — <b>แมวสื่อสารได้โดยไม่ต้องเรียก LLM</b><br>ท่า worried + หิมะตก = ผู้ใช้รู้แล้วว่า “หนาวมาก ระวัง” <b>นั่นคือ 0 token</b><br>ยิ่งแมวแสดงออกเก่ง <b>บิลยิ่งถูก</b></p>
+      </div>
+    </div>
+
+    <blockquote>
+      <p>แต่ซื่อสัตย์: <b>แมวไม่ทำเงินโดยตรง</b> มันทำให้คนจำได้ อยู่นาน และแชร์ — เงินมาจากก้อน 3<br><b>ถ้าไม่มีก้อน 3 แมวก็คือของเล่นสวยจริงๆ · ทั้งสามก้อนต้องครบ ถึงจะเป็นอาวุธ</b></p>
+    </blockquote>
+  </section>
+
+  <!-- ═══ mascot ═══ -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">คำถามใหม่ · ยังไม่ได้ถาม Fable</span>
+      <h2>ถ้าเปลี่ยนแมวเป็น mascot ประจำจังหวัด?</h2>
+      <p class="sec-note">ความเห็นของ Opus (main model) — Fable ยังไม่เห็นคำถามนี้</p>
+    </div>
+
+    <div class="verdict-box">
+      <span class="stamp">ไม่ควรทำ</span>
+      <p><b>เหตุผลที่ 1 — ลิขสิทธิ์ ไม่ใช่เรื่องดีไซน์:</b> ยุรุจารา (ゆるキャラ) ทุกตัวมีเจ้าของ · คุมะมง = จังหวัดคุมาโมโตะถือสิทธิ์ ต้องยื่นขออนุญาต · ฟุนัซซี่ = เอกชน หวงสิทธิ์หนักมาก · <b>43 เมือง = ขออนุญาต 43 เจ้า</b> ทีมคนเดียวไม่ไหว และวาดเลียนแบบก็ยังละเมิด</p>
+      <p><b>เหตุผลที่ 2 — ต่อให้ฟรีก็ยังไม่ควร: คุณจะไม่มีแบรนด์</b> กร๊วกคือของคุณ · ถ้าเปลี่ยนเป็นคุมะมง คนจำคุมะมง (ที่เขารู้จักอยู่แล้ว) ไม่ใช่ nagame — <b>คุณกลายเป็นเว็บที่เอาของคนอื่นมาแปะ</b></p>
+    </div>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>อาวุธที่ Fable ระบุ</th><th>กร๊วก</th><th>mascot 43 ตัว</th></tr></thead>
+        <tbody>
+          <tr><td>3 วินาทีแรก</td><td class="yes">ไม่เคยเห็นที่ไหน</td><td class="no">คนไทยเห็นคุมะมงมา 10 ปีแล้ว</td></tr>
+          <tr><td>แชร์ LINE</td><td class="yes">“แมวของ nagame”</td><td class="no">“อ้าว คุมะมง” — ไม่ใช่ของคุณ</td></tr>
+          <tr><td>ลดค่า LLM</td><td class="yes">5 ท่า = ภาษาที่คนเรียนรู้</td><td class="no">43 ตัว = ไม่มีใครจำภาษาได้</td></tr>
+          <tr><td>ต้นทุนอาร์ต</td><td class="yes">5 ภาพ (มีแล้ว)</td><td class="no">5 × 43 = <b>215 ภาพ</b></td></tr>
+          <tr><td><code>mood.ts</code></td><td class="yes">ท่า = ภาษา ใช้ได้ทุกเมือง</td><td class="no">ผู้ใช้ต้องเรียนภาษาใหม่ 43 รอบ</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>ทางที่เชียร์แทน — เอาความคิดมาใช้ ไม่แลกแบรนด์</h3>
+    <p class="sec-note">ไอเดียคุณดีตรงที่ “อยากให้แต่ละเมืองมีเอกลักษณ์” — ทำแบบนี้ได้ทุกอย่างที่ต้องการ:</p>
+    <p><b>กร๊วกแต่งตัวตามเมือง</b> (คงตัวเดิม 100% เปลี่ยนแค่ของประกอบ)</p>
+    <ul class="clean">
+      <li>คุมาโมโตะ → กร๊วกแก้มแดง <em>(แซวคุมะมงแบบไม่ละเมิด)</em></li>
+      <li>อาโอโมริ → กร๊วกใส่หมวกโคมเนบุตะ</li>
+      <li>นารา → กร๊วกมีกวางยืนข้างๆ</li>
+      <li>เบปปุ → กร๊วกนั่งในอ่างออนเซ็น มีไอน้ำ</li>
+    </ul>
+    <p style="font-size:.9rem;color:var(--mute);margin-top:.5rem">เมืองมีเอกลักษณ์ ✓ &nbsp; แบรนด์ยังเป็นของคุณ ✓ &nbsp; ไม่ละเมิดใคร ✓ &nbsp; <code>mood.ts</code> ยังทำงาน ✓ &nbsp; แชร์แล้วคนจำ nagame ✓</p>
+  </section>
+
+  <!-- ═══ กับดัก ═══ -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">อ่านก่อนเริ่ม</span>
+      <h2>กับดัก 6 ข้อ</h2>
+    </div>
+    <div class="traps">
+      <div class="trap"><b>หมุด POI จะแตกตอนเอียง</b> — หนามจริงข้อเดียวของก้อน 1 · counter-rotate ทุกหมุดเหมือนแมว <b>จองเวลาไว้เลย อย่าตกใจตอนเจอ</b></div>
+      <div class="trap"><b>มือถือคือสนามจริง ไม่ใช่จอ 27 นิ้ว</b> — CSS 3D transform บนมือถือเก่ากินแรงกว่าที่คิด · กฎ: particle ≤ 30 ตัว, <code>will-change</code> เท่าที่จำเป็น, ทดสอบบนมือถือจริงทุกครั้งที่แตะ transform · <b>ถ้าเฟรมตก ตัด particle ก่อนตัดการหมุน</b></div>
+      <div class="trap"><b>อย่าให้แมวพูดเยอะ</b> — กับดักที่ Fable กลัวที่สุด · แมวน่ารักจะยั่วให้อยากใส่บทพูด → ทุกบทพูดคือ LLM call → บิลบาน · <b>แมวต้องสื่อสารด้วยท่าทางเป็นหลัก พูดเป็นข้อยกเว้น</b> · จำกัด quota แชทต่อ device ตั้งแต่วันแรก อย่ารอให้บิลมาก่อน</div>
+      <div class="trap"><b>ไม่มี test runner — ยอมรับแล้วอยู่กับมัน</b> · อย่าเพิ่งตั้ง vitest ตอนนี้ มันไม่ใช่คอขวด · แต่ก้อน 1 ทั้งก้อนเป็น visual ที่เทสต์อัตโนมัติไม่ได้อยู่ดี — <b>ต้องเปิดมือถือดูเอง ทุกครั้ง</b></div>
+      <div class="trap"><b>SEO ต้องยอมแลกเวลา</b> — <b>ห้ามแตะคำว่า “เกียวโต ใบไม้เปลี่ยนสี” เด็ดขาด</b> เว็บใหม่ไม่มี backlink ไม่มีวันชนะ Pantip ในคำนั้น · ชนะที่โคยะซัง/อาตามิ/อาซาฮิกาวะ — เมืองที่ไม่มีใครเขียนถึง · <b>6–12 เดือน ไม่ใช่ 1 เดือน</b> ถ้ารับไม่ได้ ต้องรู้ตั้งแต่วันนี้</div>
+      <div class="trap"><b>43 เมืองเขียนมือ = ไม่ scale</b> · เมืองที่ 44 ต้องนั่งเขียน · note จะเน่าเงียบ<br><b>ทางแก้:</b> ใส่ <code>updated_at</code> ต่อ note + ให้อากาศจริงขัดแย้งได้ — <em>“note บอกพีคปลายตุลา ปีนี้อุ่นกว่าปกติ อาจช้าอีกสัปดาห์”</em> · <b>นี่คือของที่บล็อกปี 2023 ทำไม่ได้ และคือคำตอบว่าทำไมไม่อ่าน Pantip</b></div>
+    </div>
+  </section>
+
+  <!-- ═══ 3 เดือน ═══ -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">ปลายทาง</span>
+      <h2>3 เดือน — nagame จะเป็นอะไร</h2>
+    </div>
+
+    <div class="ending">
+      <p class="scene">คนไทยคนหนึ่งกำลังจะไปญี่ปุ่นเมษา เพื่อนแปะลิงก์ใน LINE กลุ่ม เขากด</p>
+      <p class="scene"><em>แผนที่กระดาษวาชิเอียงกางออก มีกลีบซากุระร่วงบางๆ แมวสีครีมผ้าพันคอครามยืนอยู่กลางโคยะซัง เงาทอดบนพื้นเอียง เอียงหัวนิดนึง</em></p>
+      <p class="scene">ข้างล่างเขียนว่า: <em>“ที่นี่บานช้าเพราะสูง 800 เมตร — คันไซโรยหมดแล้ว แต่ที่นี่ยังทันถึง 5 พ.ค.”</em><br>
+      เขาเลื่อนดูปฏิทินทั้งปี เห็นว่ามิถุนายนไม่มีอะไร กรกฎาคมมีเทศกาล<br>
+      เขาอ่านต่อ: <em>“ที่นี่ไม่มีโรงแรม มีแต่วัดให้พัก ต้องจองล่วงหน้า 2 เดือน อาหารเจล้วน”</em> → กด → ไป Rakuten → <b>เราได้ค่าคอม</b><br>
+      เขาแปะกลับเข้ากลุ่ม อีก 4 คนกด</p>
+      <p class="scene">พร้อมกันนั้น <b>120 หน้า long-tail เริ่มติด Google ในคำที่ไม่มีคู่แข่ง</b> — ไม่ใช่พันคนต่อวัน แต่เป็นคนที่<b>ตั้งใจไปญี่ปุ่นจริง 100%</b> ทุกคน</p>
+
+      <div class="punch">
+        ไม่ใช่ trip planner ไม่ใช่ dashboard ไม่ใช่ chatbot<br>
+        <span style="color:var(--seal)">มันคือที่ที่คนไทยเปิดดูว่า “ญี่ปุ่นตอนนี้เป็นยังไง” แล้วมีแมวยืนเล่าให้ฟัง</span>
+      </div>
+
+      <p class="scene" style="font-size:.88rem">Google Maps ทำไม่ได้เพราะไม่มีเสียง · ChatGPT ทำไม่ได้เพราะไม่มีวันนี้ · Pantip ทำไม่ได้เพราะแช่แข็งปี 2023 · บริษัทใหญ่ทำไม่ได้เพราะจ้างคนเขียน note 43 เมืองไม่คุ้ม</p>
+
+      <p style="font-weight:700;font-size:.95rem">คนเดียวที่ทำได้ คือคนที่มี note 43 เมืองอยู่ในมือแล้ว — และแมวที่วาดเสร็จแล้ว<br>
+      <span style="color:var(--seal)">ของทั้งสองอย่างอยู่ในเครื่องคุณแล้ววันนี้ มันแค่ยังไม่มีใครเห็น</span></p>
+
+      <p class="cta">▸ เริ่มที่เอียงแผนที่ พรุ่งนี้เช้า</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>Claude Fable 5 · advisor mode ผ่าน <code>fable-advisor</code> — ปรึกษา 3 รอบ (positioning → แก้ข้อมูล 43 เมือง → pitch) · Fable ให้แผน ไม่ได้แตะโค้ด · เรียกโดย Opus 4.8</p>
+    <p style="font-size:.72rem">หัวข้อ mascot ประจำจังหวัดเป็นความเห็นของ Opus — ยังไม่ได้ส่งให้ Fable ตรวจ</p>
+    <div class="sig">nagame · d:\TT\nagame · 15 ก.ค. 2026</div>
+  </footer>
+
+</div>
+</body>
+</html>
