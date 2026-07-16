@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUp,
-  Bot,
   Calendar,
   CloudRain,
   Compass,
@@ -19,6 +18,8 @@ import {
 } from "lucide-react";
 import { getKruakMood } from "@/lib/game/mood";
 import { KruakAvatar } from "@/components/kruak-avatar";
+import { ChatPanel } from "@/components/chat/chat-panel";
+import { toBubbles } from "@/lib/chat/types";
 import { isInTrip, toggleTrip } from "@/lib/game/trip";
 import { CitySearch } from "@/components/city-search";
 import type { Recommendation } from "@/lib/cities/city-configs";
@@ -80,11 +81,6 @@ type RecommendationWithImage = Recommendation & {
   image?: string | null;
 };
 
-type ChatMessage = {
-  role: "assistant" | "user";
-  content: string;
-};
-
 const quickPrompts = [
   "ฝนแบบนี้ไปไหนดี",
   "กินอะไรดีใกล้สถานี",
@@ -103,15 +99,7 @@ export function TravelDashboard({
   recommendations,
   seeds,
 }: DashboardProps) {
-  const [chatInput, setChatInput] = useState("");
-  // seed คำทักทายกร๊วกที่คำนวณฝั่ง server เป็นข้อความแรก — initializer อ่าน prop
-  // ครั้งเดียว ค่าคงที่ระหว่าง server render กับ hydration (ไม่ recompute ฝั่ง client)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => [
-    { role: "assistant", content: verdict },
-  ]);
-  const [chatError, setChatError] = useState("");
   const [webcamOpen, setWebcamOpen] = useState(false);
-  const [isPending, setIsPending] = useState(false);
   const [selectedWebcamIndex, setSelectedWebcamIndex] = useState(0);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const severeWarnings = warnings.items.filter((item) => item.level !== "advisory");
@@ -166,39 +154,6 @@ export function TravelDashboard({
     if ((weather.rainChance ?? 0) >= 40) return "มีสิทธิ์เจอฝนเป็นช่วง";
     return "จังหวะเที่ยวค่อนข้างคล่องตัว";
   }, [weather.rainChance]);
-
-  function submitPrompt(prompt: string) {
-    const value = prompt.trim();
-    if (!value) return;
-
-    setChatInput("");
-    setChatError("");
-    setChatMessages((prev) => [...prev, { role: "user", content: value }]);
-    setIsPending(true);
-
-    void (async () => {
-      try {
-        const response = await fetch("/api/assistant", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          // advisor ดึง signal ฝั่ง server เอง — ส่งแค่เมืองกับคำถามพอ
-          body: JSON.stringify({ citySlug: city.slug, prompt: value }),
-        });
-
-        const data = (await response.json()) as { reply?: string; error?: string };
-        if (!response.ok || !data.reply) {
-          setChatError(data.error ?? "ตอบกลับไม่สำเร็จ ลองใหม่อีกครั้ง");
-          return;
-        }
-
-        setChatMessages((prev) => [...prev, { role: "assistant", content: data.reply ?? "" }]);
-      } catch {
-        setChatError("การเชื่อมต่อ AI assistant ยังไม่สำเร็จ ลองใหม่อีกครั้ง");
-      } finally {
-        setIsPending(false);
-      }
-    })();
-  }
 
   return (
     <main className="min-h-screen overflow-x-clip text-[var(--foreground)]">
@@ -314,101 +269,10 @@ export function TravelDashboard({
                 </div>
               </div>
 
-              {/* คำทักทายกร๊วก — speech bubble ตราประทับ (ข้อความแรกของแชท) + แชทต่อ */}
-              <div className="mt-4 space-y-3">
-                <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
-                  {chatMessages.map((message, index) => (
-                    <div key={`${message.role}-${index}`} className={index === 0 ? "space-y-2" : undefined}>
-                      {/* ข้อความแรก (คำทักทายกร๊วก) แตกเป็นหลาย speech bubble ตาม \n\n —
-                          ให้ความรู้สึก "กร๊วกพิมพ์มาทีละใบ" ไม่ใช่กำแพงข้อความก้อนเดียว.
-                          ไม่แตะ chatMessages state (แตกตอน render เท่านั้น) = chat backend ไม่กระทบ */}
-                      {index === 0 ? (
-                        message.content
-                          .split(/\n{2,}/)
-                          .map((segment) => segment.trim())
-                          .filter(Boolean)
-                          .map((segment, segIndex) => (
-                            <div
-                              key={segIndex}
-                              className="rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-vermilion-soft)] p-4 shadow-[3px_3px_0_0_var(--nb-ink)]"
-                            >
-                              <p className="whitespace-pre-line text-sm leading-7 text-[var(--foreground)]">{segment}</p>
-                            </div>
-                          ))
-                      ) : (
-                        <div
-                          className={
-                            message.role === "assistant"
-                              ? "mr-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--surface-soft)] p-4"
-                              : "ml-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-indigo-soft)] p-4"
-                          }
-                        >
-                          <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
-                            {message.role === "assistant" ? <Bot className="h-3.5 w-3.5" aria-hidden /> : <Compass className="h-3.5 w-3.5" aria-hidden />}
-                            {message.role === "assistant" ? "กร๊วก" : "คุณ"}
-                          </div>
-                          <p className="whitespace-pre-line text-sm leading-7 text-[var(--foreground)]">{message.content}</p>
-                        </div>
-                      )}
-
-                      {/* delight: กร๊วกชะโงกดู webcam ให้ — bubble หลักฐานสด ต่อจากคำทักทาย
-                          (เฉพาะข้อความแรก + มี webcam) แปลง data feed เป็นพฤติกรรมตัวละคร */}
-                      {index === 0 && webcam.available && activeWebcam?.previewImage ? (
-                        <button
-                          type="button"
-                          onClick={() => setWebcamOpen(true)}
-                          className="mt-3 block w-full overflow-hidden rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--surface)] text-left shadow-[3px_3px_0_0_var(--nb-ink)] transition hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_var(--nb-ink)]"
-                        >
-                          <div className="relative aspect-[16/9] overflow-hidden">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={activeWebcam.previewImage} alt={activeWebcam.title ?? `${city.name} live`} className="h-full w-full object-cover" />
-                            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(31,36,48,0.55))]" />
-                            <span className="absolute left-3 top-3 nb-pill nb-pill-alert">● สดตอนนี้</span>
-                          </div>
-                          <p className="px-4 py-3 text-sm leading-6 text-[var(--foreground)]">
-                            กร๊วกเพิ่งชะโงกดูให้ — นี่สภาพ {city.name} ตอนนี้เลย กดดูเต็ม ๆ ได้
-                          </p>
-                        </button>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {quickPrompts.map((prompt) => (
-                    <button
-                      key={prompt}
-                      type="button"
-                      onClick={() => submitPrompt(prompt)}
-                      className="nb-pill transition hover:bg-[var(--nb-gold)]/30"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
-
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    submitPrompt(chatInput);
-                  }}
-                  className="space-y-3"
-                >
-                  <textarea
-                    value={chatInput}
-                    onChange={(event) => setChatInput(event.target.value)}
-                    placeholder="ถามกร๊วก เช่น ถ้าฝน 70% ควรสลับไปย่านไหนก่อน"
-                    maxLength={300}
-                    rows={2}
-                    className="nb-flat w-full px-4 py-3 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--ink-muted)] focus:shadow-[3px_3px_0_0_var(--nb-ink)]"
-                  />
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    {chatError ? <p className="text-sm font-medium text-[var(--nb-vermilion)]">{chatError}</p> : <span className="text-xs text-[var(--ink-muted)]">ตอบจากข้อมูลล่าสุดของหน้านี้</span>}
-                    <button type="submit" disabled={isPending} className="nb-btn px-5 py-2.5 text-sm">
-                      {isPending ? "กำลังคิด..." : "ถามกร๊วก"}
-                    </button>
-                  </div>
-                </form>
+              {/* คำทักทายกร๊วก (verdict) เป็น seed + แชทต่อ — ตรรกะแชทอยู่ใน ChatPanel
+                  (Phase 0 U5, docs/chat-cards-roadmap.md) shell-agnostic ใช้ร่วมกับหน้าแรกได้ */}
+              <div className="mt-4">
+                <ChatPanel citySlug={city.slug} seedBubbles={toBubbles(verdict)} quickPrompts={quickPrompts} />
               </div>
             </div>
           </section>
