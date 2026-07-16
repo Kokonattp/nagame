@@ -343,7 +343,9 @@ async function buildCityCards(citySlug: string, context: AdvisorContext, intent:
   const sets = getRecommendationSets(city.name, city.prefecture, config?.recommendations ?? []);
   // ถ้ามีร้านจริงจาก Places / ที่พักจริงจาก Rakuten แล้ว ไม่ต้องดัน place หมวดนั้นซ้ำ
   const placePicks: { kind: "see" | "eat" | "sleep"; emoji: string }[] = [{ kind: "see", emoji: "⛩" }];
-  if (!eatCards.length) placePicks.push({ kind: "eat", emoji: "🍜" });
+  // ⚠ ถ้าผู้ใช้ระบุ diet (ฮาลาล/มังฯ/แพ้กุ้ง) แต่ Places ไม่เจอร้าน → ห้ามโผล่ place eat
+  // fallback (ร้าน hardcode ไม่การันตี diet — แนะผิดเงื่อนไขความเชื่อ/แพ้อาหาร = อันตราย)
+  if (!eatCards.length && !intent.diet) placePicks.push({ kind: "eat", emoji: "🍜" });
   if (!stayCards.length) placePicks.push({ kind: "sleep", emoji: "🛏" });
   for (const pick of placePicks) {
     const item = sets[pick.kind].find((r) => !r.generic);

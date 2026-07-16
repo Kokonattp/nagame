@@ -111,13 +111,11 @@ function FlightCardView({ card }: { card: FlightCard }) {
 }
 
 function WebcamCardView({ card }: { card: WebcamCard }) {
+  // ใช้ <a> ให้ตรงกับ card อื่น — window.open โดน popup blocker ได้ในบาง browser
+  // (การ์ด stay/eat/flight ใช้ <a target=_blank> อยู่แล้ว เปิดปกติกว่า)
   return (
     <div className={CARD_BASE}>
-      <button
-        type="button"
-        onClick={() => window.open(card.liveUrl, "_blank", "noopener,noreferrer")}
-        className="block w-full text-left"
-      >
+      <a href={card.liveUrl} target="_blank" rel="noreferrer" className="block w-full text-left">
         <div className="relative h-28 w-full overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={card.previewImage} alt={card.title} className="h-full w-full object-cover" />
@@ -130,7 +128,7 @@ function WebcamCardView({ card }: { card: WebcamCard }) {
           <p className="truncate text-sm font-bold text-[var(--foreground)]">{card.title}</p>
           <p className="text-xs font-bold text-[var(--nb-indigo)]">แตะเพื่อดูสด →</p>
         </div>
-      </button>
+      </a>
     </div>
   );
 }

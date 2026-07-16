@@ -33,7 +33,11 @@ export async function GET(request: NextRequest) {
   const label = params.get("label")?.slice(0, 120) ?? null;
   const citySlug = params.get("city")?.slice(0, 80) ?? null;
   // device id ส่งมาทาง cookie/header ถ้ามี (client แนบให้) — ไม่มีก็ log เป็น null ได้
-  const deviceId = params.get("d")?.slice(0, 80) ?? null;
+  // deviceId: อ่านจาก cookie ก่อน (client เขียนจาก localStorage) → fallback query param 'd'.
+  // ⚠ KNOWN LIMITATION (Phase 1): card link ประกอบฝั่ง server (advisor) ที่ไม่รู้ deviceId
+  // จึงยังไม่มี 'd' ในหลาย URL → clickout log เป็น device_id=null. attribution เต็มรูปแบบ
+  // (funnel depth per device) จะสมบูรณ์ตอน Phase 2 ที่ย้าย identity → cookie/LINE Login พร้อมกัน.
+  const deviceId = request.cookies.get("nagame_did")?.value?.slice(0, 80) ?? params.get("d")?.slice(0, 80) ?? null;
 
   // best-effort log — ห้าม await นาน/throw จนบล็อก redirect
   void logClickout({ deviceId, kind, url: target, label, citySlug });
