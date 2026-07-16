@@ -53,18 +53,19 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ reply }, { headers: cacheHeaders(0) });
 }
 
-// rate-limit คุมเฉพาะการยิงโมเดล — เกินโควตายังตอบได้ด้วย rule-based ของ advisor (cards ยังออกปกติ)
+// rate-limit คุมการยิงโมเดล — เกินโควตา → allowLlm=false → intent+compose เป็น rule-based
+// ทั้งคู่ ไม่ยิง LLM เลย (Fable B3: เดิม comment บอก rule-based แต่โค้ดยังยิง LLM 2 calls). cards ยังออกปกติ
 async function getCityReply(citySlug: string, prompt: string, ip: string): Promise<ChatReply> {
   const cacheKey = `assistant:v2:${citySlug}:${prompt.toLowerCase()}`;
 
   if (!takeAiBudget(ip)) {
-    return getAdvisorChatReply(citySlug, prompt);
+    return getAdvisorChatReply(citySlug, prompt, false);
   }
 
   try {
-    return await cached(cacheKey, AI_REPLY_CACHE_SECONDS, () => getAdvisorChatReply(citySlug, prompt));
+    return await cached(cacheKey, AI_REPLY_CACHE_SECONDS, () => getAdvisorChatReply(citySlug, prompt, true));
   } catch {
-    return getAdvisorChatReply(citySlug, prompt);
+    return getAdvisorChatReply(citySlug, prompt, false);
   }
 }
 

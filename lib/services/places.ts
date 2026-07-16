@@ -69,15 +69,19 @@ export async function getEatPlaces(
   lat: number,
   lon: number,
   cityName: string,
-  diet?: DietFilter,
+  opts?: { diet?: DietFilter; foodKeyword?: string },
 ): Promise<PlacesSignal> {
   const key = process.env.GOOGLE_PLACES_API_KEY;
   if (!key) return empty("ยังไม่ได้ตั้งค่า Google Places (ร้านจะแสดงเมื่อใส่ GOOGLE_PLACES_API_KEY)");
 
+  const diet = opts?.diet;
+  const food = opts?.foodKeyword?.trim();
   const dietTag = diet ? DIET_QUERY[diet] : "";
-  const query = `${dietTag} restaurants in ${cityName}`.trim();
+  // foodKeyword (จาก LLM intent) นำหน้า → "ramen halal restaurants in Tokyo"
+  const query = [food, dietTag, "restaurants in", cityName].filter(Boolean).join(" ").trim();
 
-  return cached(`places:${lat.toFixed(3)}:${lon.toFixed(3)}:${diet ?? "any"}`, CACHE_SECONDS, async () => {
+  // cache key ต้องรวม food ด้วย ไม่งั้นคนถามราเมงได้ cache ซูชิของคนก่อน (Fable B2)
+  return cached(`places:${lat.toFixed(3)}:${lon.toFixed(3)}:${diet ?? "any"}:${food ?? "any"}`, CACHE_SECONDS, async () => {
     try {
       const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
         method: "POST",
@@ -115,7 +119,8 @@ export async function getEatPlaces(
           cuisine: p.primaryTypeDisplayName?.text,
           rating: typeof p.rating === "number" ? p.rating : null,
           priceLevel: p.priceLevel ? (PRICE_SYMBOL[p.priceLevel] ?? null) : null,
-          imageUrl: buildPhotoUrl(p.photos?.[0]?.name, key),
+          // proxy ผ่าน route ของเรา — ห้ามฝัง API key ใน URL ที่ส่งไป client (Fable B1: key รั่ว)
+          imageUrl: buildPhotoUrl(p.photos?.[0]?.name),
           mapUrl: p.googleMapsUri!,
         }))
         // เรตติ้งสูงก่อน (null ท้าย)
@@ -130,8 +135,10 @@ export async function getEatPlaces(
   });
 }
 
-// รูปจาก Places Photo endpoint — ต้องมี photo resource name + key
-function buildPhotoUrl(photoName: string | undefined, key: string): string | null {
+// รูปจาก Places Photo — proxy ผ่าน /api/place-photo (ฝั่ง server ค่อยแนบ key).
+// ห้ามฝัง GOOGLE_PLACES_API_KEY ใน URL ที่ส่งไป client เพราะ card render เป็น <img src>
+// ฝั่ง browser = ใครก็ view-source เอา key ไปยิง quota ได้ (Fable B1, security).
+function buildPhotoUrl(photoName: string | undefined): string | null {
   if (!photoName) return null;
-  return `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=640&key=${key}`;
+  return `/api/place-photo?name=${encodeURIComponent(photoName)}`;
 }
