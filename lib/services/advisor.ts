@@ -2,6 +2,7 @@ import { getCityConfigBySlug, type Recommendation as CityRecommendation } from "
 import { japanHolidayWindows, windowStatus } from "@/lib/cities/holidays";
 import { citiesWithSeasons, getCitySeasonCalendar, getCitySeasons } from "@/lib/cities/seasons";
 import { getCityTransit } from "@/lib/cities/transit";
+import { getAreaCoord, hasAreaCoord, type LatLon } from "@/lib/cities/area-coords";
 import { getRecommendationSets } from "@/lib/cities/travel-meta";
 import { buildOutbound } from "@/lib/outbound";
 import { getAqi } from "@/lib/services/aqi";
@@ -10,6 +11,10 @@ import { resolveCity } from "@/lib/services/geocode";
 import { getWarnings } from "@/lib/services/warnings";
 import { getWeather } from "@/lib/services/weather";
 import { getWebcams } from "@/lib/services/webcams";
+import { getStays } from "@/lib/services/stays";
+import { getEatPlaces, type DietFilter } from "@/lib/services/places";
+import { getFlightSignal } from "@/lib/services/flight-signal";
+import { cached } from "@/lib/utils/cache";
 import { toBubbles, type Card, type ChatReply } from "@/lib/chat/types";
 
 // กร๊วกตอบเป็น 1 LLM call: parseIntent (โค้ด) → รวม signal ฝั่ง server → compose.
@@ -81,31 +86,186 @@ export async function getAdvisorReply(citySlug: string, prompt: string): Promise
 // หัวใจ: LLM มีหน้าที่เดียวคือพูดไทย (bubbles) — cards ทั้งหมดโค้ดประกอบจากข้อมูลจริง
 // ที่ fetch มาแล้ว ไม่ใช่จาก LLM. citySlug = null รองรับ "หน้าแรก = แชท ไม่บังคับเลือกเมือง"
 // (docs/chat-cards-roadmap.md Phase 0 U7) — ตอบระดับประเทศจาก season data ล้วน ไม่ยิง LLM.
-export async function getAdvisorChatReply(citySlug: string | null, prompt: string): Promise<ChatReply> {
+// allowLlm = false เมื่อ route เกิน AI budget (rate limit) → parse intent + compose ด้วย
+// rule-based ทั้งคู่ ไม่ยิง LLM เลย (Fable B3: เดิม comment บอก rule-based แต่โค้ดยังยิง LLM).
+export async function getAdvisorChatReply(
+  citySlug: string | null,
+  prompt: string,
+  allowLlm = true,
+): Promise<ChatReply> {
   if (!citySlug) return buildCountryLevelReply();
 
-  // เรียก getAdvisorReply เดิมตรง ๆ แทนก๊อปตรรกะ AI/fallback — ไม่แตะของเดิม, ไม่เสี่ยงเพี้ยน.
-  // gatherContext ถูกเรียกซ้ำใน getAdvisorReply + ที่นี่ (สำหรับ cards) แต่ห่อ cached() อยู่แล้ว
-  // (TTL 10-30 นาที) เหมือน pattern getCityVerdict/page.tsx ที่ทำอยู่แล้วในไฟล์นี้ — cache hit ปกติ.
-  const [result, context] = await Promise.all([getAdvisorReply(citySlug, prompt), gatherContext(citySlug)]);
-  const cards = context ? await buildCityCards(citySlug, context) : [];
+  // ยิง 3 อย่างขนานกัน: compose (LLM/rule), context (สำหรับ cards), intent (parse คำถาม).
+  // เดิม parseCardIntent ต่อคิวหลัง context ทำให้ +1s ทุกคำตอบ — intent ใช้แค่ prompt จึงขนานได้ (Fable W2).
+  const [result, context, intent] = await Promise.all([
+    getAdvisorReply(citySlug, prompt),
+    gatherContext(citySlug),
+    parseCardIntent(prompt, allowLlm),
+  ]);
+  const cards = context ? await buildCityCards(citySlug, context, intent) : [];
 
   return { bubbles: toBubbles(result.reply), cards, source: result.source };
 }
 
-// การ์ดระดับเมือง — เฉพาะของจริงที่ fetch ได้เท่านั้น: อากาศ (มีอยู่แล้วใน context),
-// กล้องสด (ของจริงจาก webcam service), และสถานที่คัดมือ (curated ไม่ generic).
-// ล้มเงียบทีละใบ — ใบไหนไม่มีข้อมูลจริงก็แค่ไม่โผล่ ไม่ทำให้ทั้งคำตอบพัง.
-async function buildCityCards(citySlug: string, context: AdvisorContext): Promise<Card[]> {
+// intent จากคำถาม — โครงสร้างที่ใช้เลือก/เจาะการค้นหา card (หมวด + diet + ย่าน + งบ + คำอาหาร).
+// **LLM เป็นตัว parse หลัก** (อ่านเจตนาได้ครบกว่า regex เยอะ — "ทงคัตสึแถวเมืองเก่างบสองพัน"
+// regex ไม่มีวันครบ). ไม่มี LLM key → fallback regex หยาบ (แค่ กิน/นอน/บิน) พอให้ dual-mode ไม่พัง.
+// เจ้าของสั่ง 2026-07-16: "anysearch/LLM ฉลาดพอ อย่า hardcode". LLM เข้าใจเจตนา, API หาข้อมูลจริง.
+type CardIntent = {
+  wantsEat: boolean;
+  wantsStay: boolean;
+  wantsFlight: boolean;
+  diet?: DietFilter;
+  /** ชื่อย่านที่ผู้ใช้เอ่ย → ค้นเจาะย่านแทนทั้งเมือง */
+  area?: string;
+  /** งบต่อคืน (บาท) → กรองที่พัก */
+  maxBudgetThb?: number;
+  /** คำค้นอาหาร เช่น "ramen" "sushi" → ต่อท้าย query ของ Places */
+  foodKeyword?: string;
+};
+
+// fallback หยาบเมื่อไม่มี LLM key — แค่จับหมวด+diet พื้นฐาน ไม่พยายามฉลาด (ให้ LLM ทำ)
+function parseIntentRuleBased(prompt: string): CardIntent {
+  const p = prompt.toLowerCase();
+  const diet: DietFilter | undefined = /ฮาลาล|halal|muslim/i.test(prompt)
+    ? "halal"
+    : /มังสวิรัติ|เจ|vegetarian|vegan/i.test(prompt)
+      ? "vegetarian"
+      : /แพ้กุ้ง|no shrimp/i.test(prompt)
+        ? "no-shrimp"
+        : undefined;
+  return {
+    wantsEat: /กิน|อาหาร|ร้าน|eat|food|restaurant/i.test(p) || Boolean(diet),
+    wantsStay: /นอน|พัก|โรงแรม|ที่พัก|hotel|stay/i.test(p),
+    wantsFlight: /ตั๋ว|บิน|flight/i.test(p),
+    diet,
+  };
+}
+
+// LLM parse intent → structured JSON. ให้โมเดลอ่านเจตนา (ฉลาดกว่า regex) แต่คืนแค่
+// "โครงคำค้น" ไม่ใช่ข้อมูล — ข้อมูลจริงมาจาก Places/Rakuten (กัน hallucinate ราคา/ชื่อร้าน).
+// allowLlm=false (เกิน budget) / ไม่มี Anthropic key / พัง / parse ไม่ได้ → fallback rule-based.
+// cache ผลด้วย (temperature 0 = deterministic) — prompt ซ้ำไม่ยิง LLM ซ้ำ (Fable W3).
+async function parseCardIntent(prompt: string, allowLlm: boolean): Promise<CardIntent> {
+  // llmParseIntent ทำเฉพาะ Anthropic → เช็คตรงตัว (Fable W4: เดิมเช็ค 3 provider แต่ทำแค่ตัวเดียว)
+  if (!allowLlm || !process.env.ANTHROPIC_API_KEY) return parseIntentRuleBased(prompt);
+
+  try {
+    // cache เฉพาะผลสำเร็จ — ถ้า LLM พัง (null) โยนเพื่อไม่ให้ cache null (ไม่งั้น prompt นั้นไม่ลอง LLM ซ้ำ 24 ชม)
+    const llm = await cached(`intent:${prompt.toLowerCase()}`, 60 * 60 * 24, async () => {
+      const r = await llmParseIntent(prompt);
+      if (!r) throw new Error("intent parse failed");
+      return r;
+    });
+    return llm;
+  } catch {
+    return parseIntentRuleBased(prompt);
+  }
+}
+
+const INTENT_SYSTEM = [
+  "Extract travel search intent from a Thai/English question. Return ONLY minified JSON, no prose.",
+  'Shape: {"wantsEat":bool,"wantsStay":bool,"wantsFlight":bool,"diet":"halal"|"vegetarian"|"no-shrimp"|null,"area":string|null,"maxBudgetThb":number|null,"foodKeyword":string|null}',
+  "area = neighbourhood/district name in ENGLISH romaji if the user named one (e.g. Shinjuku, Dotonbori), else null.",
+  "foodKeyword = specific dish in ENGLISH if named (ramen, sushi, tonkatsu, yakiniku, cafe...), else null.",
+  "maxBudgetThb = per-night budget in Thai baht if the user gave a number or said cheap (map 'ถูก'/'cheap' to 1500), else null.",
+  "Set wantsEat/wantsStay/wantsFlight true only for what the user actually asks about.",
+].join(" ");
+
+async function llmParseIntent(prompt: string): Promise<CardIntent | null> {
+  try {
+    let raw: string | null = null;
+    if (process.env.ANTHROPIC_API_KEY) {
+      // timeout 3s — intent call block Promise.all ของ card ทั้งหมด, แขวนไม่ได้ (Fable W1: latency ฆ่า warmth)
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": process.env.ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 200,
+          temperature: 0,
+          system: INTENT_SYSTEM,
+          messages: [{ role: "user", content: prompt }],
+        }),
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timer));
+      if (res.ok) {
+        const data = (await res.json()) as { content?: { type?: string; text?: string }[] };
+        raw = data.content?.find((b) => b.type === "text")?.text ?? null;
+      }
+    }
+    if (!raw) return null;
+
+    const json = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
+    const parsed = JSON.parse(json) as Partial<CardIntent>;
+    const validDiet = parsed.diet && ["halal", "vegetarian", "no-shrimp"].includes(parsed.diet) ? parsed.diet : undefined;
+    return {
+      wantsEat: Boolean(parsed.wantsEat),
+      wantsStay: Boolean(parsed.wantsStay),
+      wantsFlight: Boolean(parsed.wantsFlight),
+      diet: validDiet,
+      area: typeof parsed.area === "string" && parsed.area ? parsed.area : undefined,
+      maxBudgetThb: typeof parsed.maxBudgetThb === "number" && parsed.maxBudgetThb > 0 ? parsed.maxBudgetThb : undefined,
+      foodKeyword: typeof parsed.foodKeyword === "string" && parsed.foodKeyword ? parsed.foodKeyword : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// แปลงชื่อย่าน (จาก LLM) → พิกัด center. ย่านที่ไม่มีใน area-coords → fallback city center
+// แต่ warn ไว้ (Fable + standing invariant: silent absorbing default = อันตราย). LLM คืนย่าน
+// romaji อิสระ (เช่น "Gion", "Akihabara") ที่ตารางอาจยังไม่มี — warn ทำให้รู้ว่าตารางต้องโต.
+function resolveAreaCenter(area: string, cityCenter: LatLon): LatLon {
+  if (!hasAreaCoord(area)) {
+    console.warn(`[advisor] area "${area}" ไม่มีใน area-coords → ใช้ city center (ตารางควรเพิ่มย่านนี้)`);
+  }
+  return getAreaCoord(area, cityCenter);
+}
+
+// การ์ดระดับเมือง — โค้ดประกอบจากของจริงเท่านั้น. Phase 1: ต่อ stays (Rakuten) /
+// places (Google) / flight (fli) เพิ่มจาก weather+webcam+place เดิม. ทุกแหล่ง dual-mode +
+// ยิงขนาน (Promise.all) — ไม่มี key/พัง → signal.available=false → ไม่มี card ใบนั้น ไม่ล้มคำตอบ.
+// เรียง card ตาม intent จากคำถาม (ถามกิน→ร้านขึ้นก่อน, ถามนอน→ที่พัก, ถามบิน→ตั๋ว).
+async function buildCityCards(citySlug: string, context: AdvisorContext, intent: CardIntent): Promise<Card[]> {
   const city = await resolveCity(citySlug);
   if (!city) return [];
 
   const config = getCityConfigBySlug(city.slug);
-  const cards: Card[] = [];
+
+  // ย่าน (จาก LLM intent) → เลื่อน center การค้นไปย่านนั้น (Fable B2). ไม่มี/ไม่รู้จัก → city center.
+  // ⚠ standing invariant: ย่านที่ LLM คืนแต่ไม่มีใน area-coords จะ fallback เงียบไป center —
+  // warn ให้รู้ว่าตารางต้องโต (ไม่ปล่อยเงียบ).
+  const [searchLat, searchLon] = intent.area
+    ? resolveAreaCenter(intent.area, [city.lat, city.lon])
+    : [city.lat, city.lon];
+
+  // ยิงของนอกทั้งหมดขนานกัน — เปราะ/ช้าตัวไหนก็ไม่ block ตัวอื่น (ทุกตัว fail-silent ในตัวเอง)
+  const [webcam, stays, eats, flight] = await Promise.all([
+    getWebcams(city.lat, city.lon, config),
+    intent.wantsStay ? getStays(searchLat, searchLon) : Promise.resolve(null),
+    intent.wantsEat
+      ? getEatPlaces(searchLat, searchLon, city.name, { diet: intent.diet, foodKeyword: intent.foodKeyword })
+      : Promise.resolve(null),
+    intent.wantsFlight ? getFlightSignal(city.name, city.prefecture) : Promise.resolve(null),
+  ]);
+
+  const weatherCard: Card[] = [];
+  const flightCards: Card[] = [];
+  const stayCards: Card[] = [];
+  const eatCards: Card[] = [];
+  const webcamCards: Card[] = [];
+  const placeCards: Card[] = [];
 
   if (context.weather.available) {
     const hasRange = typeof context.weather.high === "number" && typeof context.weather.low === "number";
-    cards.push({
+    weatherCard.push({
       id: `weather-${city.slug}`,
       kind: "weather",
       cityName: context.cityName,
@@ -116,10 +276,60 @@ async function buildCityCards(citySlug: string, context: AdvisorContext): Promis
     });
   }
 
-  // กล้องสด — ต้องมีทั้งภาพ preview และลิงก์ดูจริง ไม่งั้นไม่สร้างการ์ด (กันลิงก์ปลอม)
-  const webcam = await getWebcams(city.lat, city.lon, config);
+  // ── ตั๋วบิน (Phase 1) — ถามเรื่องบินเท่านั้น. flight signal คืน available เสมอ (มี deep-link)
+  if (flight?.available) {
+    flightCards.push({
+      id: `flight-${city.slug}`,
+      kind: "flight",
+      route: flight.route,
+      priceThb: flight.priceThb,
+      airline: flight.airline ?? undefined,
+      period: flight.period ?? undefined,
+      searchUrl: buildOutbound(flight.searchUrl, { kind: "flight", label: flight.route, citySlug: city.slug }),
+      note: flight.priceThb == null ? "กร๊วกยังเช็คราคาสดไม่ได้ กดดูที่ Google Flights ได้เลย" : undefined,
+    });
+  }
+
+  // ── ที่พัก (Phase 1, Rakuten) — กรองงบก่อน (Fable B2) แล้วเอา 2 ใบถูกสุด.
+  // งบ null ในรายการ = ไม่รู้ราคา → เก็บไว้ (ดีกว่าตัดทิ้ง card ที่อาจเข้าเกณฑ์)
+  if (stays?.available) {
+    const withinBudget = intent.maxBudgetThb
+      ? stays.items.filter((s) => s.pricePerNightThb == null || s.pricePerNightThb <= intent.maxBudgetThb!)
+      : stays.items;
+    for (const s of withinBudget.slice(0, 2)) {
+      stayCards.push({
+        id: `stay-${city.slug}-${s.name}`,
+        kind: "stay",
+        title: s.name,
+        area: s.area,
+        pricePerNightThb: s.pricePerNightThb,
+        rating: s.rating,
+        imageUrl: s.imageUrl,
+        bookUrl: buildOutbound(s.bookingUrl, { kind: "stay", label: s.name, citySlug: city.slug }),
+      });
+    }
+  }
+
+  // ── ร้านอาหาร (Phase 1, Google Places) — สูงสุด 2 ใบเรตติ้งสูง
+  if (eats?.available) {
+    for (const e of eats.items.slice(0, 2)) {
+      eatCards.push({
+        id: `eat-${city.slug}-${e.name}`,
+        kind: "eat",
+        title: e.name,
+        area: e.area,
+        cuisine: e.cuisine,
+        rating: e.rating,
+        priceLevel: e.priceLevel,
+        imageUrl: e.imageUrl,
+        mapUrl: buildOutbound(e.mapUrl, { kind: "eat", label: e.name, citySlug: city.slug }),
+      });
+    }
+  }
+
+  // ── กล้องสด — ต้องมีทั้งภาพ preview และลิงก์ดูจริง ไม่งั้นไม่สร้างการ์ด (กันลิงก์ปลอม)
   if (webcam.available && webcam.previewImage && webcam.url) {
-    cards.push({
+    webcamCards.push({
       id: `webcam-${city.slug}`,
       kind: "webcam",
       title: webcam.title ?? `กล้องสด ${context.cityName}`,
@@ -129,17 +339,16 @@ async function buildCityCards(citySlug: string, context: AdvisorContext): Promis
     });
   }
 
-  // สถานที่คัดมือ 1 ใบต่อหมวด (see/eat/sleep) — เฉพาะที่ไม่ใช่ generic (ของสมมุติ)
+  // ── สถานที่คัดมือ (fallback เมื่อ Places ไม่มี key/ไม่ตรง) 1 ใบต่อหมวด — ไม่ generic
   const sets = getRecommendationSets(city.name, city.prefecture, config?.recommendations ?? []);
-  const picks: { kind: "see" | "eat" | "sleep"; emoji: string }[] = [
-    { kind: "see", emoji: "⛩" },
-    { kind: "eat", emoji: "🍜" },
-    { kind: "sleep", emoji: "🛏" },
-  ];
-  for (const pick of picks) {
+  // ถ้ามีร้านจริงจาก Places / ที่พักจริงจาก Rakuten แล้ว ไม่ต้องดัน place หมวดนั้นซ้ำ
+  const placePicks: { kind: "see" | "eat" | "sleep"; emoji: string }[] = [{ kind: "see", emoji: "⛩" }];
+  if (!eatCards.length) placePicks.push({ kind: "eat", emoji: "🍜" });
+  if (!stayCards.length) placePicks.push({ kind: "sleep", emoji: "🛏" });
+  for (const pick of placePicks) {
     const item = sets[pick.kind].find((r) => !r.generic);
     if (!item) continue;
-    cards.push({
+    placeCards.push({
       id: `place-${pick.kind}-${city.slug}-${item.title}`,
       kind: "place",
       title: item.title,
@@ -154,7 +363,17 @@ async function buildCityCards(citySlug: string, context: AdvisorContext): Promis
     });
   }
 
-  return cards;
+  // เรียงตาม intent: หมวดที่ถามขึ้นก่อน แล้วตามด้วยบริบท (weather/webcam) + place ปิดท้าย
+  const intentFirst: Card[] = intent.wantsFlight
+    ? flightCards
+    : intent.wantsStay
+      ? stayCards
+      : intent.wantsEat
+        ? eatCards
+        : [];
+  const rest = [flightCards, stayCards, eatCards].filter((g) => g !== intentFirst).flat();
+
+  return [...intentFirst, ...weatherCard, ...rest, ...webcamCards, ...placeCards];
 }
 
 // ถามแบบยังไม่มีเมือง ("เดือนนี้ไปไหนดี", "หิมะตกที่ไหน") — ตอบจาก season data ของทุกเมือง
