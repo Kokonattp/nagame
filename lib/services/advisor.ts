@@ -10,6 +10,9 @@ import { resolveCity } from "@/lib/services/geocode";
 import { getWarnings } from "@/lib/services/warnings";
 import { getWeather } from "@/lib/services/weather";
 import { getWebcams } from "@/lib/services/webcams";
+import { getStays } from "@/lib/services/stays";
+import { getEatPlaces, type DietFilter } from "@/lib/services/places";
+import { getFlightSignal } from "@/lib/services/flight-signal";
 import { toBubbles, type Card, type ChatReply } from "@/lib/chat/types";
 
 // กร๊วกตอบเป็น 1 LLM call: parseIntent (โค้ด) → รวม signal ฝั่ง server → compose.
@@ -88,24 +91,60 @@ export async function getAdvisorChatReply(citySlug: string | null, prompt: strin
   // gatherContext ถูกเรียกซ้ำใน getAdvisorReply + ที่นี่ (สำหรับ cards) แต่ห่อ cached() อยู่แล้ว
   // (TTL 10-30 นาที) เหมือน pattern getCityVerdict/page.tsx ที่ทำอยู่แล้วในไฟล์นี้ — cache hit ปกติ.
   const [result, context] = await Promise.all([getAdvisorReply(citySlug, prompt), gatherContext(citySlug)]);
-  const cards = context ? await buildCityCards(citySlug, context) : [];
+  const cards = context ? await buildCityCards(citySlug, context, prompt) : [];
 
   return { bubbles: toBubbles(result.reply), cards, source: result.source };
 }
 
-// การ์ดระดับเมือง — เฉพาะของจริงที่ fetch ได้เท่านั้น: อากาศ (มีอยู่แล้วใน context),
-// กล้องสด (ของจริงจาก webcam service), และสถานที่คัดมือ (curated ไม่ generic).
-// ล้มเงียบทีละใบ — ใบไหนไม่มีข้อมูลจริงก็แค่ไม่โผล่ ไม่ทำให้ทั้งคำตอบพัง.
-async function buildCityCards(citySlug: string, context: AdvisorContext): Promise<Card[]> {
+// intent จากคำถาม — ตัดสินว่าจะดัน card หมวดไหนขึ้นก่อน + diet filter สำหรับร้าน
+type CardIntent = { wantsEat: boolean; wantsStay: boolean; wantsFlight: boolean; diet?: DietFilter };
+
+function parseCardIntent(prompt: string): CardIntent {
+  const p = prompt.toLowerCase();
+  const diet: DietFilter | undefined = /ฮาลาล|halal|มุสลิม|muslim/i.test(prompt)
+    ? "halal"
+    : /มังสวิรัติ|เจ|vegetarian|vegan/i.test(prompt)
+      ? "vegetarian"
+      : /แพ้กุ้ง|ไม่กินกุ้ง|no shrimp|กุ้ง/i.test(prompt)
+        ? "no-shrimp"
+        : undefined;
+  return {
+    wantsEat: /กิน|อาหาร|ร้าน|eat|food|restaurant|ฮาลาล|มังสวิรัติ|เจ/i.test(p) || Boolean(diet),
+    wantsStay: /นอน|พัก|โรงแรม|ที่พัก|hotel|stay|sleep/i.test(p),
+    wantsFlight: /ตั๋ว|เที่ยวบิน|บิน|flight|airfare/i.test(p),
+    diet,
+  };
+}
+
+// การ์ดระดับเมือง — โค้ดประกอบจากของจริงเท่านั้น. Phase 1: ต่อ stays (Rakuten) /
+// places (Google) / flight (fli) เพิ่มจาก weather+webcam+place เดิม. ทุกแหล่ง dual-mode +
+// ยิงขนาน (Promise.all) — ไม่มี key/พัง → signal.available=false → ไม่มี card ใบนั้น ไม่ล้มคำตอบ.
+// เรียง card ตาม intent จากคำถาม (ถามกิน→ร้านขึ้นก่อน, ถามนอน→ที่พัก, ถามบิน→ตั๋ว).
+async function buildCityCards(citySlug: string, context: AdvisorContext, prompt: string): Promise<Card[]> {
   const city = await resolveCity(citySlug);
   if (!city) return [];
 
   const config = getCityConfigBySlug(city.slug);
-  const cards: Card[] = [];
+  const intent = parseCardIntent(prompt);
+
+  // ยิงของนอกทั้งหมดขนานกัน — เปราะ/ช้าตัวไหนก็ไม่ block ตัวอื่น (ทุกตัว fail-silent ในตัวเอง)
+  const [webcam, stays, eats, flight] = await Promise.all([
+    getWebcams(city.lat, city.lon, config),
+    intent.wantsStay ? getStays(city.lat, city.lon) : Promise.resolve(null),
+    intent.wantsEat ? getEatPlaces(city.lat, city.lon, city.name, intent.diet) : Promise.resolve(null),
+    intent.wantsFlight ? getFlightSignal(city.name, city.prefecture) : Promise.resolve(null),
+  ]);
+
+  const weatherCard: Card[] = [];
+  const flightCards: Card[] = [];
+  const stayCards: Card[] = [];
+  const eatCards: Card[] = [];
+  const webcamCards: Card[] = [];
+  const placeCards: Card[] = [];
 
   if (context.weather.available) {
     const hasRange = typeof context.weather.high === "number" && typeof context.weather.low === "number";
-    cards.push({
+    weatherCard.push({
       id: `weather-${city.slug}`,
       kind: "weather",
       cityName: context.cityName,
@@ -116,10 +155,56 @@ async function buildCityCards(citySlug: string, context: AdvisorContext): Promis
     });
   }
 
-  // กล้องสด — ต้องมีทั้งภาพ preview และลิงก์ดูจริง ไม่งั้นไม่สร้างการ์ด (กันลิงก์ปลอม)
-  const webcam = await getWebcams(city.lat, city.lon, config);
+  // ── ตั๋วบิน (Phase 1) — ถามเรื่องบินเท่านั้น. flight signal คืน available เสมอ (มี deep-link)
+  if (flight?.available) {
+    flightCards.push({
+      id: `flight-${city.slug}`,
+      kind: "flight",
+      route: flight.route,
+      priceThb: flight.priceThb,
+      airline: flight.airline ?? undefined,
+      period: flight.period ?? undefined,
+      searchUrl: buildOutbound(flight.searchUrl, { kind: "flight", label: flight.route, citySlug: city.slug }),
+      note: flight.priceThb == null ? "กร๊วกยังเช็คราคาสดไม่ได้ กดดูที่ Google Flights ได้เลย" : undefined,
+    });
+  }
+
+  // ── ที่พัก (Phase 1, Rakuten) — สูงสุด 2 ใบถูกสุด
+  if (stays?.available) {
+    for (const s of stays.items.slice(0, 2)) {
+      stayCards.push({
+        id: `stay-${city.slug}-${s.name}`,
+        kind: "stay",
+        title: s.name,
+        area: s.area,
+        pricePerNightThb: s.pricePerNightThb,
+        rating: s.rating,
+        imageUrl: s.imageUrl,
+        bookUrl: buildOutbound(s.bookingUrl, { kind: "stay", label: s.name, citySlug: city.slug }),
+      });
+    }
+  }
+
+  // ── ร้านอาหาร (Phase 1, Google Places) — สูงสุด 2 ใบเรตติ้งสูง
+  if (eats?.available) {
+    for (const e of eats.items.slice(0, 2)) {
+      eatCards.push({
+        id: `eat-${city.slug}-${e.name}`,
+        kind: "eat",
+        title: e.name,
+        area: e.area,
+        cuisine: e.cuisine,
+        rating: e.rating,
+        priceLevel: e.priceLevel,
+        imageUrl: e.imageUrl,
+        mapUrl: buildOutbound(e.mapUrl, { kind: "eat", label: e.name, citySlug: city.slug }),
+      });
+    }
+  }
+
+  // ── กล้องสด — ต้องมีทั้งภาพ preview และลิงก์ดูจริง ไม่งั้นไม่สร้างการ์ด (กันลิงก์ปลอม)
   if (webcam.available && webcam.previewImage && webcam.url) {
-    cards.push({
+    webcamCards.push({
       id: `webcam-${city.slug}`,
       kind: "webcam",
       title: webcam.title ?? `กล้องสด ${context.cityName}`,
@@ -129,17 +214,16 @@ async function buildCityCards(citySlug: string, context: AdvisorContext): Promis
     });
   }
 
-  // สถานที่คัดมือ 1 ใบต่อหมวด (see/eat/sleep) — เฉพาะที่ไม่ใช่ generic (ของสมมุติ)
+  // ── สถานที่คัดมือ (fallback เมื่อ Places ไม่มี key/ไม่ตรง) 1 ใบต่อหมวด — ไม่ generic
   const sets = getRecommendationSets(city.name, city.prefecture, config?.recommendations ?? []);
-  const picks: { kind: "see" | "eat" | "sleep"; emoji: string }[] = [
-    { kind: "see", emoji: "⛩" },
-    { kind: "eat", emoji: "🍜" },
-    { kind: "sleep", emoji: "🛏" },
-  ];
-  for (const pick of picks) {
+  // ถ้ามีร้านจริงจาก Places / ที่พักจริงจาก Rakuten แล้ว ไม่ต้องดัน place หมวดนั้นซ้ำ
+  const placePicks: { kind: "see" | "eat" | "sleep"; emoji: string }[] = [{ kind: "see", emoji: "⛩" }];
+  if (!eatCards.length) placePicks.push({ kind: "eat", emoji: "🍜" });
+  if (!stayCards.length) placePicks.push({ kind: "sleep", emoji: "🛏" });
+  for (const pick of placePicks) {
     const item = sets[pick.kind].find((r) => !r.generic);
     if (!item) continue;
-    cards.push({
+    placeCards.push({
       id: `place-${pick.kind}-${city.slug}-${item.title}`,
       kind: "place",
       title: item.title,
@@ -154,7 +238,17 @@ async function buildCityCards(citySlug: string, context: AdvisorContext): Promis
     });
   }
 
-  return cards;
+  // เรียงตาม intent: หมวดที่ถามขึ้นก่อน แล้วตามด้วยบริบท (weather/webcam) + place ปิดท้าย
+  const intentFirst: Card[] = intent.wantsFlight
+    ? flightCards
+    : intent.wantsStay
+      ? stayCards
+      : intent.wantsEat
+        ? eatCards
+        : [];
+  const rest = [flightCards, stayCards, eatCards].filter((g) => g !== intentFirst).flat();
+
+  return [...intentFirst, ...weatherCard, ...rest, ...webcamCards, ...placeCards];
 }
 
 // ถามแบบยังไม่มีเมือง ("เดือนนี้ไปไหนดี", "หิมะตกที่ไหน") — ตอบจาก season data ของทุกเมือง
