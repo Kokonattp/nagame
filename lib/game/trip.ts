@@ -1,7 +1,7 @@
 // ทริปของกร๊วก — ที่ที่คุยกับกร๊วกแล้วอยากไป มากองรวมกันที่นี่ (client-only, localStorage).
 // ตาม [[nagame-v2-direction]]: Trip tab = "สิ่งที่คุยกับกร๊วกจะมากองที่นี่". ยังไม่มี backend
 // → เก็บ localStorage ก่อน แต่ schema เก็บ timestamp + citySlug ให้ เผื่อวันหน้ามี account
-// จะ sync/merge ได้โดยไม่เปลี่ยน schema (เหมือน journal.ts). ตรง [[nagame-architecture-decisions]].
+// จะ sync/merge ได้โดยไม่เปลี่ยน schema. ตรง [[nagame-architecture-decisions]].
 
 import { getDeviceId } from "@/lib/game/identity";
 

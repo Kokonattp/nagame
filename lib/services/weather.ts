@@ -7,6 +7,16 @@ export type RainByPeriod = {
   evening: number | null;
 };
 
+// พยากรณ์รายวันล่วงหน้า — ให้กร๊วกตอบ "พรุ่งนี้/สุดสัปดาห์นี้ฝนไหม" ได้
+// (เดิมขอแค่วันเดียว ตอบได้แค่ "ตอนนี้"). Open-Meteo ให้ฟรีถึง 16 วัน
+export type DayOutlook = {
+  date: string; // YYYY-MM-DD (JST)
+  high: number | null;
+  low: number | null;
+  rainChance: number | null;
+  condition: string;
+};
+
 export type WeatherSignal = {
   available: boolean;
   source: string;
@@ -19,6 +29,8 @@ export type WeatherSignal = {
   rainChance: number | null;
   rainByPeriod: RainByPeriod;
   windSpeed: number | null;
+  /** วันนี้ + ล่วงหน้าสูงสุด 16 วัน (ว่าง = แหล่งข้อมูลไม่รองรับ) */
+  outlook: DayOutlook[];
   updatedAt: string;
   message?: string;
 };
@@ -35,6 +47,8 @@ type OpenMeteoForecast = {
     precipitation_probability?: number[];
   };
   daily?: {
+    time?: string[];
+    weather_code?: number[];
     temperature_2m_max?: number[];
     temperature_2m_min?: number[];
     precipitation_probability_max?: number[];
@@ -51,6 +65,7 @@ type OpenWeatherForecast = {
   list?: {
     dt?: number;
     main?: { temp_min?: number; temp_max?: number };
+    weather?: { id?: number }[];
     pop?: number;
   }[];
 };
@@ -115,7 +130,8 @@ async function getOpenWeather(lat: number, lon: number): Promise<WeatherSignal> 
 
     const current = (await currentResponse.json()) as OpenWeatherCurrent;
     const forecast = (await forecastResponse.json()) as OpenWeatherForecast;
-    const today = forecast.list?.slice(0, 8) ?? [];
+    const allEntries = forecast.list ?? [];
+    const today = allEntries.slice(0, 8) ?? [];
     const highs = today.map((item) => item.main?.temp_max).filter((v): v is number => typeof v === "number");
     const lows = today.map((item) => item.main?.temp_min).filter((v): v is number => typeof v === "number");
     const rainChance = Math.max(...today.map((item) => item.pop ?? 0), 0) * 100;
@@ -142,11 +158,60 @@ async function getOpenWeather(lat: number, lon: number): Promise<WeatherSignal> 
       rainChance: round(rainChance),
       rainByPeriod,
       windSpeed: round((current.wind?.speed ?? 0) * 3.6, 1),
+      outlook: buildOutlookFromOpenWeather(allEntries),
       updatedAt: new Date().toISOString(),
     };
   } catch {
     return unavailableWeather("OpenWeather ยังไม่พร้อม ใช้ fallback ไม่สำเร็จ");
   }
+}
+
+// เพดานฟรีของ Open-Meteo. OpenWeather (fallback) ให้แค่ 5 วัน/ช่วง 3 ชม. → outlook สั้นกว่า
+const OUTLOOK_DAYS = 16;
+
+// OpenWeather ให้เป็นช่วงละ 3 ชม. ไม่ใช่รายวัน → จับกลุ่มตามวัน JST เอง
+// (สรุป: สูง=max, ต่ำ=min, ฝน=max ของวันนั้น, สภาพ=code ที่เจอบ่อยสุด)
+function buildOutlookFromOpenWeather(entries: NonNullable<OpenWeatherForecast["list"]>): DayOutlook[] {
+  const byDate = new Map<string, { highs: number[]; lows: number[]; pops: number[]; codes: number[] }>();
+
+  for (const entry of entries) {
+    if (typeof entry.dt !== "number") continue;
+    // +9 ชม. = JST แล้วตัดเอาเฉพาะวันที่
+    const date = new Date((entry.dt + 9 * 3600) * 1000).toISOString().slice(0, 10);
+    const bucket = byDate.get(date) ?? { highs: [], lows: [], pops: [], codes: [] };
+    if (typeof entry.main?.temp_max === "number") bucket.highs.push(entry.main.temp_max);
+    if (typeof entry.main?.temp_min === "number") bucket.lows.push(entry.main.temp_min);
+    if (typeof entry.pop === "number") bucket.pops.push(entry.pop * 100);
+    if (typeof entry.weather?.[0]?.id === "number") bucket.codes.push(entry.weather[0].id);
+    byDate.set(date, bucket);
+  }
+
+  return [...byDate.entries()].map(([date, b]) => ({
+    date,
+    high: b.highs.length ? round(Math.max(...b.highs)) : null,
+    low: b.lows.length ? round(Math.min(...b.lows)) : null,
+    rainChance: b.pops.length ? round(Math.max(...b.pops)) : null,
+    condition: openWeatherIdToText(mostCommon(b.codes)) ?? "ยังไม่มีข้อมูล",
+  }));
+}
+
+function mostCommon(values: number[]): number | undefined {
+  if (!values.length) return undefined;
+  const tally = new Map<number, number>();
+  for (const v of values) tally.set(v, (tally.get(v) ?? 0) + 1);
+  return [...tally.entries()].sort((a, b) => b[1] - a[1])[0][0];
+}
+
+// daily arrays ของ Open-Meteo เรียงตรงกันทุกช่อง (index เดียวกัน = วันเดียวกัน)
+function buildOutlook(daily: OpenMeteoForecast["daily"]): DayOutlook[] {
+  const dates = daily?.time ?? [];
+  return dates.map((date, index) => ({
+    date,
+    high: round(daily?.temperature_2m_max?.[index]),
+    low: round(daily?.temperature_2m_min?.[index]),
+    rainChance: round(daily?.precipitation_probability_max?.[index]),
+    condition: weatherCodeToText(daily?.weather_code?.[index] ?? null),
+  }));
 }
 
 async function getOpenMeteoWeather(lat: number, lon: number): Promise<WeatherSignal> {
@@ -157,22 +222,26 @@ async function getOpenMeteoWeather(lat: number, lon: number): Promise<WeatherSig
     url.searchParams.set("timezone", "Asia/Tokyo");
     url.searchParams.set("current", "temperature_2m,apparent_temperature,weather_code,wind_speed_10m");
     url.searchParams.set("hourly", "precipitation_probability");
-    url.searchParams.set("daily", "temperature_2m_max,temperature_2m_min,precipitation_probability_max");
-    url.searchParams.set("forecast_days", "1");
+    url.searchParams.set("daily", "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max");
+    // 16 วัน = เพดานฟรีของ Open-Meteo → กร๊วกตอบ "พรุ่งนี้/สุดสัปดาห์นี้" ได้
+    url.searchParams.set("forecast_days", String(OUTLOOK_DAYS));
 
     const response = await fetch(url, { next: { revalidate: 1800 } });
     if (!response.ok) throw new Error("Open-Meteo unavailable");
     const data = (await response.json()) as OpenMeteoForecast;
 
     const weatherCode = data.current?.weather_code ?? null;
-    const hourlyRain = data.hourly?.precipitation_probability?.slice(0, 12) ?? [];
+    // hourly ยาว 16 วันแล้ว — rainByPeriod ต้องเป็น "วันนี้" เท่านั้น จึงตัดแค่ 24 ชม.แรก
+    // (ถ้าปล่อยทั้งก้อน ช่วงเช้าจะเอาค่าเช้าของ 16 วันมารวมกัน = ผิด)
+    const hourlyTimes = data.hourly?.time ?? [];
+    const hourlyRainAll = data.hourly?.precipitation_probability ?? [];
     const rainChance =
       data.daily?.precipitation_probability_max?.[0] ??
-      (hourlyRain.length ? Math.max(...hourlyRain) : null);
+      (hourlyRainAll.length ? Math.max(...hourlyRainAll.slice(0, 24)) : null);
     // hourly.time เป็นเวลา JST อยู่แล้ว (ตั้ง timezone ตอนขอ)
-    const hourlyTimes = data.hourly?.time ?? [];
     const rainByPeriod = rainPeriodFromEntries(
-      (data.hourly?.precipitation_probability ?? [])
+      hourlyRainAll
+        .slice(0, 24)
         .map((probability, index) => ({
           hour: Number(hourlyTimes[index]?.slice(11, 13) ?? NaN),
           probability,
@@ -192,6 +261,7 @@ async function getOpenMeteoWeather(lat: number, lon: number): Promise<WeatherSig
       rainChance: round(rainChance),
       rainByPeriod,
       windSpeed: round(data.current?.wind_speed_10m, 1),
+      outlook: buildOutlook(data.daily),
       updatedAt: new Date().toISOString(),
     };
   } catch {
@@ -212,6 +282,7 @@ function unavailableWeather(message: string): WeatherSignal {
     rainChance: null,
     rainByPeriod: emptyRainByPeriod(),
     windSpeed: null,
+    outlook: [],
     updatedAt: new Date().toISOString(),
     message,
   };

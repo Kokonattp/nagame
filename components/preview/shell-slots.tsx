@@ -1,12 +1,12 @@
 "use client";
 
 // Placeholder slots สำหรับก้าว A — โชว์ว่า AppShell วางเนื้อหาถูกที่ ยังไม่ใช่ของจริง
-// (แผนที่ washi / เกมฝาท่อ / aggregate card จะมาแทนทีละแท็บในก้าวถัดไป)
+// (แผนที่ washi / aggregate card จะมาแทนทีละแท็บในก้าวถัดไป)
 
 import dynamic from "next/dynamic";
 import { KruakAvatar } from "@/components/kruak-avatar";
 
-// Leaflet ต้อง ssr:false; ManholeBook อ่าน localStorage → โหลดฝั่ง client
+// Leaflet ต้อง ssr:false → โหลดฝั่ง client
 const WashiMap = dynamic(() => import("@/components/map/washi-map").then((m) => m.WashiMap), {
   ssr: false,
   loading: () => (
@@ -14,9 +14,6 @@ const WashiMap = dynamic(() => import("@/components/map/washi-map").then((m) => 
       กำลังโหลดแผนที่…
     </div>
   ),
-});
-const ManholeBook = dynamic(() => import("@/components/book/manhole-book").then((m) => m.ManholeBook), {
-  ssr: false,
 });
 
 function Placeholder({ emoji, title, note }: { emoji: string; title: string; note: string }) {
@@ -97,7 +94,7 @@ export function MapSlot() {
     <WashiMap
       center={[35.7118, 139.7966]}
       zoom={15}
-      kruak={{ lat: 35.7108, lon: 139.7955, mood: "sunny", say: "แถวนี้เดินเก็บฝาท่อได้เลยครับ 🐾" }}
+      kruak={{ lat: 35.7108, lon: 139.7955, mood: "sunny", say: "แถวนี้เดินเที่ยวได้เลยครับ 🐾" }}
       pois={[
         { id: "s1", kind: "stay", lat: 35.7128, lon: 139.7986, label: "฿1,180", selected: true },
         { id: "s2", kind: "stay", lat: 35.7095, lon: 139.7935, label: "฿1,650" },
@@ -109,17 +106,12 @@ export function MapSlot() {
   );
 }
 
-export function BookSlot() {
-  // ก้าว C — สมุดฝาท่อจริง (อ่าน journal.ts). ใน /preview ใช้เมืองตัวอย่าง "tokyo"
-  return <ManholeBook citySlug="tokyo" cityName="โตเกียว" />;
-}
-
 export function TripSlot() {
   return (
     <Placeholder
       emoji="🧳"
       title="ทริปของฉัน"
-      note="สิ่งที่คุยในแชทมากองที่นี่ — ตั๋วบิน ที่พักที่จองแล้ว ย่านที่จะไป ฝาท่อที่ยังเก็บได้"
+      note="สิ่งที่คุยในแชทมากองที่นี่ — ตั๋วบิน ที่พักที่จองแล้ว ย่านที่จะไป"
     />
   );
 }

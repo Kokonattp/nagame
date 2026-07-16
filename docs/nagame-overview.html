@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nagame — ฟีเจอร์ &amp; สแตก</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #EDE6D6;
+    --fg: #1B1A17;
+    --card: #F7F2E6;
+    --line: #CFC5AE;
+    --line-strong: #1B1A17;
+    --mute: #7D7466;
+    --seal: #C0392B;
+    --moss: #3E5C4B;
+    --indigo: #2E4A6B;
+    --shadow: rgba(27, 26, 23, 0.14);
+    --grain: rgba(27, 26, 23, 0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15140E;
+      --fg: #EAE3D1;
+      --card: #201E15;
+      --line: #453F2E;
+      --line-strong: #6B6350;
+      --mute: #968C7A;
+      --seal: #E46353;
+      --moss: #82AC90;
+      --indigo: #7FA3CC;
+      --shadow: rgba(0, 0, 0, 0.55);
+      --grain: rgba(255, 250, 235, 0.035);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15140E;
+    --fg: #EAE3D1;
+    --card: #201E15;
+    --line: #453F2E;
+    --line-strong: #6B6350;
+    --mute: #968C7A;
+    --seal: #E46353;
+    --moss: #82AC90;
+    --indigo: #7FA3CC;
+    --shadow: rgba(0, 0, 0, 0.55);
+    --grain: rgba(255, 250, 235, 0.035);
+  }
+  :root[data-theme="light"] {
+    --bg: #EDE6D6;
+    --fg: #1B1A17;
+    --card: #F7F2E6;
+    --line: #CFC5AE;
+    --line-strong: #1B1A17;
+    --mute: #7D7466;
+    --seal: #C0392B;
+    --moss: #3E5C4B;
+    --indigo: #2E4A6B;
+    --shadow: rgba(27, 26, 23, 0.14);
+    --grain: rgba(27, 26, 23, 0.05);
+  }
+
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { animation: none !important; transition: none !important; }
+  }
+
+  body {
+    background-color: var(--bg);
+    background-image:
+      repeating-linear-gradient(90deg, transparent 0 3px, var(--grain) 3px 4px),
+      repeating-linear-gradient(0deg, transparent 0 5px, var(--grain) 5px 6px);
+    color: var(--fg);
+    font-family: "IBM Plex Sans Thai", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    padding: clamp(1.5rem, 4vw, 3.5rem) 1.25rem 6rem;
+  }
+
+  .wrap { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: clamp(3rem, 7vw, 5rem); }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+  /* ─── masthead ─── */
+  .mast { display: flex; flex-direction: column; gap: 1.5rem; }
+  .mast-top { display: flex; align-items: flex-start; gap: 1.25rem; flex-wrap: wrap; }
+  .seal {
+    width: 3.75rem; height: 3.75rem; flex: none;
+    border: 2.5px solid var(--seal); border-radius: 0.45rem;
+    color: var(--seal); display: grid; place-items: center;
+    font-size: 1.6rem; font-weight: 700; line-height: 1;
+    transform: rotate(-4deg);
+  }
+  h1 { font-size: clamp(2.1rem, 5.5vw, 3.4rem); font-weight: 700; letter-spacing: -0.035em; line-height: 1.08; text-wrap: balance; }
+  .tagline { font-size: clamp(1rem, 2vw, 1.2rem); color: var(--mute); max-width: 60ch; margin-top: 0.5rem; }
+  .rule { height: 2.5px; background: var(--fg); opacity: 0.9; }
+  .meta-row { display: flex; gap: 1.75rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--mute); }
+  .meta-row b { color: var(--fg); font-weight: 600; }
+
+  /* ─── section head ─── */
+  .sec { display: flex; flex-direction: column; gap: 1.5rem; }
+  .sec-head { display: flex; flex-direction: column; gap: 0.35rem; }
+  .eyebrow { font-size: 0.72rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--seal); }
+  h2 { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+  .sec-note { color: var(--mute); max-width: 65ch; font-size: 0.95rem; }
+
+  /* ─── tab cards (the 3 real tabs) ─── */
+  .tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
+  .tab {
+    background: var(--card);
+    border: 2px solid var(--line-strong);
+    border-radius: 0.75rem;
+    padding: 1.4rem;
+    box-shadow: 4px 4px 0 var(--shadow);
+    display: flex; flex-direction: column; gap: 0.85rem;
+  }
+  .tab-top { display: flex; align-items: center; gap: 0.7rem; }
+  .tab-ico { font-size: 1.5rem; line-height: 1; }
+  .tab h3 { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; }
+  .tab .jp { font-size: 0.75rem; color: var(--mute); }
+  .badge-default {
+    margin-left: auto; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em;
+    background: var(--seal); color: #fff; padding: 0.15rem 0.5rem; border-radius: 999px;
+  }
+  .tab p { font-size: 0.9rem; color: var(--mute); }
+  .tab ul { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem; }
+  .tab li { display: flex; gap: 0.5rem; align-items: baseline; }
+  .tab li::before { content: "▸"; color: var(--seal); flex: none; font-size: 0.7rem; }
+  .tab code { font-family: "JetBrains Mono", monospace; font-size: 0.78rem; background: var(--bg); border: 1px solid var(--line); border-radius: 0.2rem; padding: 0.05rem 0.3rem; }
+
+  /* ─── flow strip (chat as router) ─── */
+  .flow-strip {
+    display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+    background: var(--card); border: 2px dashed var(--line);
+    border-radius: 0.75rem; padding: 1.1rem 1.25rem;
+    font-size: 0.88rem;
+  }
+  .flow-step { display: flex; align-items: center; gap: 0.5rem; }
+  .flow-step .n {
+    width: 1.4rem; height: 1.4rem; flex: none; border-radius: 50%;
+    background: var(--indigo); color: var(--bg);
+    display: grid; place-items: center; font-size: 0.72rem; font-weight: 700;
+  }
+  .arrow { color: var(--mute); flex: none; }
+
+  /* ─── surfaces / pages ─── */
+  .pages { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; }
+  .page-card {
+    background: var(--card); border: 1.5px solid var(--line);
+    border-left: 4px solid var(--indigo);
+    border-radius: 0.4rem; padding: 1.1rem;
+    display: flex; flex-direction: column; gap: 0.4rem;
+  }
+  .page-card .path { font-family: "JetBrains Mono", monospace; font-size: 0.78rem; color: var(--indigo); font-weight: 500; }
+  .page-card h3 { font-size: 1.02rem; font-weight: 600; }
+  .page-card p { font-size: 0.86rem; color: var(--mute); }
+
+  /* ─── data table ─── */
+  .table-scroll { overflow-x: auto; border: 2px solid var(--line-strong); border-radius: 0.5rem; box-shadow: 4px 4px 0 var(--shadow); }
+  table { border-collapse: collapse; width: 100%; background: var(--card); font-size: 0.87rem; min-width: 34rem; }
+  thead th {
+    text-align: left; font-weight: 600; font-size: 0.72rem;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--mute);
+    padding: 0.75rem 1rem; border-bottom: 2px solid var(--line-strong);
+    white-space: nowrap;
+  }
+  tbody td { padding: 0.7rem 1rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  td .src { font-family: "JetBrains Mono", monospace; font-size: 0.78rem; }
+  .key-pill, .free-pill {
+    display: inline-block; font-size: 0.66rem; font-weight: 600;
+    padding: 0.1rem 0.45rem; border-radius: 999px; white-space: nowrap;
+  }
+  .key-pill { background: var(--seal); color: #fff; }
+  .free-pill { background: var(--moss); color: var(--bg); }
+
+  /* ─── stack columns ─── */
+  .stack { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem; }
+  .stack-col {
+    background: var(--card); border: 1.5px solid var(--line);
+    border-radius: 0.4rem; padding: 1rem 1.1rem;
+    display: flex; flex-direction: column; gap: 0.55rem;
+  }
+  .stack-col h3 { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--seal); font-weight: 600; }
+  .stack-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
+  .stack-col li { font-size: 0.87rem; display: flex; justify-content: space-between; gap: 0.75rem; align-items: baseline; }
+  .stack-col li span { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; color: var(--mute); font-variant-numeric: tabular-nums; }
+
+  /* ─── notes ─── */
+  .notes { display: flex; flex-direction: column; gap: 0.85rem; }
+  .note {
+    display: flex; gap: 0.85rem; align-items: flex-start;
+    background: var(--card); border: 1.5px solid var(--line);
+    border-left: 4px solid var(--seal);
+    border-radius: 0.4rem; padding: 0.9rem 1.1rem;
+    font-size: 0.89rem;
+  }
+  .note .tag {
+    font-family: "JetBrains Mono", monospace; font-size: 0.68rem; font-weight: 500;
+    color: var(--seal); border: 1px solid var(--seal); border-radius: 0.2rem;
+    padding: 0.05rem 0.35rem; flex: none; margin-top: 0.15rem;
+  }
+  .note b { font-weight: 600; }
+  .note code { font-family: "JetBrains Mono", monospace; font-size: 0.8rem; }
+
+  footer { display: flex; flex-direction: column; gap: 0.75rem; padding-top: 1rem; border-top: 2.5px solid var(--fg); font-size: 0.8rem; color: var(--mute); }
+  .stamp {
+    align-self: flex-start; border: 1.5px dashed var(--line); border-radius: 0.25rem;
+    padding: 0.4rem 0.7rem; font-family: "JetBrains Mono", monospace; font-size: 0.72rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <div class="mast-top">
+      <div class="seal">眺</div>
+      <div>
+        <h1>nagame — เที่ยวญี่ปุ่นแบบเห็นหน้างานจริง</h1>
+        <p class="tagline">ไม่ใช่ไกด์บุ๊กที่เขียนไว้ล่วงหน้า — ดึงอากาศ ฝุ่น กล้องสด และข่าว ณ ตอนนี้มากอง แล้วให้ <b>กร๊วก</b> คุยกับคุณเป็นภาษาไทยว่าควรทำอะไร</p>
+      </div>
+    </div>
+    <div class="rule"></div>
+    <div class="meta-row">
+      <span><b>Next.js 15.5</b> · App Router</span>
+      <span><b>3</b> หน้าหลัก</span>
+      <span><b>3</b> แท็บในหน้าเมือง</span>
+      <span><b>8</b> API routes</span>
+      <span><b>15</b> แหล่งข้อมูลภายนอก</span>
+    </div>
+  </header>
+
+  <!-- ─────────── หน้าจอ ─────────── -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="eyebrow">การใช้งาน</span>
+      <h2>เข้ามาแล้วเจออะไร</h2>
+      <p class="sec-note">สามหน้า เชื่อมกันตรงๆ — เลือกเมือง แล้วลงลึกที่หน้าเมือง ส่วนหน้ารอบเมืองแยกไว้ให้คนที่อยากออกไป day trip</p>
+    </div>
+    <div class="pages">
+      <div class="page-card">
+        <span class="path">/</span>
+        <h3>เลือกเมือง</h3>
+        <p>การ์ดเมืองพร้อมรูปจริง mood และคำโปรย มีช่องค้นหาที่พิมพ์หาเมืองนอกลิสต์ได้ — geocode ผ่าน Nominatim แล้วสร้างหน้าให้เลย</p>
+      </div>
+      <div class="page-card">
+        <span class="path">/city/[slug]</span>
+        <h3>หน้าเมือง — หัวใจของแอป</h3>
+        <p>แบ่งเป็น 3 แท็บ deep-link ได้ทุกแท็บผ่าน <code>?tab=</code> ส่งลิงก์ให้เพื่อนเปิดตรงแท็บที่ต้องการได้เลย</p>
+      </div>
+      <div class="page-card">
+        <span class="path">/city/[slug]/around</span>
+        <h3>รอบเมือง</h3>
+        <p>สำหรับ day trip — เมืองใกล้เคียง ขนส่ง เส้นขับรถ อัตราแลกเปลี่ยน และแผ่นดินไหวล่าสุด รีเฟรชทุก 10 นาที</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── 3 แท็บ ─────────── -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="eyebrow">หน้าเมือง</span>
+      <h2>สามแท็บ ทำอะไรได้บ้าง</h2>
+    </div>
+
+    <div class="tabs">
+      <article class="tab">
+        <div class="tab-top">
+          <span class="tab-ico" aria-hidden>💬</span>
+          <div><h3>แชท</h3><div class="jp">กร๊วก</div></div>
+          <span class="badge-default">ค่าเริ่มต้น</span>
+        </div>
+        <p>คุยกับกร๊วกเป็นภาษาไทย แล้วมีข้อมูลหน้างานกองอยู่ในหน้าเดียวกัน</p>
+        <ul>
+          <li>แผนวันนี้แบบจัดให้</li>
+          <li>ประกาศเตือนภัยอากาศจาก JMA</li>
+          <li>กล้องสด ดูบรรยากาศจริงตอนนี้</li>
+          <li>คำแนะนำแยกหมวด — กิน เที่ยว นอน</li>
+          <li>“กร๊วกเลือกให้ที่นึง” — กดเก็บลงทริปได้</li>
+        </ul>
+      </article>
+
+      <article class="tab">
+        <div class="tab-top">
+          <span class="tab-ico" aria-hidden>🗺️</span>
+          <div><h3>แผนที่</h3><div class="jp">地図</div></div>
+        </div>
+        <p>Leaflet สไตล์ washi ไม่ใช่แผนที่ Google สีจัด — อ่านสบายตา</p>
+        <ul>
+          <li>หมุด POI ดึงจาก Wikipedia</li>
+          <li>กร๊วกยืนอยู่บนแผนที่พร้อมคำพูด</li>
+          <li>โฟกัสย่านที่แชทส่งมาผ่าน <code>?area=</code></li>
+          <li>โหลดแบบ dynamic ไม่ทำ SSR พัง</li>
+        </ul>
+      </article>
+
+      <article class="tab">
+        <div class="tab-top">
+          <span class="tab-ico" aria-hidden>🧳</span>
+          <div><h3>ทริป</h3><div class="jp">旅程</div></div>
+        </div>
+        <p>ที่ที่คุณกดเก็บจากการ์ดของกร๊วกจะมากองรวมกันตรงนี้</p>
+        <ul>
+          <li>กดนำทางต่อ Google Maps ได้ทันที</li>
+          <li>ลบออกจากทริปได้</li>
+          <li>ว่าง = กร๊วกชวนไปเก็บ</li>
+          <li>เก็บในเครื่องก่อน ตามไปทุกเครื่องถ้ามีบัญชี</li>
+        </ul>
+      </article>
+    </div>
+
+    <div class="flow-strip">
+      <strong>แชทเป็น router:</strong>
+      <div class="flow-step"><span class="n">1</span>ถามกร๊วก</div>
+      <span class="arrow" aria-hidden>→</span>
+      <div class="flow-step"><span class="n">2</span>กร๊วกแนะย่าน</div>
+      <span class="arrow" aria-hidden>→</span>
+      <div class="flow-step"><span class="n">3</span>ยิงลิงก์เปิดแผนที่ที่โฟกัสย่านนั้นให้เลย</div>
+    </div>
+  </section>
+
+  <!-- ─────────── ข้อมูล ─────────── -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="eyebrow">แหล่งข้อมูล</span>
+      <h2>ข้อมูลมาจากไหน</h2>
+      <p class="sec-note">15 ปลายทางจริงที่ services ยิงออกไป — สีแดงคือต้องมีคีย์ใน env สีเขียวคือฟรีไม่ต้องมีคีย์</p>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>เรื่อง</th><th>แหล่ง</th><th>คีย์</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>สมองของกร๊วก</td><td class="src">api.anthropic.com · Claude</td><td><span class="key-pill">ต้องมีคีย์</span></td></tr>
+          <tr><td>สมองสำรอง</td><td class="src">api.openai.com · generativelanguage.googleapis.com</td><td><span class="key-pill">ต้องมีคีย์</span></td></tr>
+          <tr><td>บันทึกทริป</td><td class="src">supabase — dual-mode opt-in</td><td><span class="key-pill">ต้องมีคีย์</span></td></tr>
+          <tr><td>อากาศ</td><td class="src">api.openweathermap.org</td><td><span class="key-pill">ต้องมีคีย์</span></td></tr>
+          <tr><td>อากาศ · พยากรณ์ 16 วัน</td><td class="src">api.open-meteo.com</td><td><span class="free-pill">ฟรี</span></td></tr>
+          <tr><td>ฝุ่น</td><td class="src">api.openaq.org</td><td><span class="key-pill">ต้องมีคีย์</span></td></tr>
+          <tr><td>ฝุ่น</td><td class="src">air-quality-api.open-meteo.com</td><td><span class="free-pill">ฟรี</span></td></tr>
+          <tr><td>กล้องสด</td><td class="src">api.windy.com</td><td><span class="key-pill">ต้องมีคีย์</span></td></tr>
+          <tr><td>เตือนภัย</td><td class="src">www.jma.go.jp</td><td><span class="free-pill">ฟรี</span></td></tr>
+          <tr><td>แผ่นดินไหว</td><td class="src">api.p2pquake.net</td><td><span class="free-pill">ฟรี</span></td></tr>
+          <tr><td>ค้นเมือง</td><td class="src">nominatim.openstreetmap.org</td><td><span class="free-pill">ฟรี</span></td></tr>
+          <tr><td>จุดน่าสนใจ · รูปเมือง</td><td class="src">en.wikipedia.org</td><td><span class="free-pill">ฟรี</span></td></tr>
+          <tr><td>ข่าว · อีเวนต์</td><td class="src">news.google.com · RSS</td><td><span class="free-pill">ฟรี</span></td></tr>
+          <tr><td>วิดีโอบรรยากาศ</td><td class="src">youtube.com · i.ytimg.com</td><td><span class="free-pill">ฟรี</span></td></tr>
+          <tr><td>อัตราแลกเปลี่ยน</td><td class="src">open.er-api.com</td><td><span class="free-pill">ฟรี</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─────────── สแตก ─────────── -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="eyebrow">สแตก</span>
+      <h2>สร้างด้วยอะไร</h2>
+    </div>
+    <div class="stack">
+      <div class="stack-col">
+        <h3>Client</h3>
+        <ul>
+          <li>Next.js <span>15.5</span></li>
+          <li>React <span>19.2</span></li>
+          <li>TypeScript <span>5</span></li>
+          <li>Tailwind <span>4</span></li>
+          <li>Leaflet <span>1.9</span></li>
+          <li>lucide-react <span>1.14</span></li>
+        </ul>
+      </div>
+      <div class="stack-col">
+        <h3>API routes</h3>
+        <ul>
+          <li>/api/assistant</li>
+          <li>/api/day-plan</li>
+          <li>/api/trip</li>
+          <li>/api/weather</li>
+          <li>/api/aqi</li>
+          <li>/api/events</li>
+          <li>/api/geocode</li>
+          <li>/api/webcams</li>
+        </ul>
+      </div>
+      <div class="stack-col">
+        <h3>lib/services</h3>
+        <ul>
+          <li>advisor</li>
+          <li>weather · aqi</li>
+          <li>events · webcams</li>
+          <li>quakes · warnings</li>
+          <li>geocode · pois</li>
+          <li>fx · day-plan</li>
+          <li>city-images</li>
+        </ul>
+      </div>
+      <div class="stack-col">
+        <h3>lib/cities · game</h3>
+        <ul>
+          <li>city-configs</li>
+          <li>seasons · holidays</li>
+          <li>transit · drive-spots</li>
+          <li>travel-meta</li>
+          <li>kruak · mood</li>
+          <li>trip · identity</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── ของที่ควรรู้ ─────────── -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="eyebrow">ของที่ควรรู้</span>
+      <h2>สถานะจริงตอนนี้</h2>
+    </div>
+    <div class="notes">
+      <div class="note">
+        <span class="tag">แท็บ</span>
+        <p><b>มี 3 แท็บ ไม่ใช่ 4</b> — <code>app-shell.tsx</code> ประกาศแค่ <code>chat | map | trip</code> เกมฝาท่อถูกถอดออกไปแล้วใน commit <code>a833e48</code></p>
+      </div>
+      <div class="note">
+        <span class="tag">ทริป</span>
+        <p><b>ยังเป็น localStorage เป็นหลัก</b> — อ่านในเครื่องก่อน แล้วค่อย merge จาก server ถ้าตั้ง Supabase ไว้ ถ้าไม่ได้ตั้งก็เงียบๆ ใช้ในเครื่อง UI บอก user ตรงๆ</p>
+      </div>
+      <div class="note">
+        <span class="tag">LLM</span>
+        <p><b>มี 3 provider ไม่ใช่หนึ่ง</b> — Anthropic เป็นตัวหลัก มี OpenAI กับ Gemini สำรอง โค้ดเลือกตามคีย์ที่มีใน env</p>
+      </div>
+      <div class="note">
+        <span class="tag">ถอย</span>
+        <p><b>มี kill switch</b> — <code>?shell=0</code> คืนหน้า dashboard เดิมล้วนแบบไม่มีแท็บ ตั้งใจไว้ถอยหนึ่ง release ถ้าเจอบั๊ก</p>
+      </div>
+      <div class="note">
+        <span class="tag">เทส</span>
+        <p><b>ยังไม่มี test runner</b> — ไม่มี vitest/jest ใน devDependencies, script มีแค่ dev / build / start / lint</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>อ่านจากโค้ดจริงในรีโป — <code class="mono">package.json</code>, <code class="mono">app/api/*</code>, <code class="mono">components/*</code>, <code class="mono">lib/services/*</code> ไม่ได้เดาจากความจำ</p>
+    <div class="stamp">branch: remove-manhole-pwa · 2026-07-15</div>
+  </footer>
+
+</div>
+</body>
+</html>

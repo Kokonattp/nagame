@@ -20,14 +20,6 @@ export type MapPoi = {
   selected?: boolean;
 };
 
-export type ManholePin = {
-  key: string;
-  lat: number;
-  lon: number;
-  place: string;
-  collected: boolean;
-};
-
 export type WashiMapProps = {
   center: [number, number];
   zoom?: number;
@@ -36,8 +28,6 @@ export type WashiMapProps = {
   kruak?: { lat: number; lon: number; mood: KruakArtKey; say?: string };
   /** ย่านที่แชทส่งมาให้โฟกัส (?area=) → แผนที่ flyTo + ปักหมุดไฮไลต์ ไม่ remount */
   focus?: { lat: number; lon: number; label: string } | null;
-  /** จุดฝาท่อ 御朱印 (ตรา) — เก็บแล้ว=สี, ยังไม่=ghost. กด→เปิดแท็บสมุด (?tab=book) */
-  manholes?: ManholePin[];
 };
 
 // escape ค่าที่มาจากข้อมูล (title) ก่อนยัดลง innerHTML ของ divIcon — กัน HTML แตก
@@ -67,29 +57,6 @@ function poiHtml(p: MapPoi): string {
   </div>`;
 }
 
-// หมุดฝาท่อ 御朱印 — วงกลมลายท่อเล็ก. เก็บแล้ว=สีชาด+เงาแข็ง, ghost=เทาจาง.
-// wrap ด้วย <a href="?tab=book"> → กดแล้วไปแท็บสมุด (URL = single source of truth,
-// ไม่ต้อง callback ข้าม dynamic boundary). Leaflet ปล่อย click ผ่านไปที่ <a> ปกติ.
-function manholeHtml(m: ManholePin): string {
-  const ink = m.collected ? "#23282f" : "#9a958c";
-  const fill = m.collected ? "var(--nb-vermilion)" : "var(--surface-soft)";
-  const op = m.collected ? "1" : "0.72";
-  const ribs = Array.from({ length: 12 })
-    .map((_, i) => {
-      const a = (i * Math.PI) / 6;
-      return `<line x1="${(11 * Math.cos(a)).toFixed(1)}" y1="${(11 * Math.sin(a)).toFixed(1)}" x2="${(15 * Math.cos(a)).toFixed(1)}" y2="${(15 * Math.sin(a)).toFixed(1)}"/>`;
-    })
-    .join("");
-  return `<a href="?tab=book" style="display:block;text-decoration:none;opacity:${op};filter:drop-shadow(2px 2px 0 rgba(43,40,36,.28));" title="ฝาท่อ: ${m.place}">
-    <svg viewBox="-20 -20 40 40" width="34" height="34" xmlns="http://www.w3.org/2000/svg">
-      <circle r="17" fill="${fill}" stroke="${ink}" stroke-width="2.5"/>
-      <circle r="13" fill="none" stroke="${ink}" stroke-width="1.2" stroke-dasharray="2 2"/>
-      <g stroke="${ink}" stroke-width="1" opacity="0.6">${ribs}</g>
-      <text y="5" font-size="14" text-anchor="middle" fill="${ink}" stroke="none">🕳</text>
-    </svg>
-  </a>`;
-}
-
 function kruakHtml(mood: KruakArtKey, say?: string): string {
   const src = KRUAK_ART[mood].asset;
   const bubble = say
@@ -104,7 +71,7 @@ function kruakHtml(mood: KruakArtKey, say?: string): string {
   </div>`;
 }
 
-export function WashiMap({ center, zoom = 14, pois, kruak, focus, manholes = [] }: WashiMapProps) {
+export function WashiMap({ center, zoom = 14, pois, kruak, focus }: WashiMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const focusMarkerRef = useRef<import("leaflet").Marker | null>(null);
@@ -135,17 +102,6 @@ export function WashiMap({ center, zoom = 14, pois, kruak, focus, manholes = [] 
           iconAnchor: [13, 13], // กึ่งกลาง dot 26px อยู่ตรงพิกัดเป๊ะ (ชื่อกางไปทางขวาตอน hover)
         });
         L.marker([p.lat, p.lon], { icon }).addTo(map);
-      }
-
-      // หมุดฝาท่อ 御朱印 — วางบน landmark, กด→?tab=book. zIndex ต่ำกว่ากร๊วก สูงกว่า POI
-      for (const m of manholes) {
-        const icon = L.divIcon({
-          html: manholeHtml(m),
-          className: "",
-          iconSize: [34, 34],
-          iconAnchor: [17, 17],
-        });
-        L.marker([m.lat, m.lon], { icon, zIndexOffset: 500 }).addTo(map);
       }
 
       if (kruak) {

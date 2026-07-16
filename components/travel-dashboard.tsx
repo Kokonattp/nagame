@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUp,
-  Bot,
   Calendar,
   CloudRain,
   Compass,
@@ -19,16 +18,8 @@ import {
 } from "lucide-react";
 import { getKruakMood } from "@/lib/game/mood";
 import { KruakAvatar } from "@/components/kruak-avatar";
-import {
-  countStamps,
-  earnStamp,
-  getCityStamps,
-  STAMP_KEYS,
-  STAMP_META,
-  STAMPS_PER_CITY,
-  type CityStamps,
-  type StampKey,
-} from "@/lib/game/journal";
+import { ChatPanel } from "@/components/chat/chat-panel";
+import { toBubbles } from "@/lib/chat/types";
 import { isInTrip, toggleTrip } from "@/lib/game/trip";
 import { CitySearch } from "@/components/city-search";
 import type { Recommendation } from "@/lib/cities/city-configs";
@@ -90,11 +81,6 @@ type RecommendationWithImage = Recommendation & {
   image?: string | null;
 };
 
-type ChatMessage = {
-  role: "assistant" | "user";
-  content: string;
-};
-
 const quickPrompts = [
   "ฝนแบบนี้ไปไหนดี",
   "กินอะไรดีใกล้สถานี",
@@ -113,25 +99,10 @@ export function TravelDashboard({
   recommendations,
   seeds,
 }: DashboardProps) {
-  const [chatInput, setChatInput] = useState("");
-  // seed คำทักทายกร๊วกที่คำนวณฝั่ง server เป็นข้อความแรก — initializer อ่าน prop
-  // ครั้งเดียว ค่าคงที่ระหว่าง server render กับ hydration (ไม่ recompute ฝั่ง client)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => [
-    { role: "assistant", content: verdict },
-  ]);
-  const [chatError, setChatError] = useState("");
   const [webcamOpen, setWebcamOpen] = useState(false);
-  const [isPending, setIsPending] = useState(false);
   const [selectedWebcamIndex, setSelectedWebcamIndex] = useState(0);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const severeWarnings = warnings.items.filter((item) => item.level !== "advisory");
-
-  // ── เกม: 御朱印帳 สมุดตราประทับของกร๊วก (localStorage, per-เมือง) ──
-  const [stamps, setStamps] = useState<CityStamps>({});
-  const [journalOpen, setJournalOpen] = useState(false);
-  const [slammingStamp, setSlammingStamp] = useState<StampKey | null>(null);
-  const [justCompleted, setJustCompleted] = useState(false);
-  const stampCount = countStamps(stamps);
 
   // NPC มู้ด — pure จากสัญญาณที่มีอยู่แล้ว ไม่ fetch ใหม่
   const mood = useMemo(
@@ -139,60 +110,12 @@ export function TravelDashboard({
     [severeWarnings.length, weather.rainChance, aqi.aqi],
   );
 
-  // ประทับตรา: idempotent, ยิง animation เฉพาะครั้งที่ได้ใหม่, เช็คครบ 5/5 เพื่อคำชมของกร๊วก
-  const claimStamp = useCallback(
-    (key: StampKey) => {
-      const { earned, stamps: next } = earnStamp(city.slug, key);
-      if (!earned) return;
-      setStamps(next);
-      setSlammingStamp(key);
-      window.setTimeout(() => setSlammingStamp((cur) => (cur === key ? null : cur)), 450);
-      if (countStamps(next) === STAMPS_PER_CITY) {
-        setJustCompleted(true);
-        setChatMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: "ครบทุกตราของเมืองนี้แล้ว! กร๊วกภูมิใจนะ 🎉 ไปเก็บเมืองอื่นต่อกันเลย" },
-        ]);
-      }
-    },
-    [city.slug],
-  );
-
-  // โหลดตราของเมืองนี้ + ประทับ "เยือนเมือง" อัตโนมัติเมื่อเปิดหน้า (ครั้งแรกของเมืองนั้น)
-  useEffect(() => {
-    const existing = getCityStamps(city.slug);
-    setStamps(existing);
-    setJustCompleted(false);
-    if (!existing.visit) {
-      const { stamps: next } = earnStamp(city.slug, "visit");
-      setStamps(next);
-    }
-  }, [city.slug]);
-
   useEffect(() => {
     const onScroll = () => setShowBackToTop(window.scrollY > 900);
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  // ประทับ "ดูแผนวันนี้" เมื่อ #day-plan โผล่เข้ามาในจอ
-  const dayPlanRef = useRef<HTMLElement | null>(null);
-  useEffect(() => {
-    const node = dayPlanRef.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          claimStamp("dayplan");
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.4 },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [claimStamp]);
 
   // แผนวันนี้โหลดฝั่ง client — หน้าเพจไม่ต้องรอ AI ตอน server render
   const [dayPlan, setDayPlan] = useState<DayPlanSignal | null | undefined>(undefined);
@@ -231,40 +154,6 @@ export function TravelDashboard({
     if ((weather.rainChance ?? 0) >= 40) return "มีสิทธิ์เจอฝนเป็นช่วง";
     return "จังหวะเที่ยวค่อนข้างคล่องตัว";
   }, [weather.rainChance]);
-
-  function submitPrompt(prompt: string) {
-    const value = prompt.trim();
-    if (!value) return;
-
-    setChatInput("");
-    setChatError("");
-    setChatMessages((prev) => [...prev, { role: "user", content: value }]);
-    setIsPending(true);
-    claimStamp("chat"); // ตรา 💬 — ทักกร๊วกแล้ว
-
-    void (async () => {
-      try {
-        const response = await fetch("/api/assistant", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          // advisor ดึง signal ฝั่ง server เอง — ส่งแค่เมืองกับคำถามพอ
-          body: JSON.stringify({ citySlug: city.slug, prompt: value }),
-        });
-
-        const data = (await response.json()) as { reply?: string; error?: string };
-        if (!response.ok || !data.reply) {
-          setChatError(data.error ?? "ตอบกลับไม่สำเร็จ ลองใหม่อีกครั้ง");
-          return;
-        }
-
-        setChatMessages((prev) => [...prev, { role: "assistant", content: data.reply ?? "" }]);
-      } catch {
-        setChatError("การเชื่อมต่อ AI assistant ยังไม่สำเร็จ ลองใหม่อีกครั้ง");
-      } finally {
-        setIsPending(false);
-      }
-    })();
-  }
 
   return (
     <main className="min-h-screen overflow-x-clip text-[var(--foreground)]">
@@ -367,129 +256,23 @@ export function TravelDashboard({
                     {mood.tone ?? "ผู้ช่วยเที่ยวประจำเมือง"}
                   </p>
                 </div>
-                {/* pill row เกม: กล้องสด + ตราประทับ 朱 x/5 (พื้นผิวเกมบนหน้า = แค่นี้) */}
                 <div className="ml-auto flex shrink-0 items-center gap-2">
                   {webcam.available && activeWebcam?.previewImage ? (
                     <button
                       type="button"
-                      onClick={() => {
-                        setWebcamOpen(true);
-                        claimStamp("webcam");
-                      }}
+                      onClick={() => setWebcamOpen(true)}
                       className="nb-pill transition hover:bg-[var(--nb-gold)]/30"
                     >
                       📷 กล้องสด
                     </button>
                   ) : null}
-                  <button
-                    type="button"
-                    onClick={() => setJournalOpen(true)}
-                    className={`nb-pill transition hover:bg-[var(--nb-gold)]/30 ${slammingStamp ? "kruak-stamp-slam" : ""} ${stampCount === STAMPS_PER_CITY ? "nb-pill-gold" : ""}`}
-                    aria-label={`สมุดตราประทับ ได้ ${stampCount} จาก ${STAMPS_PER_CITY} ตรา`}
-                  >
-                    朱 {stampCount}/{STAMPS_PER_CITY}
-                  </button>
                 </div>
               </div>
 
-              {/* คำทักทายกร๊วก — speech bubble ตราประทับ (ข้อความแรกของแชท) + แชทต่อ */}
-              <div className="mt-4 space-y-3">
-                <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
-                  {chatMessages.map((message, index) => (
-                    <div key={`${message.role}-${index}`} className={index === 0 ? "space-y-2" : undefined}>
-                      {/* ข้อความแรก (คำทักทายกร๊วก) แตกเป็นหลาย speech bubble ตาม \n\n —
-                          ให้ความรู้สึก "กร๊วกพิมพ์มาทีละใบ" ไม่ใช่กำแพงข้อความก้อนเดียว.
-                          ไม่แตะ chatMessages state (แตกตอน render เท่านั้น) = chat backend ไม่กระทบ */}
-                      {index === 0 ? (
-                        message.content
-                          .split(/\n{2,}/)
-                          .map((segment) => segment.trim())
-                          .filter(Boolean)
-                          .map((segment, segIndex) => (
-                            <div
-                              key={segIndex}
-                              className="rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-vermilion-soft)] p-4 shadow-[3px_3px_0_0_var(--nb-ink)]"
-                            >
-                              <p className="whitespace-pre-line text-sm leading-7 text-[var(--foreground)]">{segment}</p>
-                            </div>
-                          ))
-                      ) : (
-                        <div
-                          className={
-                            message.role === "assistant"
-                              ? "mr-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--surface-soft)] p-4"
-                              : "ml-6 rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--nb-indigo-soft)] p-4"
-                          }
-                        >
-                          <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
-                            {message.role === "assistant" ? <Bot className="h-3.5 w-3.5" aria-hidden /> : <Compass className="h-3.5 w-3.5" aria-hidden />}
-                            {message.role === "assistant" ? "กร๊วก" : "คุณ"}
-                          </div>
-                          <p className="whitespace-pre-line text-sm leading-7 text-[var(--foreground)]">{message.content}</p>
-                        </div>
-                      )}
-
-                      {/* delight: กร๊วกชะโงกดู webcam ให้ — bubble หลักฐานสด ต่อจากคำทักทาย
-                          (เฉพาะข้อความแรก + มี webcam) แปลง data feed เป็นพฤติกรรมตัวละคร */}
-                      {index === 0 && webcam.available && activeWebcam?.previewImage ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setWebcamOpen(true);
-                            claimStamp("webcam"); // ตรา 📷 — ชะโงกดูเมืองแล้ว
-                          }}
-                          className="mt-3 block w-full overflow-hidden rounded-[16px] border-2 border-[var(--nb-ink)] bg-[var(--surface)] text-left shadow-[3px_3px_0_0_var(--nb-ink)] transition hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_var(--nb-ink)]"
-                        >
-                          <div className="relative aspect-[16/9] overflow-hidden">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={activeWebcam.previewImage} alt={activeWebcam.title ?? `${city.name} live`} className="h-full w-full object-cover" />
-                            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(31,36,48,0.55))]" />
-                            <span className="absolute left-3 top-3 nb-pill nb-pill-alert">● สดตอนนี้</span>
-                          </div>
-                          <p className="px-4 py-3 text-sm leading-6 text-[var(--foreground)]">
-                            กร๊วกเพิ่งชะโงกดูให้ — นี่สภาพ {city.name} ตอนนี้เลย กดดูเต็ม ๆ ได้
-                          </p>
-                        </button>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {quickPrompts.map((prompt) => (
-                    <button
-                      key={prompt}
-                      type="button"
-                      onClick={() => submitPrompt(prompt)}
-                      className="nb-pill transition hover:bg-[var(--nb-gold)]/30"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
-
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    submitPrompt(chatInput);
-                  }}
-                  className="space-y-3"
-                >
-                  <textarea
-                    value={chatInput}
-                    onChange={(event) => setChatInput(event.target.value)}
-                    placeholder="ถามกร๊วก เช่น ถ้าฝน 70% ควรสลับไปย่านไหนก่อน"
-                    maxLength={300}
-                    rows={2}
-                    className="nb-flat w-full px-4 py-3 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--ink-muted)] focus:shadow-[3px_3px_0_0_var(--nb-ink)]"
-                  />
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    {chatError ? <p className="text-sm font-medium text-[var(--nb-vermilion)]">{chatError}</p> : <span className="text-xs text-[var(--ink-muted)]">ตอบจากข้อมูลล่าสุดของหน้านี้</span>}
-                    <button type="submit" disabled={isPending} className="nb-btn px-5 py-2.5 text-sm">
-                      {isPending ? "กำลังคิด..." : "ถามกร๊วก"}
-                    </button>
-                  </div>
-                </form>
+              {/* คำทักทายกร๊วก (verdict) เป็น seed + แชทต่อ — ตรรกะแชทอยู่ใน ChatPanel
+                  (Phase 0 U5, docs/chat-cards-roadmap.md) shell-agnostic ใช้ร่วมกับหน้าแรกได้ */}
+              <div className="mt-4">
+                <ChatPanel citySlug={city.slug} seedBubbles={toBubbles(verdict)} quickPrompts={quickPrompts} />
               </div>
             </div>
           </section>
@@ -511,7 +294,7 @@ export function TravelDashboard({
         </section>
 
         {/* ─── Tier 2 — เควสต์วันนี้: แผนวันนี้ ─── */}
-        <section id="day-plan" ref={dayPlanRef} className="nb-card p-5 md:p-7">
+        <section id="day-plan" className="nb-card p-5 md:p-7">
           <div className="flex items-start justify-between gap-4">
             <SectionIntro
               eyebrow="เควสต์วันนี้ · today's quest"
@@ -573,7 +356,7 @@ export function TravelDashboard({
 
         {/* ─── Tier 3 — ของฝากจากกร๊วก (loot) + ประกาศจากศาลเจ้า (เตือนภัย) ─── */}
         <section className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <KruakPicksCard citySlug={city.slug} cityName={city.name} recommendations={recommendations} onClaim={() => claimStamp("recs")} />
+          <KruakPicksCard citySlug={city.slug} cityName={city.name} recommendations={recommendations} />
 
           <PaperCard
             eyebrow="ประกาศจากศาลเจ้า · shrine notice"
@@ -736,14 +519,6 @@ export function TravelDashboard({
         </div>
       ) : null}
 
-      {journalOpen ? (
-        <KruakJournalModal
-          cityName={city.name}
-          stamps={stamps}
-          justCompleted={justCompleted}
-          onClose={() => setJournalOpen(false)}
-        />
-      ) : null}
     </main>
   );
 }
@@ -819,12 +594,10 @@ function KruakPicksCard({
   citySlug,
   cityName,
   recommendations,
-  onClaim,
 }: {
   citySlug: string;
   cityName: string;
   recommendations: DashboardProps["recommendations"];
-  onClaim: () => void;
 }) {
   const picks = [
     { emoji: "🛏", label: "พัก", kind: "sleep", item: recommendations.sleep[0] },
@@ -846,84 +619,14 @@ function KruakPicksCard({
 
       <Link
         href={`/city/${citySlug}/around`}
-        onClick={onClaim}
         className="mt-4 flex items-center justify-between gap-3 rounded-[var(--nb-radius-sm)] border-[2.5px] border-[var(--nb-ink)] bg-[var(--nb-indigo)] p-4 text-white shadow-[var(--nb-shadow-sm)] transition hover:-translate-y-0.5 hover:shadow-[var(--nb-shadow)]"
       >
         <div>
           <p className="text-sm font-semibold">ดูที่พัก / ที่กิน / ที่เที่ยวทั้งหมด</p>
-          <p className="mt-1 text-xs text-white/70">รับตรา 🍜 + จุดคัดมือทั้งเมืองที่หน้ารอบเมือง</p>
+          <p className="mt-1 text-xs text-white/70">จุดคัดมือทั้งเมืองที่หน้ารอบเมือง</p>
         </div>
         <Compass className="h-5 w-5 shrink-0" aria-hidden />
       </Link>
-    </div>
-  );
-}
-
-// สมุด 御朱印帳 — เปิดจาก pill 朱 เท่านั้น (ไม่ render บนหน้า). โชว์ 5 ช่องตรา: ได้=ประทับสีชาด, ยังไม่ได้=เส้นจาง
-function KruakJournalModal({
-  cityName,
-  stamps,
-  justCompleted,
-  onClose,
-}: {
-  cityName: string;
-  stamps: CityStamps;
-  justCompleted: boolean;
-  onClose: () => void;
-}) {
-  const earned = countStamps(stamps);
-  return (
-    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-[rgba(23,24,27,0.72)] backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
-      <div
-        className="flex h-full w-full flex-col overflow-hidden bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--nb-shadow)] sm:h-auto sm:max-h-[92vh] sm:max-w-md sm:rounded-[var(--nb-radius)] sm:border-[2.5px] sm:border-[var(--nb-ink)]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b-[2.5px] border-[var(--nb-ink)] px-5 py-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-warm)]">御朱印帳 · สมุดตราประทับ</p>
-            <h3 className="mt-1 font-serif text-xl text-[var(--foreground)]">{cityName} · {earned}/{STAMPS_PER_CITY}</h3>
-          </div>
-          <button type="button" onClick={onClose} className="nb-pill shrink-0 px-4 py-2">ปิด</button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-5">
-          {justCompleted ? (
-            <p className="mb-4 rounded-[14px] border-2 border-[var(--nb-ink)] bg-[var(--nb-gold)]/30 px-4 py-3 text-center text-sm font-semibold text-[var(--foreground)]">
-              🎉 ครบทุกตราของ {cityName} แล้ว! กร๊วกภูมิใจนะ
-            </p>
-          ) : (
-            <p className="mb-4 text-sm leading-6 text-[var(--ink-muted)]">เก็บตราครบทั้ง {STAMPS_PER_CITY} ดวงของเมืองนี้ — ตราได้จากการเที่ยวไปกับกร๊วกในแอป</p>
-          )}
-          <div className="grid grid-cols-1 gap-3">
-            {STAMP_KEYS.map((key) => {
-              const has = Boolean(stamps[key]);
-              const meta = STAMP_META[key];
-              return (
-                <div
-                  key={key}
-                  className={`flex items-center gap-3 rounded-[14px] border-2 px-4 py-3 transition ${
-                    has
-                      ? "border-[var(--nb-ink)] bg-[var(--nb-vermilion-soft)]"
-                      : "border-dashed border-[var(--line-strong)] bg-transparent opacity-70"
-                  }`}
-                >
-                  <span
-                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 text-xl ${
-                      has ? "border-[var(--nb-vermilion)] bg-[var(--surface)]" : "border-[var(--line-strong)] grayscale"
-                    }`}
-                    aria-hidden
-                  >
-                    {has ? meta.emoji : "○"}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[var(--foreground)]">{meta.label}</p>
-                    <p className="text-xs leading-5 text-[var(--ink-muted)]">{has ? "ได้แล้ว ✓" : meta.hint}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

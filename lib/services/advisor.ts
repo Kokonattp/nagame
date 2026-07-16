@@ -1,13 +1,16 @@
-import { getCityConfigBySlug } from "@/lib/cities/city-configs";
+import { getCityConfigBySlug, type Recommendation as CityRecommendation } from "@/lib/cities/city-configs";
 import { japanHolidayWindows, windowStatus } from "@/lib/cities/holidays";
-import { getCitySeasons } from "@/lib/cities/seasons";
+import { citiesWithSeasons, getCitySeasonCalendar, getCitySeasons } from "@/lib/cities/seasons";
 import { getCityTransit } from "@/lib/cities/transit";
 import { getRecommendationSets } from "@/lib/cities/travel-meta";
+import { buildOutbound } from "@/lib/outbound";
 import { getAqi } from "@/lib/services/aqi";
 import { getEvents } from "@/lib/services/events";
 import { resolveCity } from "@/lib/services/geocode";
 import { getWarnings } from "@/lib/services/warnings";
 import { getWeather } from "@/lib/services/weather";
+import { getWebcams } from "@/lib/services/webcams";
+import { toBubbles, type Card, type ChatReply } from "@/lib/chat/types";
 
 // กร๊วกตอบเป็น 1 LLM call: parseIntent (โค้ด) → รวม signal ฝั่ง server → compose.
 // intent parser เป็น pure function คืน contract เดิม {period, wantsFlights} —
@@ -36,6 +39,8 @@ type AdvisorContext = {
   events: Awaited<ReturnType<typeof getEvents>>;
   warnings: Awaited<ReturnType<typeof getWarnings>>;
   activeSeasons: string[];
+  /** ฤดูทั้งปีของเมืองนี้ (ไม่ใช่แค่ที่กำลังเกิด) — ให้ตอบ "ใบไม้แดงเมื่อไหร่" ได้ทุกเดือน */
+  seasonCalendar: { name: string; kind: string; window: string; note: string }[];
   holidayName: string | null;
   stationName?: string;
   recommendations: {
@@ -70,6 +75,123 @@ export async function getAdvisorReply(citySlug: string, prompt: string): Promise
   }
 
   return { reply: buildFallbackReply(context, intent, prompt), source: "Rule-based advisor" };
+}
+
+// ── ChatReply — Phase 0 (docs/chat-cards-roadmap.md) ──────────────────────
+// หัวใจ: LLM มีหน้าที่เดียวคือพูดไทย (bubbles) — cards ทั้งหมดโค้ดประกอบจากข้อมูลจริง
+// ที่ fetch มาแล้ว ไม่ใช่จาก LLM. citySlug = null รองรับ "หน้าแรก = แชท ไม่บังคับเลือกเมือง"
+// (docs/chat-cards-roadmap.md Phase 0 U7) — ตอบระดับประเทศจาก season data ล้วน ไม่ยิง LLM.
+export async function getAdvisorChatReply(citySlug: string | null, prompt: string): Promise<ChatReply> {
+  if (!citySlug) return buildCountryLevelReply();
+
+  // เรียก getAdvisorReply เดิมตรง ๆ แทนก๊อปตรรกะ AI/fallback — ไม่แตะของเดิม, ไม่เสี่ยงเพี้ยน.
+  // gatherContext ถูกเรียกซ้ำใน getAdvisorReply + ที่นี่ (สำหรับ cards) แต่ห่อ cached() อยู่แล้ว
+  // (TTL 10-30 นาที) เหมือน pattern getCityVerdict/page.tsx ที่ทำอยู่แล้วในไฟล์นี้ — cache hit ปกติ.
+  const [result, context] = await Promise.all([getAdvisorReply(citySlug, prompt), gatherContext(citySlug)]);
+  const cards = context ? await buildCityCards(citySlug, context) : [];
+
+  return { bubbles: toBubbles(result.reply), cards, source: result.source };
+}
+
+// การ์ดระดับเมือง — เฉพาะของจริงที่ fetch ได้เท่านั้น: อากาศ (มีอยู่แล้วใน context),
+// กล้องสด (ของจริงจาก webcam service), และสถานที่คัดมือ (curated ไม่ generic).
+// ล้มเงียบทีละใบ — ใบไหนไม่มีข้อมูลจริงก็แค่ไม่โผล่ ไม่ทำให้ทั้งคำตอบพัง.
+async function buildCityCards(citySlug: string, context: AdvisorContext): Promise<Card[]> {
+  const city = await resolveCity(citySlug);
+  if (!city) return [];
+
+  const config = getCityConfigBySlug(city.slug);
+  const cards: Card[] = [];
+
+  if (context.weather.available) {
+    const hasRange = typeof context.weather.high === "number" && typeof context.weather.low === "number";
+    cards.push({
+      id: `weather-${city.slug}`,
+      kind: "weather",
+      cityName: context.cityName,
+      headline: `${context.cityName} ตอนนี้ ${context.weather.condition}${typeof context.weather.temperature === "number" ? ` ${context.weather.temperature}°C` : ""}`,
+      tempRange: hasRange ? `${context.weather.low}–${context.weather.high}°C` : undefined,
+      rainChance: context.weather.rainChance,
+      season: context.activeSeasons[0],
+    });
+  }
+
+  // กล้องสด — ต้องมีทั้งภาพ preview และลิงก์ดูจริง ไม่งั้นไม่สร้างการ์ด (กันลิงก์ปลอม)
+  const webcam = await getWebcams(city.lat, city.lon, config);
+  if (webcam.available && webcam.previewImage && webcam.url) {
+    cards.push({
+      id: `webcam-${city.slug}`,
+      kind: "webcam",
+      title: webcam.title ?? `กล้องสด ${context.cityName}`,
+      previewImage: webcam.previewImage,
+      liveUrl: buildOutbound(webcam.url, { kind: "webcam", label: webcam.title ?? undefined, citySlug: city.slug }),
+      source: webcam.source,
+    });
+  }
+
+  // สถานที่คัดมือ 1 ใบต่อหมวด (see/eat/sleep) — เฉพาะที่ไม่ใช่ generic (ของสมมุติ)
+  const sets = getRecommendationSets(city.name, city.prefecture, config?.recommendations ?? []);
+  const picks: { kind: "see" | "eat" | "sleep"; emoji: string }[] = [
+    { kind: "see", emoji: "⛩" },
+    { kind: "eat", emoji: "🍜" },
+    { kind: "sleep", emoji: "🛏" },
+  ];
+  for (const pick of picks) {
+    const item = sets[pick.kind].find((r) => !r.generic);
+    if (!item) continue;
+    cards.push({
+      id: `place-${pick.kind}-${city.slug}-${item.title}`,
+      kind: "place",
+      title: item.title,
+      area: item.area,
+      emoji: pick.emoji,
+      note: item.note,
+      mapUrl: buildOutbound(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.title} ${city.name}`)}`, {
+        kind: "nav",
+        label: item.title,
+        citySlug: city.slug,
+      }),
+    });
+  }
+
+  return cards;
+}
+
+// ถามแบบยังไม่มีเมือง ("เดือนนี้ไปไหนดี", "หิมะตกที่ไหน") — ตอบจาก season data ของทุกเมือง
+// ล้วน ๆ ไม่ยิง LLM (ข้อมูลพอตอบตรง ๆ อยู่แล้ว, กันค่าใช้จ่าย+latency ของคำถามกว้างที่สุด).
+async function buildCountryLevelReply(): Promise<ChatReply> {
+  const matches: { slug: string; name: string; season: { name: string; note: string } }[] = [];
+
+  for (const slug of citiesWithSeasons()) {
+    const config = getCityConfigBySlug(slug);
+    if (!config) continue;
+    const active = getCitySeasons(slug).find((season) => windowStatus(season.from, season.to).state === "active");
+    if (active) matches.push({ slug, name: config.name, season: { name: active.name, note: active.note } });
+  }
+
+  const picks = matches.slice(0, 4);
+  const cards: Card[] = picks.map((m) => ({
+    id: `season-${m.slug}`,
+    kind: "weather",
+    cityName: m.name,
+    headline: `${m.name} กำลังเป็นช่วง${m.season.name}`,
+    season: m.season.name,
+    note: m.season.note,
+  }));
+
+  const monthName = new Intl.DateTimeFormat("th-TH", { month: "long" }).format(new Date());
+  const bubbles = picks.length
+    ? [
+        `ช่วง${monthName}นี้ กร๊วกเห็นหลายที่กำลังสวยพอดีเลยครับ 🐾`,
+        picks.map((m) => `• ${m.name}: ${m.season.name} — ${m.season.note}`).join("\n"),
+        "อยากรู้รายละเอียดเมืองไหน ถามชื่อเมืองมาได้เลยครับ หรือบอกงบ/จำนวนวันก็ได้",
+      ]
+    : [
+        `ช่วง${monthName}นี้ กร๊วกยังไม่มีไฮไลต์ฤดูที่คัดไว้พอดีช่วงนี้ครับ`,
+        "ลองบอกชื่อเมืองที่สนใจ หรือถามเรื่องอากาศ/งบประมาณได้เลย กร๊วกช่วยดูให้",
+      ];
+
+  return { bubbles, cards, source: "Rule-based advisor" };
 }
 
 // คำทักทายเปิดหน้าของกร๊วก — คำนวณฝั่ง server ครั้งเดียว ส่งเป็น prop ให้ hero
@@ -144,8 +266,15 @@ async function gatherContext(citySlug: string): Promise<AdvisorContext | null> {
   const holidayName =
     japanHolidayWindows.find((window) => windowStatus(window.from, window.to).state === "active")?.name ?? null;
 
-  const compact = (items: { title: string; note: string }[]) =>
-    items.slice(0, 6).map((item) => ({ title: item.title, note: item.note.slice(0, 120) }));
+  // ⚠ กันของปลอม: รายการ generic เป็นชื่อที่ระบบแต่งเอง (เช่น "Otaru cafe street")
+  // ไม่มีอยู่จริง — เดิมถูกส่งเข้า LLM เหมือนของจริง ทำให้กร๊วกแนะนำร้านที่ไม่มีอยู่
+  // ได้ทั้งที่ system prompt สั่งห้ามแต่งข้อมูล (ความจริงรั่วที่ชั้น context ไม่ใช่ที่โมเดล).
+  // ตอนนี้กรองทิ้งก่อนถึงกร๊วก → เมืองไม่มีของจริงก็ตอบน้อยลง ดีกว่าตอบผิด.
+  const compact = (items: CityRecommendation[]) =>
+    items
+      .filter((item) => !item.generic)
+      .slice(0, 6)
+      .map((item) => ({ title: item.title, note: item.note.slice(0, 120) }));
 
   return {
     cityName: city.name,
@@ -155,6 +284,12 @@ async function gatherContext(citySlug: string): Promise<AdvisorContext | null> {
     events,
     warnings,
     activeSeasons,
+    seasonCalendar: getCitySeasonCalendar(city.slug).map((season) => ({
+      name: season.name,
+      kind: season.kind,
+      window: season.window,
+      note: season.note.slice(0, 120),
+    })),
     holidayName,
     stationName: getCityTransit(city.slug)?.station.name,
     recommendations: {
@@ -166,8 +301,17 @@ async function gatherContext(citySlug: string): Promise<AdvisorContext | null> {
 }
 
 const MAX_OUTPUT_TOKENS = 220;
-const SYSTEM_PROMPT =
-  "You are กร๊วก, a warm but concise Thai travel advisor for Japan. Use only the provided context. Never invent current facts, timings, prices, or operating hours. Give ONE clear recommendation the traveller can act on, in Thai within 120 words. If a weather warning is active, lead with it.";
+const SYSTEM_PROMPT = [
+  "You are กร๊วก, a warm but concise Thai travel advisor for Japan.",
+  "Use ONLY the provided context. Never invent current facts, timings, prices, operating hours, or place names.",
+  "Give ONE clear recommendation the traveller can act on, in Thai within 120 words.",
+  "If a weather warning is active, lead with it.",
+  // ข้อมูลใหม่ที่เพิ่งต่อเข้ามา — บอกโมเดลว่ามีอะไรใช้ได้บ้าง ไม่งั้นมันไม่รู้ว่ามี
+  "dailyOutlook = per-day forecast up to 16 days ahead (date/high/low/rainChance). Use it for questions about tomorrow or the coming days. Do NOT answer beyond the last date it contains.",
+  "seasonCalendar = this city's seasonal highlights for the WHOLE year with their date windows. Use it to answer when-to-visit questions (e.g. autumn leaves, cherry blossoms) even if that season is not active now. These windows are multi-year averages, not a forecast — say so when it matters.",
+  // ปิดช่องที่เคยรั่ว: ถ้าไม่มีข้อมูล ให้บอกว่าไม่รู้ ห้ามเดา
+  "If the context has no recommendation for what is asked, say plainly that you don't have one for this city yet and suggest asking about something you do have. Never fill the gap with a plausible-sounding place name.",
+].join(" ");
 
 async function composeAiReply(context: AdvisorContext | null, intent: AdvisorIntent, prompt: string): Promise<string | null> {
   if (!context) return null;
@@ -195,6 +339,10 @@ async function composeAiReply(context: AdvisorContext | null, intent: AdvisorInt
       aqi: context.aqi.available ? { label: context.aqi.label, aqi: context.aqi.aqi } : null,
       activeWarnings: context.warnings.items.map((item) => item.label),
       activeSeasons: context.activeSeasons,
+      // ฤดูทั้งปี — ตอบ "ใบไม้แดงเมื่อไหร่ / ไปเดือนไหนดี" ได้แม้ตอนนี้ยังไม่ถึงฤดูนั้น
+      seasonCalendar: context.seasonCalendar,
+      // พยากรณ์ล่วงหน้าถึง 16 วัน — ตอบ "พรุ่งนี้/สุดสัปดาห์นี้ฝนไหม" ได้
+      dailyOutlook: context.weather.outlook.slice(0, 16),
       holiday: context.holidayName,
       events: context.events.items.slice(0, 3).map((item) => item.title),
       recommendations: context.recommendations,
@@ -316,17 +464,34 @@ function buildFallbackReply(context: AdvisorContext | null, intent: AdvisorInten
 
   const indoorish = (item: Recommendation) => /museum|cultural|indoor|canal|ในร่ม|ปลอดฝน|สำรองวันฝน|ตลาด|ช้อป/i.test(`${item.title} ${item.note}`);
   const bullet = (items: Recommendation[]) => items.slice(0, 3).map((item) => `- ${item.title}: ${item.note}`);
+  // context กรอง generic ออกแล้ว → เมืองที่ไม่มีของคัดมือจะได้ลิสต์ว่าง
+  // ต้องบอกตรง ๆ ว่ายังไม่มี ห้ามเงียบแล้วปล่อยหัวข้อลอย (เดิมของปลอมถมช่องนี้ให้)
+  const section = (label: string, items: Recommendation[], empty: string) =>
+    items.length ? [label, ...bullet(items)] : [empty];
+
+  // ถามอะไรต้องได้เรื่องนั้น — หัวข้อที่ถาม (กิน/นอน) มาก่อนสภาพอากาศเสมอ.
+  // เดิมฝน >= 60% จะปล้น branch ไปตอบ "ที่เที่ยวในร่ม" ทั้งที่ผู้ใช้ถามเรื่องกิน
+  // (เมืองฝนตกถามหาร้าน แล้วได้คลองมาแทน) → ฝนเป็นหมายเหตุต่อท้าย ไม่ใช่ตัวเปลี่ยนหัวข้อ
+  const askedEat = lower.includes("กิน") || lower.includes("eat") || lower.includes("อาหาร") || lower.includes("ร้าน");
+  const askedSleep = lower.includes("นอน") || lower.includes("พัก") || lower.includes("hotel") || lower.includes("sleep");
+  const rainNote = rainHigh ? "(ฝนช่วงนี้มีสิทธิ์มา พกร่มไปด้วยนะครับ)" : "";
 
   let body: string[];
-  if (lower.includes("กิน") || lower.includes("eat") || lower.includes("อาหาร")) {
-    body = ["ถ้าจะโฟกัสเรื่องกิน เริ่มจากนี่ก่อน:", ...bullet(eat)];
-  } else if (lower.includes("นอน") || lower.includes("พัก") || lower.includes("hotel") || lower.includes("sleep")) {
-    body = ["ถ้าจะเลือกย่านพัก ดูตัวเลือกนี้ก่อน:", ...bullet(sleep)];
+  if (askedEat) {
+    body = [
+      ...section("ถ้าจะโฟกัสเรื่องกิน เริ่มจากนี่ก่อน:", eat, `ร้านใน ${context.cityName} กร๊วกยังไม่มีที่คัดไว้ให้ครับ ลองถามเรื่องที่เที่ยวหรือย่านพักแทนได้`),
+      rainNote,
+    ];
+  } else if (askedSleep) {
+    body = [
+      ...section("ถ้าจะเลือกย่านพัก ดูตัวเลือกนี้ก่อน:", sleep, `ย่านพักใน ${context.cityName} กร๊วกยังไม่มีที่คัดไว้ให้ครับ`),
+      rainNote,
+    ];
   } else if (rainHigh || lower.includes("ฝน") || lower.includes("rain")) {
     const picks = see.filter(indoorish);
-    body = ["ฝนช่วงนี้มีสิทธิ์มา เริ่มจากจุดที่เปลี่ยนแผนง่าย/อยู่ในร่มก่อน:", ...bullet(picks.length ? picks : see)];
+    body = section("ฝนช่วงนี้มีสิทธิ์มา เริ่มจากจุดที่เปลี่ยนแผนง่าย/อยู่ในร่มก่อน:", picks.length ? picks : see, `จุดใน ${context.cityName} กร๊วกยังไม่มีที่คัดไว้ให้ครับ`);
   } else {
-    body = ["จุดที่เข้ากับจังหวะวันนี้:", ...bullet(see)];
+    body = section("จุดที่เข้ากับจังหวะวันนี้:", see, `${context.cityName} กร๊วกยังไม่มีจุดที่คัดไว้ให้ครับ — ถามเรื่องอากาศหรือช่วงเวลาที่ควรไปได้นะ`);
   }
 
   return [...lead, weatherLine, ...body].filter(Boolean).join("\n");

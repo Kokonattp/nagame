@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdvisorReply } from "@/lib/services/advisor";
+import { getAdvisorChatReply } from "@/lib/services/advisor";
 import { resolveCity } from "@/lib/services/geocode";
 import { cached, cacheHeaders } from "@/lib/utils/cache";
+import type { ChatReply } from "@/lib/chat/types";
 
 type AssistantRequest = {
-  citySlug: string;
+  /** optional ตั้งแต่ Phase 0 U7 — หน้าแรกถามได้โดยยังไม่เลือกเมือง (ตอบระดับประเทศ) */
+  citySlug?: string;
   prompt: string;
 };
 
@@ -15,13 +17,16 @@ const MAX_PROMPT_CHARS = 300;
 const AI_RATE_WINDOW_MS = 60_000;
 const AI_RATE_MAX_CALLS = 6;
 const AI_REPLY_CACHE_SECONDS = 60 * 15;
+// ถามระดับประเทศ (citySlug ว่าง) ไม่ยิง LLM เลย (ดู buildCountryLevelReply) —
+// cache นานกว่าได้เพราะ season data เปลี่ยนช้า และไม่กินโควตา AI budget ต่อ IP
+const COUNTRY_REPLY_CACHE_SECONDS = 60 * 60;
 
 const rateBuckets = new Map<string, number[]>();
 
 export async function POST(request: NextRequest) {
   const body = (await request.json()) as AssistantRequest;
   const prompt = body.prompt?.trim();
-  const citySlug = body.citySlug?.trim();
+  const citySlugRaw = body.citySlug?.trim();
 
   if (!prompt) {
     return NextResponse.json({ error: "กรุณาพิมพ์คำถามก่อน", reply: null }, { status: 400, headers: cacheHeaders(0) });
@@ -32,31 +37,43 @@ export async function POST(request: NextRequest) {
       { status: 400, headers: cacheHeaders(0) },
     );
   }
-  if (!citySlug) {
-    return NextResponse.json({ error: "ยังไม่รู้ว่าถามถึงเมืองไหน", reply: null }, { status: 400, headers: cacheHeaders(0) });
+
+  // ไม่มี citySlug → ถามระดับประเทศ (หน้าแรก = แชท, Phase 0 U7) ไม่ 400 อีกต่อไป
+  if (!citySlugRaw) {
+    const reply = await getCountryReply(prompt);
+    return NextResponse.json({ reply }, { headers: cacheHeaders(0) });
   }
 
-  const city = await resolveCity(citySlug);
+  const city = await resolveCity(citySlugRaw);
   if (!city) {
     return NextResponse.json({ error: "ไม่รู้จักเมืองนี้", reply: null }, { status: 404, headers: cacheHeaders(0) });
   }
 
-  const reply = await getReply(city.slug, prompt, getClientIp(request));
+  const reply = await getCityReply(city.slug, prompt, getClientIp(request));
   return NextResponse.json({ reply }, { headers: cacheHeaders(0) });
 }
 
-// rate-limit คุมเฉพาะการยิงโมเดล — เกินโควตายังตอบได้ด้วย rule-based ของ advisor
-async function getReply(citySlug: string, prompt: string, ip: string): Promise<string> {
-  const cacheKey = `assistant:${citySlug}:${prompt.toLowerCase()}`;
+// rate-limit คุมเฉพาะการยิงโมเดล — เกินโควตายังตอบได้ด้วย rule-based ของ advisor (cards ยังออกปกติ)
+async function getCityReply(citySlug: string, prompt: string, ip: string): Promise<ChatReply> {
+  const cacheKey = `assistant:v2:${citySlug}:${prompt.toLowerCase()}`;
 
   if (!takeAiBudget(ip)) {
-    return (await getAdvisorReply(citySlug, prompt)).reply;
+    return getAdvisorChatReply(citySlug, prompt);
   }
 
   try {
-    return await cached(cacheKey, AI_REPLY_CACHE_SECONDS, async () => (await getAdvisorReply(citySlug, prompt)).reply);
+    return await cached(cacheKey, AI_REPLY_CACHE_SECONDS, () => getAdvisorChatReply(citySlug, prompt));
   } catch {
-    return (await getAdvisorReply(citySlug, prompt)).reply;
+    return getAdvisorChatReply(citySlug, prompt);
+  }
+}
+
+async function getCountryReply(prompt: string): Promise<ChatReply> {
+  const cacheKey = `assistant:v2:country:${prompt.toLowerCase()}`;
+  try {
+    return await cached(cacheKey, COUNTRY_REPLY_CACHE_SECONDS, () => getAdvisorChatReply(null, prompt));
+  } catch {
+    return getAdvisorChatReply(null, prompt);
   }
 }
 

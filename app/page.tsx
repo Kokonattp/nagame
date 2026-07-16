@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { CitySearch } from "@/components/city-search";
+import { ChatPanel } from "@/components/chat/chat-panel";
+import { getAdvisorChatReply } from "@/lib/services/advisor";
 import { cityConfigs } from "@/lib/cities/city-configs";
 import { japanMajorCities } from "@/lib/cities/japan-major-cities";
 import { getCityMeta } from "@/lib/cities/travel-meta";
@@ -7,17 +9,23 @@ import { getCityHeroImagesBulk } from "@/lib/services/city-images";
 
 export const revalidate = 86400;
 
+// หน้าแรก = แชทกร๊วกทันที ไม่บังคับเลือกเมืองก่อน (Phase 0 U7, docs/chat-cards-roadmap.md).
+// seed มาจาก getAdvisorChatReply(null, ...) — ตอบระดับประเทศจาก season data ล้วน ไม่ยิง LLM
+// (ถูก+เร็วพอสำหรับ revalidate รายวัน) กริดเมืองเดิมย้ายลงใต้แชท คนรู้ปลายทางคลิกตรงได้เหมือนเดิม.
 export default async function Home() {
-  const heroImages = await getCityHeroImagesBulk(
-    cityConfigs
-      .filter((city) => !getCityMeta(city.slug, city.name).heroImage)
-      .map((city) => ({
-        slug: city.slug,
-        name: city.name,
-        prefecture: city.prefecture,
-        japaneseName: city.japaneseName,
-      })),
-  );
+  const [heroImages, seed] = await Promise.all([
+    getCityHeroImagesBulk(
+      cityConfigs
+        .filter((city) => !getCityMeta(city.slug, city.name).heroImage)
+        .map((city) => ({
+          slug: city.slug,
+          name: city.name,
+          prefecture: city.prefecture,
+          japaneseName: city.japaneseName,
+        })),
+    ),
+    getAdvisorChatReply(null, "สวัสดี"),
+  ]);
 
   const cities = cityConfigs.map((city) => {
     const meta = getCityMeta(city.slug, city.name);
@@ -42,15 +50,18 @@ export default async function Home() {
           </p>
           <div className="space-y-3">
             <h1 className="font-serif text-4xl leading-tight md:text-6xl">
-              เที่ยวญี่ปุ่นแบบเห็นหน้างานจริง
+              ถามกร๊วกได้เลย — เพื่อนแมวที่อยู่ญี่ปุ่นตอนนี้
             </h1>
             <p className="max-w-2xl text-sm leading-7 text-[var(--ink-muted)] md:text-base md:leading-8">
-              เลือกเมืองแล้วเช็คอากาศ ฝุ่น กล้องสด อีเวนต์ และไอเดียกิน-เที่ยว-นอนได้ในหน้าเดียว
-              รองรับ {cities.length} เมืองทั่วญี่ปุ่น และค้นหาเมืองอื่นเพิ่มได้เลย
+              ยังไม่รู้จะไปเมืองไหนก็ถามได้ เช่น &quot;เดือนนี้ไปไหนดี&quot; หรือ &quot;หิมะตกที่ไหน&quot; —
+              กร๊วกช่วยดูอากาศ ฤดู กล้องสด และที่พัก-ที่กินให้ในที่เดียว
             </p>
           </div>
-          <CitySearch seeds={japanMajorCities} />
         </header>
+
+        <section className="nb-card p-5 md:p-6">
+          <ChatPanel seedBubbles={seed.bubbles} seedCards={seed.cards} placeholder="เช่น เดือนนี้ไปไหนดี หรือ ธันวาไปโตเกียวหนาวไหม" />
+        </section>
 
         <section className="space-y-5">
           <div className="flex items-end justify-between gap-4">
@@ -58,10 +69,12 @@ export default async function Home() {
               <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--accent-warm)]">
                 All cities
               </p>
-              <h2 className="mt-2 font-serif text-3xl">เลือกเมืองที่อยากไป</h2>
+              <h2 className="mt-2 font-serif text-3xl">หรือเลือกเมืองที่อยากไปเลย</h2>
             </div>
             <p className="hidden text-sm text-[var(--ink-muted)] md:block">{cities.length} เมือง</p>
           </div>
+
+          <CitySearch seeds={japanMajorCities} />
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {cities.map((city) => (

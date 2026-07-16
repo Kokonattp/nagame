@@ -30,7 +30,9 @@ export async function GET(request: NextRequest) {
   ]);
 
   const sets = getRecommendationSets(city.name, city.prefecture, config?.recommendations ?? []);
-  const candidates = [...sets.see, ...sets.do, ...sets.shop, ...sets.eat];
+  // กรอง generic (ชื่อที่ระบบแต่งเอง ไม่มีอยู่จริง) ออกก่อนเข้าแผนวัน —
+  // ไม่งั้นแผนจะพาไปที่ที่ไม่มีอยู่. เมืองที่ไม่มีของจริงพอ → day-plan บอกว่ายังจัดให้ไม่ได้
+  const candidates = [...sets.see, ...sets.do, ...sets.shop, ...sets.eat].filter((item) => !item.generic);
 
   const activeSeasons = getCitySeasons(city.slug)
     .filter((season) => windowStatus(season.from, season.to).state === "active")

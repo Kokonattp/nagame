@@ -1,0 +1,347 @@
+<title>กร๊วก × Nagame — Pitch</title>
+<style>
+  :root {
+    --washi: #F6F1E7; --surface: #FDFAF3; --ink: #2B2622; --muted: #6B6258;
+    --verm: #C8503C; --verm-soft: #F3DDD7; --matcha: #4F7355; --matcha-soft: #E3EBE2;
+    --gold: #A87B1E; --gold-soft: #F1E7CE; --line: #2B2622;
+    --sh: 4px 4px 0 0 var(--ink); --sh-sm: 2.5px 2.5px 0 0 var(--ink);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --washi: #191F2E; --surface: #232B3E; --ink: #EAE3D3; --muted: #A79F8C;
+      --verm: #E06A54; --verm-soft: #4A2E28; --matcha: #7FAE86; --matcha-soft: #2A3A2E;
+      --gold: #D4A945; --gold-soft: #3D3420; --line: #EAE3D3;
+      --sh: 4px 4px 0 0 rgba(0,0,0,.5); --sh-sm: 2.5px 2.5px 0 0 rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="light"] {
+    --washi: #F6F1E7; --surface: #FDFAF3; --ink: #2B2622; --muted: #6B6258;
+    --verm: #C8503C; --verm-soft: #F3DDD7; --matcha: #4F7355; --matcha-soft: #E3EBE2;
+    --gold: #A87B1E; --gold-soft: #F1E7CE; --line: #2B2622;
+    --sh: 4px 4px 0 0 var(--ink); --sh-sm: 2.5px 2.5px 0 0 var(--ink);
+  }
+  :root[data-theme="dark"] {
+    --washi: #191F2E; --surface: #232B3E; --ink: #EAE3D3; --muted: #A79F8C;
+    --verm: #E06A54; --verm-soft: #4A2E28; --matcha: #7FAE86; --matcha-soft: #2A3A2E;
+    --gold: #D4A945; --gold-soft: #3D3420; --line: #EAE3D3;
+    --sh: 4px 4px 0 0 rgba(0,0,0,.5); --sh-sm: 2.5px 2.5px 0 0 rgba(0,0,0,.5);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--washi); color: var(--ink);
+    font-family: "Leelawadee UI", "Noto Sans Thai", "Sarabun", Tahoma, system-ui, sans-serif;
+    line-height: 1.7;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 1.25rem; }
+
+  /* ===== HERO ===== */
+  .hero { padding: 4.5rem 0 3.5rem; text-align: center; position: relative; }
+  .stamp {
+    width: 84px; height: 84px; border-radius: 50%; margin: 0 auto 1.4rem;
+    background: var(--verm); color: #FDFAF3; display: grid; place-items: center;
+    font-size: 2.4rem; border: 3px solid var(--line); box-shadow: var(--sh-sm);
+    transform: rotate(-7deg);
+  }
+  .hero h1 {
+    font-size: clamp(1.7rem, 4.5vw, 2.7rem); font-weight: 800; line-height: 1.4;
+    margin: 0 auto .9rem; max-width: 21ch; text-wrap: balance;
+  }
+  .hero h1 em { font-style: normal; color: var(--verm); }
+  .hero .tag {
+    display: inline-block; border: 2.5px solid var(--line); background: var(--surface);
+    box-shadow: var(--sh-sm); border-radius: 999px; padding: .3rem 1.1rem;
+    font-weight: 700; font-size: .9rem; margin-bottom: 1.6rem;
+  }
+  .hero p.lead { max-width: 34rem; margin: 0 auto; color: var(--muted); font-size: 1.02rem; }
+
+  /* ===== sections ===== */
+  section { padding: 2.8rem 0; }
+  .eyebrow {
+    font-size: .72rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--verm); margin: 0 0 .4rem;
+  }
+  h2 { font-size: 1.45rem; font-weight: 800; margin: 0 0 1.4rem; line-height: 1.4; text-wrap: balance; }
+
+  /* ===== pain: tab chips ===== */
+  .tabs-mess { display: flex; flex-wrap: wrap; gap: .55rem; margin-bottom: 1.2rem; }
+  .tab-chip {
+    border: 2px solid var(--line); background: var(--surface); border-radius: 8px 8px 0 0;
+    padding: .35rem .8rem .45rem; font-size: .85rem; font-weight: 700; color: var(--muted);
+    box-shadow: var(--sh-sm); position: relative;
+  }
+  .tab-chip::before { content: "✕"; margin-right: .45rem; opacity: .45; font-size: .75rem; }
+  .pain-note { font-size: 1rem; max-width: 40rem; }
+  .pain-note b { color: var(--verm); }
+
+  /* ===== chat demo ===== */
+  .chat {
+    border: 3px solid var(--line); border-radius: 18px; background: var(--surface);
+    box-shadow: var(--sh); overflow: hidden;
+  }
+  .chat-head {
+    display: flex; align-items: center; gap: .7rem; padding: .8rem 1.1rem;
+    border-bottom: 2.5px solid var(--line); background: var(--washi);
+  }
+  .chat-head .face {
+    width: 38px; height: 38px; border-radius: 50%; background: var(--verm);
+    color: #FDFAF3; display: grid; place-items: center; font-size: 1.2rem;
+    border: 2.5px solid var(--line); flex: none;
+  }
+  .chat-head b { font-size: .95rem; }
+  .chat-head span { font-size: .78rem; color: var(--muted); display: block; margin-top: -2px; }
+  .chat-body { padding: 1.2rem; display: flex; flex-direction: column; gap: .8rem; }
+  .msg { max-width: 78%; padding: .6rem 1rem; font-size: .92rem; line-height: 1.6; }
+  .msg.user {
+    align-self: flex-end; background: var(--ink); color: var(--washi);
+    border-radius: 14px 14px 3px 14px;
+  }
+  .msg.kruak {
+    align-self: flex-start; background: var(--washi); border: 2px solid var(--line);
+    border-radius: 3px 14px 14px 14px; box-shadow: var(--sh-sm);
+  }
+  .cards-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .7rem; padding: .2rem 0 .3rem; }
+  .jcard {
+    border: 2.5px solid var(--line); border-radius: 12px; background: var(--surface);
+    box-shadow: var(--sh-sm); overflow: hidden; font-size: .84rem;
+  }
+  .jcard .jhead {
+    padding: .45rem .8rem; font-weight: 800; border-bottom: 2px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center; gap: .5rem;
+  }
+  .jcard .jhead .kind { font-size: .68rem; letter-spacing: .08em; }
+  .jcard.stay .jhead { background: var(--verm-soft); }
+  .jcard.eat .jhead { background: var(--matcha-soft); }
+  .jcard.fly .jhead { background: var(--gold-soft); }
+  .jcard .jbody { padding: .6rem .8rem .7rem; }
+  .jcard .price { font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .jcard .sub { color: var(--muted); font-size: .78rem; margin-top: .1rem; }
+  .jcard .go {
+    display: inline-block; margin-top: .55rem; border: 2px solid var(--line); border-radius: 7px;
+    background: var(--washi); padding: .18rem .65rem; font-weight: 700; font-size: .78rem;
+    box-shadow: 1.5px 1.5px 0 0 var(--line);
+  }
+  .jcard.stay .go { background: var(--verm); color: #FDFAF3; }
+  .demo-cap { text-align: center; font-size: .82rem; color: var(--muted); margin-top: .9rem; }
+  .demo-cap b { color: var(--ink); }
+
+  /* ===== diff table ===== */
+  .diff { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+  .dcard {
+    border: 2.5px solid var(--line); border-radius: 14px; background: var(--surface);
+    box-shadow: var(--sh-sm); padding: 1.1rem 1.25rem;
+  }
+  .dcard h3 { margin: 0 0 .5rem; font-size: 1rem; display: flex; align-items: center; gap: .5rem; }
+  .dcard h3 .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line); flex: none; }
+  .dcard p { margin: 0; font-size: .9rem; color: var(--muted); }
+  .dcard p b { color: var(--ink); }
+
+  /* ===== trip draft ===== */
+  .trip { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .8rem; }
+  .day {
+    border: 2.5px solid var(--line); border-radius: 12px; background: var(--surface);
+    box-shadow: var(--sh-sm); overflow: hidden;
+  }
+  .day h4 { margin: 0; padding: .45rem .8rem; border-bottom: 2px solid var(--line); background: var(--washi); font-size: .85rem; }
+  .day h4 small { font-weight: 400; color: var(--muted); margin-left: .3rem; }
+  .day ul { list-style: none; margin: 0; padding: .55rem .8rem .7rem; font-size: .84rem; }
+  .day li { padding: .28rem 0; border-bottom: 1.5px dashed color-mix(in srgb, var(--line) 25%, transparent); }
+  .day li:last-child { border-bottom: 0; }
+  .day li.drag { color: var(--verm); font-weight: 700; }
+  .trip-note { font-size: .88rem; color: var(--muted); margin-top: .9rem; max-width: 44rem; }
+  .trip-note b { color: var(--ink); }
+
+  /* ===== biz ===== */
+  .biz { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+
+  /* ===== roadmap ===== */
+  .road { border-left: 3px solid var(--line); margin-left: .6rem; padding-left: 1.4rem; display: flex; flex-direction: column; gap: 1.15rem; }
+  .rstep { position: relative; }
+  .rstep::before {
+    content: ""; position: absolute; left: calc(-1.4rem - 3px - 7px); top: .45rem;
+    width: 14px; height: 14px; border-radius: 50%; background: var(--surface);
+    border: 3px solid var(--line);
+  }
+  .rstep.now::before { background: var(--verm); }
+  .rstep h4 { margin: 0; font-size: .98rem; }
+  .rstep h4 .wk { font-weight: 400; color: var(--muted); font-size: .8rem; margin-left: .4rem; }
+  .rstep p { margin: .15rem 0 0; font-size: .88rem; color: var(--muted); }
+  .rstep p b { color: var(--ink); }
+
+  /* ===== close ===== */
+  .close-card {
+    border: 3px solid var(--line); border-radius: 16px; background: var(--surface);
+    box-shadow: var(--sh); padding: 1.5rem 1.7rem; text-align: center;
+  }
+  .close-card h2 { margin-bottom: .6rem; }
+  .close-card p { margin: 0 auto; max-width: 36rem; font-size: .95rem; color: var(--muted); }
+  .close-card p b { color: var(--verm); }
+
+  footer { text-align: center; padding: 2rem 0 3rem; font-size: .78rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="stamp">🐾</div>
+    <div class="tag">Nagame × กร๊วก — เพื่อนแมวคนไทยที่อยู่ญี่ปุ่น</div>
+    <h1>เลิกเปิด 5 เว็บวางแผนเที่ยวญี่ปุ่น — <em>ถามแมวตัวเดียวพอ</em></h1>
+    <p class="lead">แชทถามเป็นภาษาไทย ได้คำตอบพร้อมข้อมูลจริง ตั๋วบิน · ที่พัก · ร้านอาหาร · อากาศ · กล้องสด — รวมในที่เดียว แล้วร่างทริปให้เห็นภาพ ลากปรับได้เลย</p>
+  </div>
+
+  <section>
+    <p class="eyebrow">ปัญหา</p>
+    <h2>วางแผนเที่ยวญี่ปุ่นวันนี้ หน้าตาแบบนี้</h2>
+    <div class="tabs-mess">
+      <span class="tab-chip">Skyscanner — เทียบตั๋วเอง</span>
+      <span class="tab-chip">Agoda — ไล่ดูที่พัก</span>
+      <span class="tab-chip">Google Maps — ร้านอยู่ไหน</span>
+      <span class="tab-chip">YouTube — หน้างานจริงเป็นไง</span>
+      <span class="tab-chip">พันทิป/บล็อก — เชื่อได้แค่ไหน</span>
+      <span class="tab-chip">กรมอุตุญี่ปุ่น — ฝนตกไหม</span>
+    </div>
+    <p class="pain-note">มือใหม่เจอหนักสุด: <b>ไม่รู้ด้วยซ้ำว่าต้องเริ่มถามอะไร</b> — เดือนไหนไปไหนดี หิมะตกที่ไหน JR Pass คุ้มไหม สุดท้ายไปลอกทริปคนอื่นทั้งที่ไม่ตรงกับตัวเอง</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">สินค้า</p>
+    <h2>เปิดแอปมาเจอกร๊วกเลย — ไม่ต้องเลือกเมืองก่อน ถามได้ทันที</h2>
+
+    <div class="chat">
+      <div class="chat-head">
+        <div class="face">🐱</div>
+        <div><b>กร๊วก</b><span>เพื่อนที่อยู่ญี่ปุ่นตอนนี้ · ตอบจากข้อมูลจริง</span></div>
+      </div>
+      <div class="chat-body">
+        <div class="msg user">ธันวาปีนี้ไปโตเกียว 5 วัน งบ 30,000 พอไหม อยากเห็นหิมะด้วย</div>
+        <div class="msg kruak">พอครับ แต่บอกตรง ๆ หิมะในตัวโตเกียวเดือนธันวายังไม่ค่อยตก 🐾 ถ้าอยากเห็นหิมะจริงแนะเผื่อวันเดย์ทริปไปคาวากุจิโกะหรือกุนมะ — เดี๋ยวกร๊วกดูของจริงให้ก่อนนะ</div>
+        <div class="cards-row">
+          <div class="jcard fly">
+            <div class="jhead"><span>✈️ ตั๋วบิน BKK→NRT</span><span class="kind">ธ.ค.</span></div>
+            <div class="jbody">
+              <div class="price">฿9,800~</div>
+              <div class="sub">ZIPAIR / AirAsia X · ราคาช่วงที่ถาม</div>
+              <span class="go">ดูตั๋วช่วงนี้ →</span>
+            </div>
+          </div>
+          <div class="jcard stay">
+            <div class="jhead"><span>🏨 อาซากุสะ</span><span class="kind">คืนละ</span></div>
+            <div class="jbody">
+              <div class="price">฿1,650</div>
+              <div class="sub">ใกล้สถานี · เรตติ้ง 4.4 · รวม 4 คืน ~฿6,600</div>
+              <span class="go">เช็คห้องว่าง →</span>
+            </div>
+          </div>
+          <div class="jcard eat">
+            <div class="jhead"><span>🌤 อากาศ ธ.ค.</span><span class="kind">โตเกียว</span></div>
+            <div class="jbody">
+              <div class="price">6–13°C</div>
+              <div class="sub">แห้ง ฟ้าใส · หิมะ: ไปคาวากุจิโกะ/กุนมะ · 📷 กล้องสดชิบุยะ</div>
+              <span class="go">ดูกล้องสด →</span>
+            </div>
+          </div>
+        </div>
+        <div class="msg kruak">งบ 30,000 แบ่งคร่าว ๆ: ตั๋ว ~10,000 · ที่พัก ~6,600 · เหลือวันละ ~2,600 กิน+รถไฟสบาย ๆ ครับ อยากให้กร๊วกร่างทริป 5 วันให้เลยไหม?</div>
+      </div>
+    </div>
+    <p class="demo-cap">ทุกการ์ด = <b>ข้อมูลจริงจาก API</b> (Rakuten · Google Places · ราคาตั๋ว · กรมอุตุญี่ปุ่น · กล้องสด) — AI มีหน้าที่เดียวคือพูดไทยแบบเพื่อน <b>ไม่มีสิทธิ์แต่งตัวเลข</b></p>
+  </section>
+
+  <section>
+    <p class="eyebrow">เห็นภาพทั้งทริป</p>
+    <h2>กร๊วกร่างทริปให้ก่อน — แล้วลากสลับได้ตามใจ</h2>
+    <div class="trip">
+      <div class="day">
+        <h4>วัน 1 <small>อาซากุสะ · อุเอโนะ</small></h4>
+        <ul><li>🏮 วัดเซนโซจิ</li><li>🍜 ราเมงย่านเก่า</li><li>🌇 โตเกียวสกายทรี</li></ul>
+      </div>
+      <div class="day">
+        <h4>วัน 2 <small>ชิบุยะ · ฮาราจูกุ</small></h4>
+        <ul><li>🚦 แยกชิบุยะ</li><li class="drag">↕ 🛍 ทาเคชิตะ (ลากมาจากวัน 4)</li><li>⛩ เมจิจิงกู</li></ul>
+      </div>
+      <div class="day">
+        <h4>วัน 3 <small>เดย์ทริปหิมะ ❄</small></h4>
+        <ul><li>🚄 คาวากุจิโกะ</li><li>🗻 จุดชมฟูจิ</li><li>♨️ ออนเซ็นเท้า</li></ul>
+      </div>
+      <div class="day">
+        <h4>วัน 4–5 <small>ชินจูกุ · กลับ</small></h4>
+        <ul><li>🍢 โอโมอิเดะโยโกโจ</li><li>🌃 จุดชมวิวฟรี</li><li>🛫 NRT</li></ul>
+      </div>
+    </div>
+    <p class="trip-note"><b>ร่างด้วยตรรกะ ไม่ใช่ AI มโน:</b> ย่านใกล้กันถูกจับอยู่วันเดียวกัน (ไม่เดินย้อนไปมา) · วันฝนสลับของในร่มมาให้เอง (พยากรณ์ 16 วัน) · ทุกจุดกดดูวิธีเดินทางต่อได้ทันที</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">ทำไมต้องกร๊วก</p>
+    <h2>สิ่งที่ ChatGPT กับ Agoda ให้ไม่ได้</h2>
+    <div class="diff">
+      <div class="dcard">
+        <h3><span class="dot" style="background:var(--verm)"></span>เพื่อน ไม่ใช่เซลส์</h3>
+        <p>กร๊วกแนะนำตามความเหมาะ ไม่ใช่ตามค่าคอม — บางทีแนะศาลเจ้าฟรี ทริคคอนบินิ ที่ไม่ได้เงินสักบาท <b>ความไม่ขายของคือเหตุผลที่คนเชื่อ</b></p>
+      </div>
+      <div class="dcard">
+        <h3><span class="dot" style="background:var(--matcha)"></span>บริบทคนไทยจริง</h3>
+        <p>งบเป็นบาท · ฮาลาล/มังสวิรัติ/แพ้กุ้ง · JR Pass คุ้มไหม · คำถามที่คนไทยถามจริงแต่ <b>ChatGPT ตอบแบบฝรั่ง Agoda ไม่ตอบเลย</b></p>
+      </div>
+      <div class="dcard">
+        <h3><span class="dot" style="background:var(--gold)"></span>จำคุณได้ + ทักก่อน</h3>
+        <p>ล็อกอินด้วย LINE — กร๊วกจำทริปที่แล้ว จำว่าแพ้อะไร และ<b>ทักมาเองตอนใกล้บิน</b> "อาทิตย์หน้าโตเกียวฝนนะ เตรียมร่ม" — โครงสร้างที่คู่แข่งเลียนแบบไม่ได้</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Business Model</p>
+    <h2>ฟรีทั้งหมด — รายได้ตามมาเมื่อคนรักมันแล้ว</h2>
+    <div class="biz">
+      <div class="dcard">
+        <h3>วันนี้: ฟรี + วัดทุกคลิก</h3>
+        <p>เราไม่ใช่ตัวจอง ไม่รับเงินสักบาท — ทุกปุ่ม "เช็คห้องว่าง" ออกไปเว็บจองผ่านท่อกลางที่<b>นับคลิกไว้ตั้งแต่วันแรก</b> = รู้มูลค่าล่วงหน้าก่อนเปิดรายได้</p>
+      </div>
+      <div class="dcard">
+        <h3>พรุ่งนี้: เสียบ affiliate</h3>
+        <p>ท่อเดิม เติม affiliate id — ที่พัก (Agoda ~4-7%) · กิจกรรม/JR Pass (Klook ~5-8%) · ตั๋วบิน <b>ไม่ต้องรื้ออะไรเลย</b> และกร๊วกยังแนะนำตามความเหมาะเหมือนเดิม</p>
+      </div>
+      <div class="dcard">
+        <h3>ถัดไป: เศรษฐกิจความรัก</h3>
+        <p>ซื้อขนม/ชุดให้กร๊วก แบบเดียวกับที่คนซื้อสติกเกอร์ LINE — <b>จ่ายเพราะรัก ไม่ใช่เพราะถูกขาย</b> · ต้นทุน AI เพียง ~$0.003/คำตอบ ถูกกว่าที่คิดมาก</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Roadmap</p>
+    <h2>ของโชว์ได้ทุก 1–2 สัปดาห์ ไม่หายไปเป็นเดือน</h2>
+    <div class="road">
+      <div class="rstep now">
+        <h4>Phase 0 — แชทเป็นหน้าแรก + การ์ดใบแรก <span class="wk">~1 สัปดาห์</span></h4>
+        <p>เปิดมาถามกร๊วกได้เลยไม่ต้องเลือกเมือง · คำตอบเป็นการ์ด · <b>ท่อนับคลิกวางตั้งแต่วันแรก</b></p>
+      </div>
+      <div class="rstep">
+        <h4>Phase 1 — ข้อมูลจริง 3 แหล่ง <span class="wk">~2-3 สัปดาห์</span></h4>
+        <p>ที่พัก Rakuten API จริง · ร้าน Google Places (+filter ฮาลาล/แพ้กุ้ง) · ตั๋วบินแบบซื่อสัตย์ (เช็คไม่ได้ก็บอกตรง ๆ)</p>
+      </div>
+      <div class="rstep">
+        <h4>Phase 2 — กร๊วกร่างทริป + ลากวาง + LINE Login <span class="wk">~2-3 สัปดาห์</span></h4>
+        <p>"ไป 5 วัน" → ได้ร่างทั้งทริป ลากปรับได้ · ล็อกอิน LINE = กร๊วกจำคุณได้จริง + เริ่มวัด retention จริง</p>
+      </div>
+      <div class="rstep">
+        <h4>Phase 3 — เลี้ยงกร๊วก <span class="wk">retention ระหว่างปี</span></h4>
+        <p>ให้ขนม/ของฝากรายวัน ปลดร่างใหม่ — <b>เหตุผลเปิดแอปแม้ยังไม่มีทริป</b> (คนเที่ยวญี่ปุ่นปีละครั้ง แต่คิดถึงแมวได้ทุกวัน)</p>
+      </div>
+      <div class="rstep">
+        <h4>อนาคต — เมืองจำลอง diorama + เมืองที่สอง</h4>
+        <p>เมื่อของหลักพิสูจน์แล้วว่าคนใช้จริง ค่อยเติมโลก 2.5D ที่กร๊วกเดินนำเที่ยว (แผน PixiJS พร้อมอยู่แล้ว)</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="close-card">
+      <p class="eyebrow">สิ่งเดียวที่ต้องพิสูจน์</p>
+      <h2>"คนไทยจะเปิดกร๊วกครั้งแรกทำไม"</h2>
+      <p>เทคโนโลยีพร้อม ต้นทุนคุมได้ โมเดลรายได้วางท่อไว้แล้ว — เดิมพันจริงอยู่ที่ <b>hook ประโยคเดียว: "ลองถามแมวตัวนี้ดู"</b> ซึ่งทดสอบได้ถูก ๆ ผ่าน TikTok/เพจ/LINE OA คู่ขนานกับการ build ตั้งแต่ Phase 0</p>
+    </div>
+  </section>
+
+  <footer>Nagame × กร๊วก · ทิศทาง 16 ก.ค. 2026 · เอกสารเทคนิค: docs/chat-cards-roadmap.md</footer>
+</div>
