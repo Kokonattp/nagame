@@ -1,13 +1,16 @@
 import { getCityConfigBySlug, type Recommendation as CityRecommendation } from "@/lib/cities/city-configs";
 import { japanHolidayWindows, windowStatus } from "@/lib/cities/holidays";
-import { getCitySeasonCalendar, getCitySeasons } from "@/lib/cities/seasons";
+import { citiesWithSeasons, getCitySeasonCalendar, getCitySeasons } from "@/lib/cities/seasons";
 import { getCityTransit } from "@/lib/cities/transit";
 import { getRecommendationSets } from "@/lib/cities/travel-meta";
+import { buildOutbound } from "@/lib/outbound";
 import { getAqi } from "@/lib/services/aqi";
 import { getEvents } from "@/lib/services/events";
 import { resolveCity } from "@/lib/services/geocode";
 import { getWarnings } from "@/lib/services/warnings";
 import { getWeather } from "@/lib/services/weather";
+import { getWebcams } from "@/lib/services/webcams";
+import { toBubbles, type Card, type ChatReply } from "@/lib/chat/types";
 
 // กร๊วกตอบเป็น 1 LLM call: parseIntent (โค้ด) → รวม signal ฝั่ง server → compose.
 // intent parser เป็น pure function คืน contract เดิม {period, wantsFlights} —
@@ -72,6 +75,123 @@ export async function getAdvisorReply(citySlug: string, prompt: string): Promise
   }
 
   return { reply: buildFallbackReply(context, intent, prompt), source: "Rule-based advisor" };
+}
+
+// ── ChatReply — Phase 0 (docs/chat-cards-roadmap.md) ──────────────────────
+// หัวใจ: LLM มีหน้าที่เดียวคือพูดไทย (bubbles) — cards ทั้งหมดโค้ดประกอบจากข้อมูลจริง
+// ที่ fetch มาแล้ว ไม่ใช่จาก LLM. citySlug = null รองรับ "หน้าแรก = แชท ไม่บังคับเลือกเมือง"
+// (docs/chat-cards-roadmap.md Phase 0 U7) — ตอบระดับประเทศจาก season data ล้วน ไม่ยิง LLM.
+export async function getAdvisorChatReply(citySlug: string | null, prompt: string): Promise<ChatReply> {
+  if (!citySlug) return buildCountryLevelReply();
+
+  // เรียก getAdvisorReply เดิมตรง ๆ แทนก๊อปตรรกะ AI/fallback — ไม่แตะของเดิม, ไม่เสี่ยงเพี้ยน.
+  // gatherContext ถูกเรียกซ้ำใน getAdvisorReply + ที่นี่ (สำหรับ cards) แต่ห่อ cached() อยู่แล้ว
+  // (TTL 10-30 นาที) เหมือน pattern getCityVerdict/page.tsx ที่ทำอยู่แล้วในไฟล์นี้ — cache hit ปกติ.
+  const [result, context] = await Promise.all([getAdvisorReply(citySlug, prompt), gatherContext(citySlug)]);
+  const cards = context ? await buildCityCards(citySlug, context) : [];
+
+  return { bubbles: toBubbles(result.reply), cards, source: result.source };
+}
+
+// การ์ดระดับเมือง — เฉพาะของจริงที่ fetch ได้เท่านั้น: อากาศ (มีอยู่แล้วใน context),
+// กล้องสด (ของจริงจาก webcam service), และสถานที่คัดมือ (curated ไม่ generic).
+// ล้มเงียบทีละใบ — ใบไหนไม่มีข้อมูลจริงก็แค่ไม่โผล่ ไม่ทำให้ทั้งคำตอบพัง.
+async function buildCityCards(citySlug: string, context: AdvisorContext): Promise<Card[]> {
+  const city = await resolveCity(citySlug);
+  if (!city) return [];
+
+  const config = getCityConfigBySlug(city.slug);
+  const cards: Card[] = [];
+
+  if (context.weather.available) {
+    const hasRange = typeof context.weather.high === "number" && typeof context.weather.low === "number";
+    cards.push({
+      id: `weather-${city.slug}`,
+      kind: "weather",
+      cityName: context.cityName,
+      headline: `${context.cityName} ตอนนี้ ${context.weather.condition}${typeof context.weather.temperature === "number" ? ` ${context.weather.temperature}°C` : ""}`,
+      tempRange: hasRange ? `${context.weather.low}–${context.weather.high}°C` : undefined,
+      rainChance: context.weather.rainChance,
+      season: context.activeSeasons[0],
+    });
+  }
+
+  // กล้องสด — ต้องมีทั้งภาพ preview และลิงก์ดูจริง ไม่งั้นไม่สร้างการ์ด (กันลิงก์ปลอม)
+  const webcam = await getWebcams(city.lat, city.lon, config);
+  if (webcam.available && webcam.previewImage && webcam.url) {
+    cards.push({
+      id: `webcam-${city.slug}`,
+      kind: "webcam",
+      title: webcam.title ?? `กล้องสด ${context.cityName}`,
+      previewImage: webcam.previewImage,
+      liveUrl: buildOutbound(webcam.url, { kind: "webcam", label: webcam.title ?? undefined, citySlug: city.slug }),
+      source: webcam.source,
+    });
+  }
+
+  // สถานที่คัดมือ 1 ใบต่อหมวด (see/eat/sleep) — เฉพาะที่ไม่ใช่ generic (ของสมมุติ)
+  const sets = getRecommendationSets(city.name, city.prefecture, config?.recommendations ?? []);
+  const picks: { kind: "see" | "eat" | "sleep"; emoji: string }[] = [
+    { kind: "see", emoji: "⛩" },
+    { kind: "eat", emoji: "🍜" },
+    { kind: "sleep", emoji: "🛏" },
+  ];
+  for (const pick of picks) {
+    const item = sets[pick.kind].find((r) => !r.generic);
+    if (!item) continue;
+    cards.push({
+      id: `place-${pick.kind}-${city.slug}-${item.title}`,
+      kind: "place",
+      title: item.title,
+      area: item.area,
+      emoji: pick.emoji,
+      note: item.note,
+      mapUrl: buildOutbound(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.title} ${city.name}`)}`, {
+        kind: "nav",
+        label: item.title,
+        citySlug: city.slug,
+      }),
+    });
+  }
+
+  return cards;
+}
+
+// ถามแบบยังไม่มีเมือง ("เดือนนี้ไปไหนดี", "หิมะตกที่ไหน") — ตอบจาก season data ของทุกเมือง
+// ล้วน ๆ ไม่ยิง LLM (ข้อมูลพอตอบตรง ๆ อยู่แล้ว, กันค่าใช้จ่าย+latency ของคำถามกว้างที่สุด).
+async function buildCountryLevelReply(): Promise<ChatReply> {
+  const matches: { slug: string; name: string; season: { name: string; note: string } }[] = [];
+
+  for (const slug of citiesWithSeasons()) {
+    const config = getCityConfigBySlug(slug);
+    if (!config) continue;
+    const active = getCitySeasons(slug).find((season) => windowStatus(season.from, season.to).state === "active");
+    if (active) matches.push({ slug, name: config.name, season: { name: active.name, note: active.note } });
+  }
+
+  const picks = matches.slice(0, 4);
+  const cards: Card[] = picks.map((m) => ({
+    id: `season-${m.slug}`,
+    kind: "weather",
+    cityName: m.name,
+    headline: `${m.name} กำลังเป็นช่วง${m.season.name}`,
+    season: m.season.name,
+    note: m.season.note,
+  }));
+
+  const monthName = new Intl.DateTimeFormat("th-TH", { month: "long" }).format(new Date());
+  const bubbles = picks.length
+    ? [
+        `ช่วง${monthName}นี้ กร๊วกเห็นหลายที่กำลังสวยพอดีเลยครับ 🐾`,
+        picks.map((m) => `• ${m.name}: ${m.season.name} — ${m.season.note}`).join("\n"),
+        "อยากรู้รายละเอียดเมืองไหน ถามชื่อเมืองมาได้เลยครับ หรือบอกงบ/จำนวนวันก็ได้",
+      ]
+    : [
+        `ช่วง${monthName}นี้ กร๊วกยังไม่มีไฮไลต์ฤดูที่คัดไว้พอดีช่วงนี้ครับ`,
+        "ลองบอกชื่อเมืองที่สนใจ หรือถามเรื่องอากาศ/งบประมาณได้เลย กร๊วกช่วยดูให้",
+      ];
+
+  return { bubbles, cards, source: "Rule-based advisor" };
 }
 
 // คำทักทายเปิดหน้าของกร๊วก — คำนวณฝั่ง server ครั้งเดียว ส่งเป็น prop ให้ hero

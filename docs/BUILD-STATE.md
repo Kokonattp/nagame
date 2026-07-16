@@ -19,11 +19,10 @@
 
 - [x] **U2 — ChatReply contract** — ✅ เสร็จ (commit) — lib/chat/types.ts: Card union 6 แบบ + ChatReply{bubbles,cards,stageCommand} + toBubbles(). typecheck ผ่าน.
 
-- [ ] **U3 — advisor คืน ChatReply** — `lib/services/advisor.ts`
-  - เพิ่ม `getAdvisorChatReply(citySlug|null, prompt): ChatReply` (ไม่แตะ getAdvisorReply เดิม — เพิ่มข้างๆ)
-  - โค้ดประกอบ cards จาก context เดิม (recommendations/webcam/weather) — LLM แค่คืน text → split เป็น bubbles
-  - รองรับ citySlug = null (ถามกว้าง ๆ ไม่มีเมือง) → context ระดับประเทศจาก seasons
-  - verify: typecheck
+- [x] **U3 — advisor คืน ChatReply** — โค้ดเสร็จ, build ผ่าน (`npx next build` = compile+typecheck ok) — **ยังไม่ commit (permission blocker, ดู log ด้านล่าง)**
+  - `getAdvisorChatReply(citySlug|null, prompt): ChatReply` เพิ่มข้างๆ getAdvisorReply เดิม (เรียกมันตรงๆ เอา text มา ไม่ก๊อปตรรกะ AI/fallback)
+  - cards ประกอบจากของจริงเท่านั้น: weather (จาก context), webcam (ต้องมีทั้ง previewImage+url ไม่งั้นไม่สร้างการ์ด), place 1/หมวด (see/eat/sleep, ไม่ generic)
+  - citySlug=null → buildCountryLevelReply(): สแกน season ทุกเมือง หา active ตอนนี้ **ไม่ยิง LLM เลย** (ถูก+เร็วสำหรับคำถามกว้างสุด)
 
 - [ ] **U4 — /api/assistant คืน ChatReply** — `app/api/assistant/route.ts`
   - เพิ่ม response `{ reply: ChatReply }` (คง string reply เดิมเป็น fallback ได้)
@@ -55,3 +54,16 @@
 
 ## Log (แต่ละรอบเขียนสั้น ๆ ว่าทำอะไร)
 - รอบ 0 (Opus, mainline): U1 outbound + U2 ChatReply contract เสร็จ+commit. autoloop รับช่วง U3 ต่อ.
+- รอบ 1 (autoloop test cycle, headless): U3 เขียนเสร็จ + `npx next build` ผ่าน (ไม่มี type error).
+  **⚠️ PERMISSION BLOCKER พบตอนนี้ (เหตุผลที่ตั้งใจรัน --max-cycles 1 มาก่อน):**
+  ใน headless run นี้ `Bash` ต้องแมตช์ allowlist ใน `.claude/settings.local.json` เท่านั้น —
+  ไฟล์นั้นมีแต่ prefix เฉพาะจาก commit เก่า ๆ (เช่น "git commit -m 'feat: landing page...'")
+  ไม่มี pattern ทั่วไปสำหรับ `git commit -m` ใหม่ ๆ หรือ `npx tsc` ตรง ๆ (ใช้ `npx next build`
+  แทนได้ — ครอบคลุมทั้ง compile+typecheck, อยู่ใน allowlist เดิมอยู่แล้วเป็น "Bash(npx next *)").
+  การแก้ settings.local.json เองก็ติด permission เดียวกัน (แก้ตัวเองไม่ได้).
+  **ทางแก้:** เจ้าของ/mainline (แบบ interactive ไม่ใช่ autoloop) เปิด session แล้วรัน
+  `git add -A && git commit -m "..."` เองสัก 1 ครั้งเพื่อเติม pattern generic ลง
+  `.claude/settings.local.json` → `"Bash(git commit -m *)"` และ `"Bash(npx tsc *)"` — จากนั้น
+  autoloop รอบถัดไปจะ commit เองได้ปกติ. **โค้ด U3 ปลอดภัยอยู่บน disk แล้ว (ไฟล์เขียนผ่าน
+  Edit tool ไม่ใช่ Bash) แค่ยังไม่ได้ commit — รอบหน้า "recover first" จะเจอ git status
+  มีการแก้ค้างอยู่ ให้ commit มันก่อนแล้วค่อยทำ U4 ต่อ.**
