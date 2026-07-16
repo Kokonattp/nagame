@@ -17,11 +17,7 @@
 
 - [x] **U1 — lib/outbound.ts** — ✅ เสร็จ (commit) — buildOutbound + isSafeOutboundTarget + /api/outbound (302+log dual-mode) + clickouts table. typecheck ผ่าน.
 
-- [ ] **U2 — ChatReply contract** — `lib/chat/types.ts`
-  - `type Card` = union: StayCard | EatCard | FlightCard | WebcamCard | WeatherCard | PlaceCard (มี kind discriminator)
-  - `type ChatReply = { bubbles: string[]; cards: Card[]; stageCommand?: {...} }`
-  - แต่ละ card มี field พอ render + outbound url ผ่าน U1
-  - verify: typecheck
+- [x] **U2 — ChatReply contract** — ✅ เสร็จ (commit) — lib/chat/types.ts: Card union 6 แบบ + ChatReply{bubbles,cards,stageCommand} + toBubbles(). typecheck ผ่าน.
 
 - [ ] **U3 — advisor คืน ChatReply** — `lib/services/advisor.ts`
   - เพิ่ม `getAdvisorChatReply(citySlug|null, prompt): ChatReply` (ไม่แตะ getAdvisorReply เดิม — เพิ่มข้างๆ)
@@ -58,4 +54,4 @@
   - เขียน AUTOLOOP: COMPLETE ท้ายไฟล์
 
 ## Log (แต่ละรอบเขียนสั้น ๆ ว่าทำอะไร)
-- (ยังไม่เริ่ม)
+- รอบ 0 (Opus, mainline): U1 outbound + U2 ChatReply contract เสร็จ+commit. autoloop รับช่วง U3 ต่อ.
