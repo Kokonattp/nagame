@@ -15,11 +15,7 @@
 
 ## Work units
 
-- [ ] **U1 — lib/outbound.ts** — ฟังก์ชันกลางทุก link ออกนอกแอป + click logging
-  - `buildOutbound(url, meta)` คืน URL ที่ผ่าน `/api/outbound?to=...&ctx=...` (หรือ track ตรง)
-  - `/api/outbound/route.ts` — log click ลง Supabase (dual-mode: ไม่มี key = redirect เฉยๆ ไม่พัง) แล้ว 302 redirect ออก
-  - schema: table `clickouts` (device_id, url, kind, city_slug, label, ts) — เพิ่มใน supabase/schema.sql
-  - verify: typecheck ผ่าน
+- [x] **U1 — lib/outbound.ts** — ✅ เสร็จ (commit) — buildOutbound + isSafeOutboundTarget + /api/outbound (302+log dual-mode) + clickouts table. typecheck ผ่าน.
 
 - [ ] **U2 — ChatReply contract** — `lib/chat/types.ts`
   - `type Card` = union: StayCard | EatCard | FlightCard | WebcamCard | WeatherCard | PlaceCard (มี kind discriminator)
