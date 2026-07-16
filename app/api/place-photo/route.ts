@@ -17,13 +17,20 @@ export async function GET(request: NextRequest) {
     return new NextResponse(null, { status: 404 });
   }
 
-  const target = `https://places.googleapis.com/v1/${name}/media?maxWidthPx=640&key=${key}`;
+  // ขอ URL รูปจริงผ่าน skipHttpRedirect=true → Google คืน JSON {photoUri} ที่เป็น lh3 URL
+  // (ไม่มี key) แทนการ 302. เราส่ง photoUri นั้นให้ client redirect ต่อ — ไม่มีทางที่ key
+  // จะโผล่ใน URL ที่ client เห็น (เดิม redirect ไป res.url อาจ = target ที่มี key ถ้า Google
+  // ตอบ 200 ตรง ๆ ไม่ redirect).
+  const metaUrl = `https://places.googleapis.com/v1/${name}/media?maxWidthPx=640&skipHttpRedirect=true&key=${key}`;
   try {
-    // skipHttpRedirect=false (default) → Google 302 ไป lh3 URL ที่ไม่มี key; เรา follow แล้วส่งต่อ
-    const res = await fetch(target, { redirect: "follow", next: { revalidate } });
+    const res = await fetch(metaUrl, { next: { revalidate } });
     if (!res.ok) return new NextResponse(null, { status: 404 });
-    // redirect client ไป URL สุดท้าย (ไม่มี key) — เบากว่า stream ตัวรูปผ่าน server
-    return NextResponse.redirect(res.url, 302);
+    const data = (await res.json()) as { photoUri?: string };
+    // photoUri ต้องเป็น googleusercontent (ไม่มี key) — กันเผลอ redirect ไป URL ที่มี key
+    if (!data.photoUri || data.photoUri.includes("key=") || !/^https:\/\//.test(data.photoUri)) {
+      return new NextResponse(null, { status: 404 });
+    }
+    return NextResponse.redirect(data.photoUri, 302);
   } catch {
     return new NextResponse(null, { status: 404 });
   }

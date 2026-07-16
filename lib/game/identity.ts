@@ -16,6 +16,10 @@ export function getDeviceId(): string | null {
       id = crypto.randomUUID();
       window.localStorage.setItem(KEY, id);
     }
+    // มิเรอร์ลง cookie ด้วย เพื่อให้ /api/outbound (server) อ่าน deviceId ได้ตอนคลิกออกนอกแอป
+    // → click-out attribution ต่อ device ทำงาน (localStorage server อ่านไม่ได้). SameSite=Lax
+    // พอสำหรับ same-site redirect, 1 ปี, ไม่ใช่ HttpOnly เพราะต้องเขียนจาก client.
+    document.cookie = `nagame_did=${id}; path=/; max-age=31536000; SameSite=Lax`;
     return id;
   } catch {
     // storage ปิด (private mode) → ไม่มี id คงที่ได้ → คืน null, ชั้นบนจะ fallback localStorage-only
