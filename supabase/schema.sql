@@ -19,6 +19,23 @@ create table if not exists trips (
 
 create index if not exists trips_device_idx on trips (device_id);
 
+-- ── เมตาทริปต่อเมือง: วันเดินทาง + สัญญาณจอง (Phase 2 Trip lifecycle) ──
+-- status ไม่เก็บ — derive จากวัน+สัญญาณจองเสมอ (lib/game/trip-lifecycle.ts) เพราะ
+-- status เป็นฟังก์ชันของ "วันนี้" ถ้าเก็บไว้จะ stale ทันทีที่วันเปลี่ยน (planning→flying
+-- ต้องขยับเองโดยไม่มีใครกดปุ่ม). เก็บแต่ fact ที่ปลอมไม่ได้ แล้วคำนวณตอนอ่าน.
+create table if not exists trip_meta (
+  device_id       text not null,
+  city_slug       text not null,
+  start_date      text,           -- ISO "YYYY-MM-DD" (null = ยังไม่ใส่วัน = dream)
+  end_date        text,
+  booked_manually boolean not null default false,
+  booked_signal_at bigint,        -- epoch ms ของ clickout kind=stay|flight ล่าสุด (ปลอมไม่ได้)
+  updated_at      bigint not null,
+  primary key (device_id, city_slug)
+);
+
+create index if not exists trip_meta_device_idx on trip_meta (device_id);
+
 -- หมายเหตุ RLS: เราเข้าผ่าน service key ฝั่ง server (API route) เท่านั้น ไม่เปิด anon key ให้ client
 -- แตะตารางตรง จึงไม่ต้องพึ่ง RLS policy. ถ้าวันหน้าจะให้ client แตะตรง ต้องเปิด RLS + policy
 -- ที่กรอง device_id/line_user_id ให้ถูกก่อน.
