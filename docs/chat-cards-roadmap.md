@@ -1,7 +1,7 @@
 # Nagame — ทิศทางปัจจุบัน: "กร๊วกรวมของให้" (chat + cards)
 
 > ตัดสินใจ 2026-07-16 · แทนแผน diorama full-rewrite ที่พักไว้ ([diorama-architecture.md](./diorama-architecture.md))
-> สถานะ: **อนุมัติทิศแล้ว ยังไม่ลงมือเขียนโค้ด**
+> สถานะ: **Phase 0 เสร็จแล้ว** (ยืนยันจากโค้ดจริง 2026-07-17) · กำลังทำ Phase 1.5 (จัดหน้าแชท)
 
 ## ประโยคเดียวของ product
 
@@ -48,10 +48,10 @@
 
 ## Roadmap
 
-### Phase 0 — ท่อ + ผ่าแชท (~1 สัปดาห์) · REAL
-1. **`lib/outbound.ts`** — ฟังก์ชันกลางทุก link ออกนอก + click logging ลง Supabase (~ครึ่งวัน, ทำก่อนทุกอย่าง)
-2. **ผ่า `ChatPanel` ออกจาก `travel-dashboard.tsx`** (864 บรรทัด) — prerequisite ของทุกอย่าง
-3. **Contract ใหม่ `ChatReply`** — `{ text, cards[], stageCommand? }`
+### Phase 0 — ท่อ + ผ่าแชท · ✅ เสร็จแล้ว (ยืนยันจากโค้ดจริง 2026-07-17)
+1. ✅ **`lib/outbound.ts`** — มีจริง + `/api/outbound/route.ts` + กัน open-redirect (`isSafeOutboundTarget`). `advisor.ts` เรียก `buildOutbound` ครบ 5 จุด (flight/stay/eat/webcam/nav)
+2. ✅ **ผ่า `ChatPanel` ออกจาก `travel-dashboard.tsx`** — `components/chat/chat-panel.tsx` (174 บรรทัด) แยกแล้ว; dashboard เหลือ 728 บรรทัด
+3. ✅ **Contract ใหม่ `ChatReply`** — `lib/chat/types.ts`: `{ bubbles[], cards[], stageCommand?, source? }` + `toBubbles()` แตกฟองที่ server จุดเดียว (เลิกสัญญาใจ `\n\n` แล้ว)
    - **card = โค้ดประกอบจากข้อมูลจริง ไม่ใช่ LLM** (LLM พูดไทยอย่างเดียว) → ไม่มี hallucination เข้า UI, fail-silent เป็นธรรมชาติ
    - formalize multi-bubble: server split เป็น `bubbles: string[]` (เลิกพึ่งสัญญาใจ `\n\n`)
 4. **หน้าแรก = แชทกร๊วก ไม่บังคับเลือกเมืองก่อน** — เมืองไหลจากบทสนทนา:
@@ -83,10 +83,28 @@
 - LINE Login + ย้าย identity จาก device id → บัญชีจริง (Supabase มีอยู่แล้ว)
 - ติดเมตริก 4 ตัวข้างบน + dashboard ดูเองง่ายๆ
 
-### Phase 3 — เลี้ยงกร๊วก (retention ระหว่างปี)
-- ให้ขนม/ของฝากกร๊วกรายวัน (ได้ขนมจากการใช้แอป: เก็บแสตมป์/ทำแพลนเสร็จ) — ต่อยอด "stamp economy นอกทริป" ใน PROJECT_MEMORY
-- **กติกา:** ความผูกพันล้วน (ร่าง/ชุด/ท่าใหม่) — ไม่มี guilt-trip, ไม่มีแมวผอมโซ, ไม่แลกเงินได้, จ่ายเงินจริง = option ทีหลังเมื่อ loop ติดแล้ว
-- during-trip mode + after-trip recap (จาก v1 spec เดิม)
+### Phase 3 — Retention model (Fable-designed 2026-07-16, แทน "เลี้ยงกร๊วกรายวัน" เดิม)
+
+**⚠ streak รายวันผิดกับ product ปีละครั้ง (เจ้าของจับได้ + Fable ยืนยัน).** retention จริง = (1) กลับมาช่วงวางแผนปีถัดไป (2) แชร์/ชวนเพื่อน (3) switching cost — ปีหน้าเริ่มจาก 80% ไม่ใช่ 0. ทุก mechanic ต้องป้อน 1 ใน 3 นี้ ไม่งั้น = vanity.
+
+**แกน = A(เกม/สะสม) + B(ความจำกร๊วก = เครื่องยนต์)** — Fable ประเมิน 4 ทิศ (A/B/C/D) แล้วเลือก. PROJECT_MEMORY บรรทัด 55: "เครื่องยนต์ retention จริง=ความจำกร๊วก, สมุดสะสม=ร่างที่มองเห็น". **ทุกอย่างที่ผู้ใช้ทำใน A (ฝากที่อยากไป/ถามแพ้กุ้ง/จบทริป) เขียนลงความจำกร๊วก** → ปีหน้ากลับมาเพื่อนจำได้ = กลับมาที่นี่แทน ChatGPT/Google = moat. **C(social) เก็บแค่ share ทางเดียว** (defer feed ทริปเพื่อนจนมี user base — ไข่-ไก่). **D(newsletter) ตัดออกจาก retention → ย้ายไป acquisition** (content สาธารณะ TikTok/เพจกร๊วก, track แยก). **"engagement ระหว่างปีเบา = ความซื่อสัตย์ของ product ปีละครั้ง ไม่ใช่จุดอ่อน" — อย่าปลอมตัวเลขให้หนา.**
+
+**PREREQ (ต้องทำใน Phase 2 ก่อน gamify):** Trip ไม่มี "วันเดินทาง" เลยในระบบ (TripItem/trips schema มีแค่ชื่อ/เมือง). ยกระดับ Trip เป็น object มี lifecycle:
+`Trip { id, name, dates?, status: dream→planning→booked→flying→done }` — status ขยับจาก**เหตุการณ์จริง** ไม่ใช่ปุ่มกด (ใส่วัน=planning, clickout kind=stay/flight=booked, ถึงวัน=flying, เลยวัน=done). **clickouts ที่วัดรายได้ = game signal ฟรี** (จองจริง=คืบหน้า ปลอมไม่ได้) + ปุ่ม manual "จองแล้ว" fallback (clickout device_id nullable).
+
+**Model 3 ช่วง lifecycle:**
+- **ก่อนทริป (retention จริงสุด) = Trip Readiness** — checklist ทุกช่องมีประโยชน์จริง (มีวัน/มีที่นอน/มีแผนรายวัน/รู้ JR Pass·เงินสด·ประกัน). รางวัล = **artifact ไม่ใช่แต้ม**: แผนทริปการ์ดสวยแชร์เพื่อนร่วมทริป
+- **หลังทริป (viral loop เดียว) = Recap Card** ขนาด story ลง LINE/IG — ลงแรง design ที่นี่มากกว่า mechanic ไหน (share/referral แก้ acquisition ด้วย)
+- **ระหว่างปี (dormant) = ลิ้นชักฝัน × ปฏิทินฤดู** — โยนที่อยากไปให้กร๊วกเก็บ (dream item ผูกฤดู) + ดู "ตอนนี้ญี่ปุ่นสวยตรงไหน" จาก seasons.ts → ได้ **โปสการ์ดฤดูผูกปีจริง (ปลอมไม่ได้เพราะย้อนเวลาไม่ได้ — vintage เหมือนไวน์)**. ปีหน้ากด "ไปจริง" → auto-draft จากของสะสม = switching cost
+
+**กร๊วกทัก (channel):** ก่อน LINE = in-app welcome-back state (wishlist×seasons×วันนี้, โค้ดล้วน). หลัง LINE (Phase 2) = LINE OA push event-driven เท่านั้น (booking window เปิด / ฤดูที่สนใจมาถึง / ครบรอบทริป / ก่อนบิน X วัน). **Hard cap ≤1-2/เดือน** — เกินนี้เพื่อนกลายเป็น marketing bot. (⚠ เช็ค LINE push free quota ก่อนออกแบบความถี่)
+
+**กับดัก (Fable) — hard rules:**
+- 🔴 **ห้าม ship ของสะสมถาวรก่อน LINE Login** (device id ล้าง cache = หายเกลี้ยง = anti-retention แรงกว่าไม่มีฟีเจอร์) — LINE = hard gate ไม่ใช่แค่ลำดับ
+- seasons.ts = ค่าเฉลี่ย ไม่ใช่พยากรณ์ → กร๊วกพูด "ใกล้ฤดู/ปกติราวๆ" ห้าม "บานแล้ว!" (ขัด thesis ข้อมูลซื่อสัตย์)
+- seasonsByCity = external-data-keyed → เมืองไม่มี season data คืน [] เงียบ → ต้องมี tripwire (test city-configs vs seasons + log เมื่อว่าง)
+- **ห้าม daily quota/streak ทุกรูปแบบ** (streak-DNA ในเสื้อคลุมแมว) — ขนม/ของฝากผูก event จริง ไม่ใช่ login รายวัน
+- ห้ามผูกเงิน (Wirtual), ห้าม guilt-trip/แมวผอมโซ
 
 ### อนาคต (เมื่อของหลักพิสูจน์แล้ว)
 - diorama 2.5D (PixiJS v8) เป็น "ของขวัญ" เสริม
