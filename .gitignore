@@ -42,3 +42,6 @@ next-env.d.ts
 
 docs/BUILD-STATE.md.autoloop.json
 docs/BUILD-STATE.md.autoloop.log
+
+# autoloop runtime sidecar (ไม่ใช่ของโปรเจกต์)
+docs/BUILD-STATE.md.autoloop.*
