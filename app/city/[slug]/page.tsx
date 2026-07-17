@@ -10,15 +10,10 @@ import type { Recommendation } from "@/lib/cities/city-configs";
 import { getCityVerdict } from "@/lib/services/advisor";
 import { getAqi } from "@/lib/services/aqi";
 import { getCityHeroImagesBulk, getPlaceImages } from "@/lib/services/city-images";
-import { getEvents } from "@/lib/services/events";
-import { getFx } from "@/lib/services/fx";
-import { getQuakes } from "@/lib/services/quakes";
 import { resolveCity } from "@/lib/services/geocode";
 import { getWarnings } from "@/lib/services/warnings";
 import { getWebcams } from "@/lib/services/webcams";
 import { getWeather } from "@/lib/services/weather";
-import { getCityTransit } from "@/lib/cities/transit";
-import { getCityDrive } from "@/lib/cities/drive-spots";
 
 // 10 นาที — ให้ประกาศเตือนภัย JMA และข่าวใน feed ตามทันเหตุการณ์
 export const revalidate = 600;
@@ -60,13 +55,13 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
   }
 
   const config = getCityConfigBySlug(city.slug);
-  const [weather, aqi, webcam, events, quakes, fx, warnings, verdict] = await Promise.all([
+  // ยิงเฉพาะของที่หน้านี้แสดงจริง — events/quakes/fx เคยยิงแล้วส่งเข้า TravelDashboard
+  // แต่ถูกรื้อออกจาก UI ไปก่อนหน้า เหลือ fetch ค้าง = จ่าย network + quota ทุก request ฟรี ๆ
+  // service ยังอยู่ครบ (lib/services/*) — Phase 2 ที่ทำ warning/fx card เรียกกลับมาได้ทันที
+  const [weather, aqi, webcam, warnings, verdict] = await Promise.all([
     getWeather(city.lat, city.lon),
     getAqi(city.lat, city.lon),
     getWebcams(city.lat, city.lon, config),
-    getEvents(config),
-    getQuakes(city.lat, city.lon),
-    getFx(),
     getWarnings({ slug: city.slug, prefecture: city.prefecture }),
     getCityVerdict(city.slug),
   ]);
@@ -104,13 +99,8 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
         weather={weather}
         aqi={aqi}
         webcam={webcam}
-        events={events}
-        quakes={quakes}
-        fx={fx}
         warnings={warnings}
         verdict={verdict}
-        transit={getCityTransit(city.slug)}
-        drive={getCityDrive(city.slug)}
         recommendations={recommendations}
         seeds={japanMajorCities}
       />
