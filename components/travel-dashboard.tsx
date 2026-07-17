@@ -19,7 +19,9 @@ import {
 import { getKruakMood } from "@/lib/game/mood";
 import { KruakAvatar } from "@/components/kruak-avatar";
 import { ChatPanel } from "@/components/chat/chat-panel";
-import { toBubbles } from "@/lib/chat/types";
+import { CardList } from "@/components/chat/cards";
+import { toBubbles, type Card } from "@/lib/chat/types";
+import { buildOutbound } from "@/lib/outbound";
 import { isInTrip, toggleTrip } from "@/lib/game/trip";
 import { CitySearch } from "@/components/city-search";
 import type { Recommendation } from "@/lib/cities/city-configs";
@@ -87,6 +89,30 @@ const quickPrompts = [
   "ควรพักย่านไหนดี",
   "ช่วยจัดแผนครึ่งวัน",
 ];
+
+// หมวดของ day-plan (see/eat/shop/do — ไม่มี sleep เพราะ day-plan ตัดออกแล้ว) → emoji ของ PlaceCard
+const DAY_PLAN_EMOJI: Record<string, string> = { see: "⛩", eat: "🍜", shop: "🛍", do: "🎡" };
+
+// แผนวันนี้ (Tier 2) — ย้ายจากรายการข้อความล้วนมาเป็น PlaceCard เดิมที่มีอยู่แล้ว
+// (docs/BUILD-STATE.md U2) ทุกใบมี mapUrl ผ่าน buildOutbound ตามกฎเหล็ก
+function dayPlanItemsToCards(
+  items: { title: string; area: string; kind: string }[],
+  citySlug: string,
+  cityName: string,
+  slot: string,
+): Card[] {
+  return items.map((item) => ({
+    id: `dayplan-${slot}-${citySlug}-${item.title}`,
+    kind: "place",
+    title: item.title,
+    area: item.area,
+    emoji: DAY_PLAN_EMOJI[item.kind] ?? "📍",
+    mapUrl: buildOutbound(
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.title} ${cityName}`)}`,
+      { kind: "nav", label: item.title, citySlug },
+    ),
+  }));
+}
 
 export function TravelDashboard({
   city,
@@ -325,10 +351,10 @@ export function TravelDashboard({
                         <span className={`nb-pill ${period.rainChance >= 60 ? "nb-pill-alert" : ""}`}>ฝน {period.rainChance}%</span>
                       ) : null}
                     </div>
-                    <p className="mt-1.5 text-sm font-medium leading-6 text-[var(--foreground)]">
-                      {period.items.map((item) => item.title).join(" → ")}
-                    </p>
                     {period.reason ? <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">{period.reason}</p> : null}
+                    <div className="mt-2">
+                      <CardList cards={dayPlanItemsToCards(period.items, city.slug, city.name, period.slot)} />
+                    </div>
                   </div>
                 ))}
                 {dayPlan.routeUrl ? (
