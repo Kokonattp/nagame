@@ -62,7 +62,29 @@
 
 ## ค้างรอเจ้าของ (autoloop เขียนลงตรงนี้แล้วจบ turn)
 
-_(ยังไม่มี)_
+### 🛑 U3 + U4 ติดปมเดียวกัน: card contract รองรับ dashboard ไม่ได้ (2026-07-17)
+
+**ไม่ใช่แค่ warnings อย่างที่ U1 คาด — `PickRow` (ของฝากกร๊วก) ก็ติดด้วย**
+
+| ของที่ย้ายไม่ได้ | ทำไม | ถ้าฝืนย้าย |
+|---|---|---|
+| `PickRow` (ของฝาก Tier 3) | มีปุ่ม **＋ทริป** (`toggleTrip()` + localStorage + `useEffect` กัน hydration) และลิงก์แผนที่เป็น **deep-link ภายใน** `/city/[slug]?tab=map&area=` | `PlaceCard` ไม่มีปุ่มทริป/ไม่มี state → **ฟีเจอร์ "เพิ่มลงทริป" หาย** = ตัด funnel step ที่ roadmap บอกว่าสำคัญ ("ถาม → เปิด card → คลิกออก → **เพิ่มลงทริป**") |
+| `warnings.items` (เตือนภัย JMA) | ไม่มี `CardKind` ที่สื่อ "คำเตือนภัย" ได้ + มี `level` 3 ระดับ (emergency/warning/watch) ที่ต้องใช้สีเตือน | ไม่มีที่ลง |
+
+**รากปัญหา:** `Card` ตอนนี้เป็น **presentational ล้วน** (title/area/emoji/mapUrl/note) แต่ dashboard มี card ที่ **มี action + state** (ทริป) และ card ที่ **สื่อความรุนแรง** (เตือนภัย)
+
+**ทางเลือก (เจ้าของตัดสิน — ผมไม่ตัดเอง เพราะแก้ contract = กระทบ Phase 2 ทั้งก้อน):**
+
+- **A. ขยาย contract** — เพิ่ม `PlaceCard.tripId?` (ให้ card ใดก็ได้เพิ่มลงทริป) + `CardKind: "warning"`
+  → ตรงกับ Phase 2 ("card จากแชทเพิ่มลงทริปได้") อยู่แล้ว = ทำตอนนี้ก็ไม่เสียของ
+  → แต่กระทบ `lib/chat/types.ts` + `cards/index.tsx` + advisor
+- **B. ย้ายเฉพาะที่ย้ายได้** — ปล่อย PickRow/warnings อยู่ dashboard ตามเดิม (roadmap บอก "แทนการเทออกทั้งหน้า" อยู่แล้ว)
+  → ได้แค่ day-plan (U2 ทำไปแล้ว) = งานนี้จบแค่นี้
+- **C. หยุดงานนี้** — รอทำพร้อม Phase 2 (Trip drag-drop) ซึ่งต้องแตะ trip schema อยู่แล้ว
+  → Phase 2 จะเพิ่ม `day`/`order` ลง trip + LINE Login ย้าย identity → ทำทีเดียวไม่ต้องรื้อสองรอบ
+
+**ข้อสังเกต:** roadmap เขียนเงื่อนไขไว้เองว่า Phase 1.5 ข้อ 2 "ทำได้ก็ต่อเมื่อ Phase 1 ทำให้ card มีของจริงพอ
+(stays/places/flight/weather/webcam)" — ตอนนี้ card **มีของจริงพอสำหรับ day-plan** แต่ **ไม่พอสำหรับ trip action + warning**
 
 ## Log รอบ
 
