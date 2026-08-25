@@ -656,10 +656,22 @@ async function requestGeminiReply(userContent: string): Promise<string | null> {
         }),
       },
     );
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const errorBody = (await response.json().catch(() => null)) as { error?: { code?: number; status?: string; message?: string } } | null;
+      console.warn("[advisor] Gemini request failed", {
+        status: response.status,
+        code: errorBody?.error?.code,
+        reason: errorBody?.error?.status,
+        message: errorBody?.error?.message?.slice(0, 240),
+      });
+      return null;
+    }
     const data = (await response.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null;
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null;
+    if (!text) console.warn("[advisor] Gemini response had no text", { finishReason: (data.candidates?.[0] as { finishReason?: string } | undefined)?.finishReason });
+    return text;
   } catch {
+    console.warn("[advisor] Gemini request threw before a response was received");
     return null;
   }
 }
