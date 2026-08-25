@@ -24,33 +24,37 @@ const COUNTRY_REPLY_CACHE_SECONDS = 60 * 60;
 const rateBuckets = new Map<string, number[]>();
 
 export async function POST(request: NextRequest) {
+  const responseHeaders = {
+    ...cacheHeaders(0),
+    "x-nagame-ai-configured": String(Boolean(process.env.ANTHROPIC_API_KEY || process.env.AI_API_KEY || process.env.GEMINI_API_KEY)),
+  };
   const body = (await request.json()) as AssistantRequest;
   const prompt = body.prompt?.trim();
   const citySlugRaw = body.citySlug?.trim();
 
   if (!prompt) {
-    return NextResponse.json({ error: "กรุณาพิมพ์คำถามก่อน", reply: null }, { status: 400, headers: cacheHeaders(0) });
+    return NextResponse.json({ error: "กรุณาพิมพ์คำถามก่อน", reply: null }, { status: 400, headers: responseHeaders });
   }
   if (prompt.length > MAX_PROMPT_CHARS) {
     return NextResponse.json(
       { error: `คำถามยาวเกินไป (จำกัด ${MAX_PROMPT_CHARS} ตัวอักษร)`, reply: null },
-      { status: 400, headers: cacheHeaders(0) },
+      { status: 400, headers: responseHeaders },
     );
   }
 
   // ไม่มี citySlug → ถามระดับประเทศ (หน้าแรก = แชท, Phase 0 U7) ไม่ 400 อีกต่อไป
   if (!citySlugRaw) {
     const reply = await getCountryReply(prompt);
-    return NextResponse.json({ reply }, { headers: cacheHeaders(0) });
+    return NextResponse.json({ reply }, { headers: responseHeaders });
   }
 
   const city = await resolveCity(citySlugRaw);
   if (!city) {
-    return NextResponse.json({ error: "ไม่รู้จักเมืองนี้", reply: null }, { status: 404, headers: cacheHeaders(0) });
+    return NextResponse.json({ error: "ไม่รู้จักเมืองนี้", reply: null }, { status: 404, headers: responseHeaders });
   }
 
   const reply = await getCityReply(city.slug, prompt, getClientIp(request));
-  return NextResponse.json({ reply }, { headers: cacheHeaders(0) });
+  return NextResponse.json({ reply }, { headers: responseHeaders });
 }
 
 // rate-limit คุมการยิงโมเดล — เกินโควตา → allowLlm=false → intent+compose เป็น rule-based
