@@ -1,5 +1,32 @@
 # Project memory
 
+## Product positioning boundary — 2026-08-25
+
+- Nagame is a Thai-first Japan pre-trip companion: it helps users choose where/when to go, prepare the trip, and continue using the plan during travel.
+- Core flow: `คุยกับกร๊วก → คำแนะนำเฉพาะตัว → หลักฐานข้อมูลสด → checklist/trip brief → ใช้ต่อระหว่างเดินทาง`.
+- Tomarigi-style full-screen globe and camera directory are reference inspiration only and are out of scope for the next implementation package. Live cameras/maps are evidence selected by Kruak, not the opening catalog.
+- Next bounded package: **Pre-trip Companion — “รู้เมืองแล้ว ช่วยเตรียมทริป”**. Require a Task Contract and `SOL GATE: READY` before code changes.
+
+## Local-first trip cards — 2026-08-25
+
+- The pre-trip home uses IndexedDB as the primary browser store for saved evidence cards; the legacy `nagame.pretrip-plan.v1` localStorage key is read only once for migration and is no longer written.
+- Users can export/import a validated `.nagame` JSON file. Browser persistence remains device/origin scoped and best-effort; the file is the portable backup path. Cloud sync/auth is a later approval gate.
+- Saved cards are user-managed, not constrained to one card per day. The current status model is `เก็บไว้` / `สำคัญ` / `เสร็จแล้ว`; cards can be filtered, updated, or removed from the plan rail.
+- The UX should remain card-led and calm: no dense dashboard, forced daily itinerary, or silent disappearance of a saved card.
+
+## Go-live candidate UX polish — 2026-08-25
+
+- The pre-trip home is the current go-live candidate surface. Preserve the station/field-notebook visual world, but keep the first mobile viewport compact enough to reach the three entry choices quickly.
+- Saved-card management must be explicit in the UI: use a visible `จัดการ` affordance, not an unlabeled ellipsis alone.
+- Supporting card metadata and storage/backup guidance must remain readable on narrow screens. Use go-live-candidate/pre-trip-companion language in user-facing and active handoff materials.
+
+## Production deployment — 2026-08-25
+
+- The reviewed `go-live-polish-v1` candidate was deployed to the existing Vercel production project `nattps-projects-da430d7f/nagame` and aliased to `https://nagame.vercel.app`.
+- Deployment `dpl_PP4wirhNpfWURsHwtUaRqfPVQZXy` reached `READY`; the Vercel remote build compiled, type-checked, and generated all 18 routes.
+- Public browser smoke passed at 1440px and 390px, including the Thai-first entry surface, three start choices, responsive width, and isolated IndexedDB card-management behavior.
+- This release was deployed from the reviewed working tree without a new Git commit. Provider/authenticated E2E, fresh data verification, device testing, and rollback rehearsal remain separate gates.
+
 ## Kruak weather mascot
 
 - The dashboard uses the **Kruak** Japanese bobtail cat mascot for weather-state feedback. Final transparent assets live in `public/kruak/`; `lib/game/kruak.ts` is the central asset registry, and UI should use `components/kruak-avatar.tsx` rather than hard-code artwork paths.
