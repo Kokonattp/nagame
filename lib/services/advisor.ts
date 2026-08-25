@@ -522,6 +522,16 @@ async function gatherContext(citySlug: string): Promise<AdvisorContext | null> {
 }
 
 const MAX_OUTPUT_TOKENS = 220;
+let geminiDiagnostic = "not-called";
+
+export function resetGeminiDiagnostic() {
+  geminiDiagnostic = "not-called";
+}
+
+export function getGeminiDiagnostic() {
+  return geminiDiagnostic;
+}
+
 const SYSTEM_PROMPT = [
   "You are กร๊วก, a warm but concise Thai travel advisor for Japan.",
   "Use ONLY the provided context. Never invent current facts, timings, prices, operating hours, or place names.",
@@ -658,6 +668,8 @@ async function requestGeminiReply(userContent: string): Promise<string | null> {
     );
     if (!response.ok) {
       const errorBody = (await response.json().catch(() => null)) as { error?: { code?: number; status?: string; message?: string } } | null;
+      const safeMessage = errorBody?.error?.message?.replace(/[^\x20-\x7E]/g, " ").slice(0, 180);
+      geminiDiagnostic = `http:${response.status};code:${errorBody?.error?.code ?? "unknown"};reason:${errorBody?.error?.status ?? "unknown"};message:${safeMessage ?? "unknown"}`;
       console.warn("[advisor] Gemini request failed", {
         status: response.status,
         code: errorBody?.error?.code,
@@ -668,9 +680,16 @@ async function requestGeminiReply(userContent: string): Promise<string | null> {
     }
     const data = (await response.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null;
-    if (!text) console.warn("[advisor] Gemini response had no text", { finishReason: (data.candidates?.[0] as { finishReason?: string } | undefined)?.finishReason });
+    if (!text) {
+      const finishReason = (data.candidates?.[0] as { finishReason?: string } | undefined)?.finishReason;
+      geminiDiagnostic = `empty;finishReason:${finishReason ?? "unknown"}`;
+      console.warn("[advisor] Gemini response had no text", { finishReason });
+    } else {
+      geminiDiagnostic = "ok";
+    }
     return text;
   } catch {
+    geminiDiagnostic = "network-error";
     console.warn("[advisor] Gemini request threw before a response was received");
     return null;
   }

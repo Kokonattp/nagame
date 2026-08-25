@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdvisorChatReply } from "@/lib/services/advisor";
+import { getAdvisorChatReply, getGeminiDiagnostic, resetGeminiDiagnostic } from "@/lib/services/advisor";
 import { resolveCity } from "@/lib/services/geocode";
 import { cached, cacheHeaders } from "@/lib/utils/cache";
 import type { ChatReply } from "@/lib/chat/types";
@@ -24,6 +24,7 @@ const COUNTRY_REPLY_CACHE_SECONDS = 60 * 60;
 const rateBuckets = new Map<string, number[]>();
 
 export async function POST(request: NextRequest) {
+  resetGeminiDiagnostic();
   const responseHeaders = {
     ...cacheHeaders(0),
     "x-nagame-ai-configured": String(Boolean(process.env.ANTHROPIC_API_KEY || process.env.AI_API_KEY || process.env.GEMINI_API_KEY)),
@@ -54,7 +55,10 @@ export async function POST(request: NextRequest) {
   }
 
   const reply = await getCityReply(city.slug, prompt, getClientIp(request));
-  return NextResponse.json({ reply }, { headers: responseHeaders });
+  return NextResponse.json(
+    { reply },
+    { headers: { ...responseHeaders, "x-nagame-gemini-diagnostic": getGeminiDiagnostic() } },
+  );
 }
 
 // rate-limit คุมการยิงโมเดล — เกินโควตา → allowLlm=false → intent+compose เป็น rule-based
