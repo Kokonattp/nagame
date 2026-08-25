@@ -25,7 +25,9 @@
 - The reviewed `go-live-polish-v1` candidate was deployed to the existing Vercel production project `nattps-projects-da430d7f/nagame` and aliased to `https://nagame.vercel.app`.
 - Deployment `dpl_PP4wirhNpfWURsHwtUaRqfPVQZXy` reached `READY`; the Vercel remote build compiled, type-checked, and generated all 18 routes.
 - Public browser smoke passed at 1440px and 390px, including the Thai-first entry surface, three start choices, responsive width, and isolated IndexedDB card-management behavior.
-- This release was deployed from the reviewed working tree without a new Git commit. Provider/authenticated E2E, fresh data verification, device testing, and rollback rehearsal remain separate gates.
+- The initial CLI deployment was from the reviewed working tree; it was superseded by the Git-connected production deployment from commit `068db7b` on `origin/main`.
+- Real production smoke passed for the first-start UI/API flow, the city assistant endpoint, and IndexedDB save/reload/card management. The city response reported `Rule-based advisor`, so AI-provider success is not inferred.
+- Provider/authenticated E2E, fresh data verification, device testing, and rollback rehearsal remain separate gates.
 
 ## Kruak weather mascot
 

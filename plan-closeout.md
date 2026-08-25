@@ -13,8 +13,8 @@ Status: `CLOSED_WITH_NOTES` for candidate `go-live-polish-v1`; production deploy
 - Saved cards now show an explicit `จัดการ` affordance and retain the three-card-action menu.
 - Card metadata, storage status, and backup guidance use more readable sizes/colors.
 - Active handoff/design language now uses `GO_LIVE_CANDIDATE` and `Pre-trip Companion`.
-- Production alias is live at `https://nagame.vercel.app`.
-- Resume point: observe real user/provider behavior and decide whether to anchor the currently deployed working tree in a Git commit; no further deployment is required for this candidate.
+- Production alias is live at `https://nagame.vercel.app` from Git-connected production deployment of commit `068db7b`.
+- Resume point: no implementation resume is required for this candidate; continue observing real user/provider behavior under the separate gates below.
 
 ## Files changed
 
@@ -41,10 +41,14 @@ Status: `CLOSED_WITH_NOTES` for candidate `go-live-polish-v1`; production deploy
   - `C:\Users\Kaloka\AppData\Local\Temp\nagame-go-live-desktop.png`
   - `C:\Users\Kaloka\AppData\Local\Temp\nagame-go-live-mobile.png`
 - Production deployment: PASS; Vercel deployment `dpl_PP4wirhNpfWURsHwtUaRqfPVQZXy`, status `READY`, target `production`, alias `https://nagame.vercel.app`.
+- Git release: PASS; commit `068db7b` (`feat(pretrip): launch Japan trip companion home`) pushed to `origin/main`.
+- Git-connected production deployment: PASS; deployment `dpl_4AMwe4fBRRwuQks1PG521HKVGipP`, status `READY`, alias `https://nagame.vercel.app`.
 - Vercel remote build: PASS; Next.js 15.5.18 compiled, type-checked, and generated all 18 routes.
 - Production HTTP smoke: PASS; `curl.exe -I` returned `HTTP/1.1 200 OK` from Vercel.
 - Production browser smoke: PASS at 1440px and 390px; Thai hero and three entry choices rendered, no horizontal overflow, and no console/page errors.
-- Production card smoke in an isolated IndexedDB profile: PASS; visible `จัดการ`, three actions, important filter, and remove flow; test data was deleted afterward.
+- Production UI/API smoke: PASS; clicking the first start choice made a real `POST /api/assistant` and returned HTTP 200 with an assistant reply and 4 evidence cards.
+- Production city API smoke: PASS; real `POST /api/assistant` with `citySlug=tokyo` returned HTTP 200 and 5 cards. The response source was `Rule-based advisor`; AI-provider success is not claimed.
+- Production card smoke in an isolated IndexedDB profile: PASS; saved Matsumoto, reloaded it, opened visible `จัดการ`, used the three actions and important filter, then removed it; test data was deleted afterward.
 - Production screenshots:
   - `C:\Users\Kaloka\AppData\Local\Temp\nagame-production-desktop.png`
   - `C:\Users\Kaloka\AppData\Local\Temp\nagame-production-mobile.png`
@@ -61,4 +65,4 @@ Status: `CLOSED_WITH_NOTES` for candidate `go-live-polish-v1`; production deploy
 - Production host confirmation and deploy: `PASS`; the existing Vercel project and alias were used.
 - DNS/alias smoke: `PASS` through `https://nagame.vercel.app`.
 - Provider E2E, authenticated E2E, fresh third-party data verification, device E2E, and rollback rehearsal: `NOT RUN`.
-- Commit/push: `NOT RUN`; this production deployment is not anchored to a new Git commit.
+- Commit/push: `PASS`; `068db7b` is on `origin/main` and the Git-connected deployment is `READY`.
