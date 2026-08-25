@@ -27,7 +27,8 @@
 - Public browser smoke passed at 1440px and 390px, including the Thai-first entry surface, three start choices, responsive width, and isolated IndexedDB card-management behavior.
 - The initial CLI deployment was from the reviewed working tree; it was superseded by the Git-connected production deployment from commit `068db7b` on `origin/main`.
 - Real production smoke passed for the first-start UI/API flow, the city assistant endpoint, and IndexedDB save/reload/card management. The city response reported `Rule-based advisor`, so AI-provider success is not inferred.
-- Provider/authenticated E2E, fresh data verification, device testing, and rollback rehearsal remain separate gates.
+- Gemini REST request handling was corrected to use the documented REST authentication header and snake_case request fields. A direct production test then confirmed the runtime key was configured but invalid: Gemini returned HTTP 400 `INVALID_ARGUMENT` / `API key not valid`. Do not claim AI-provider success until the owner rotates the Vercel production key.
+- Authenticated E2E, fresh data verification, device testing, and rollback rehearsal remain separate gates.
 
 ## Kruak weather mascot
 

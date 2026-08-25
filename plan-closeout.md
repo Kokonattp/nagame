@@ -20,6 +20,8 @@ Status: `CLOSED_WITH_NOTES` for candidate `go-live-polish-v1`; production deploy
 
 - `components/pretrip/pretrip-home.tsx` — visible card-management label.
 - `app/globals.css` — mobile hierarchy, card action affordance, metadata and storage-copy readability.
+- `app/api/assistant/route.ts` — assistant response boundary and production-safe headers.
+- `lib/services/advisor.ts` — Gemini REST request contract and safe provider failure logging.
 - `DESIGN.md` — status moved to `GO_LIVE_CANDIDATE`.
 - `PROJECT_MEMORY.md` — durable go-live UX rules and terminology boundary.
 - `docs/nagame-pretrip-companion-plan.md` — active status/wording aligned.
@@ -48,6 +50,7 @@ Status: `CLOSED_WITH_NOTES` for candidate `go-live-polish-v1`; production deploy
 - Production browser smoke: PASS at 1440px and 390px; Thai hero and three entry choices rendered, no horizontal overflow, and no console/page errors.
 - Production UI/API smoke: PASS; clicking the first start choice made a real `POST /api/assistant` and returned HTTP 200 with an assistant reply and 4 evidence cards.
 - Production city API smoke: PASS; real `POST /api/assistant` with `citySlug=tokyo` returned HTTP 200 and 5 cards. The response source was `Rule-based advisor`; AI-provider success is not claimed.
+- Gemini provider smoke: FAIL with direct production evidence; runtime reported `configured=true`, then Gemini returned `HTTP 400 INVALID_ARGUMENT` with `API key not valid. Please pass a valid API key.` The REST request was corrected to use the documented header and snake_case payload, but the Vercel credential itself is invalid.
 - Production card smoke in an isolated IndexedDB profile: PASS; saved Matsumoto, reloaded it, opened visible `จัดการ`, used the three actions and important filter, then removed it; test data was deleted afterward.
 - Production screenshots:
   - `C:\Users\Kaloka\AppData\Local\Temp\nagame-production-desktop.png`
@@ -64,5 +67,6 @@ Status: `CLOSED_WITH_NOTES` for candidate `go-live-polish-v1`; production deploy
 - Source/build/runtime/UX evidence is local-candidate evidence only.
 - Production host confirmation and deploy: `PASS`; the existing Vercel project and alias were used.
 - DNS/alias smoke: `PASS` through `https://nagame.vercel.app`.
-- Provider E2E, authenticated E2E, fresh third-party data verification, device E2E, and rollback rehearsal: `NOT RUN`.
+- AI provider E2E: `FAIL/BLOCKED` on the invalid Vercel `GEMINI_API_KEY`; a valid owner-supplied production key is required before this gate can pass.
+- Authenticated E2E, fresh third-party data verification, device E2E, and rollback rehearsal: `NOT RUN`.
 - Commit/push: `PASS`; `068db7b` is on `origin/main` and the Git-connected deployment is `READY`.
