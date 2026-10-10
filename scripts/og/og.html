@@ -1,0 +1,37 @@
+<!doctype html>
+<!-- Home share image (1200×630), rendered by scripts/og/render.cjs into app/opengraph-image.png.
+     Chrome renders it because next/og (satori) drops stacked Thai tone marks ("ญี่ปุ่น" → "ญีปุน"). -->
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;700&display=block" />
+  <style>
+    html, body { margin: 0; }
+    .og {
+      position: relative; width: 1200px; height: 630px; overflow: hidden; display: flex; align-items: center;
+      background: linear-gradient(135deg, #dcebff 0%, #f7fbff 45%, #ffe9f2 100%);
+      font-family: "Prompt", sans-serif; color: #0c1f4a;
+    }
+    .fuji { position: absolute; left: 0; bottom: 0; }
+    .copy { position: relative; padding: 0 0 40px 90px; width: 720px; }
+    .brand { font-size: 34px; font-weight: 500; color: #1a66d9; }
+    h1 { margin: 6px 0 0; font-size: 76px; line-height: 1.25; font-weight: 700; }
+    p { margin: 14px 0 0; font-size: 32px; line-height: 1.45; color: #4b5878; font-weight: 500; }
+    .tabi { position: absolute; right: 70px; top: 105px; width: 420px; height: 420px; }
+  </style>
+</head>
+<body>
+  <div class="og">
+    <svg class="fuji" width="1200" height="260" viewBox="0 0 1200 260">
+      <path d="M0 260 L0 230 C 200 220 330 150 470 70 Q 520 40 570 70 C 710 150 840 220 1200 230 L1200 260 Z" fill="#2d7ff9" opacity="0.18" />
+      <path d="M440 92 Q 520 36 600 92 L 580 104 L 556 92 L 532 106 L 508 92 L 484 106 L 462 96 Z" fill="#ffffff" opacity="0.9" />
+    </svg>
+    <div class="copy">
+      <div class="brand">Nagame 眺め</div>
+      <h1>วางทริปญี่ปุ่นกับทาบิ</h1>
+      <p>บอกช่วงเวลากับแนวที่ชอบ<br />ได้เส้นทางและร่างทริปรายวัน</p>
+    </div>
+    <img class="tabi" src="../../public/tabi/tabi-happy.png" alt="" />
+  </div>
+</body>
+</html>

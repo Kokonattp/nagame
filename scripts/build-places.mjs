@@ -181,9 +181,12 @@ writeJson(new URL("scores.json", CACHE), scores);
 const cityFile = readFileSync(new URL("../lib/cities/japan-major-cities.ts", import.meta.url), "utf8");
 const CITIES = [...cityFile.matchAll(/\["([^"]+)", "([^"]+)", "([^"]+)", ([\d.]+), ([\d.]+)\]/g)]
   .map(([, name, ja, prefecture, lat, lon]) => ({ name, ja, prefecture, lat: Number(lat), lon: Number(lon) }));
+// Tabi-only bases (see TABI_EXTRA_BASES in lib/tabi/cities.ts)
+const EXTRA_BASES = [{ name: "Toyama", ja: "富山", prefecture: "Toyama", lat: 36.6953, lon: 137.2113 }];
+CITIES.push(...EXTRA_BASES);
 const REGION = {
   Hokkaido: "hokkaido", Aomori: "tohoku", Miyagi: "tohoku", Tokyo: "kanto", Kanagawa: "kanto", Tochigi: "kanto",
-  Yamanashi: "chubu", Nagano: "chubu", Aichi: "chubu", Ishikawa: "chubu", Gifu: "chubu", Shizuoka: "chubu",
+  Yamanashi: "chubu", Nagano: "chubu", Toyama: "chubu", Aichi: "chubu", Ishikawa: "chubu", Gifu: "chubu", Shizuoka: "chubu",
   Osaka: "kansai", Kyoto: "kansai", Nara: "kansai", Hyogo: "kansai", Wakayama: "kansai",
   Hiroshima: "chugoku", Okayama: "chugoku", Kagawa: "shikoku", Ehime: "shikoku",
   Fukuoka: "kyushu", Kagoshima: "kyushu", Oita: "kyushu", Kumamoto: "kyushu", Okinawa: "okinawa",

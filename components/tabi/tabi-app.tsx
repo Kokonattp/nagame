@@ -42,6 +42,9 @@ const hideBroken = (e: React.SyntheticEvent<HTMLImageElement>) => {
 
 export function TabiApp() {
   const [screen, setScreen] = useState<Screen>("home");
+  // Each screen root carries .tabi-rise, so a screen change already slides in.
+  // (View Transitions were tried and dropped: with React state they left the old screen in place.)
+  const go = setScreen;
   const [turns, setTurns] = useState<Turn[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +67,7 @@ export function TabiApp() {
     if (!text || loading) return;
     setError(null);
     setTurns((t) => [...t, { role: "user", text }]);
-    setScreen((s) => (s === "home" || s === "trips" ? "chat" : s));
+    go((s) => (s === "home" || s === "trips" ? "chat" : s));
     setLoading(true);
     const route = selected ?? trip?.route;
     const tripForRoute = trip && route && trip.route?.id === route.id ? trip : null;
@@ -91,23 +94,23 @@ export function TabiApp() {
 
       if (reply.action === "suggest_routes" && reply.routes) {
         setRoutes(reply.routes);
-        setScreen("chat");
+        go("chat");
       } else if (reply.action === "open_route" && reply.openRouteId) {
         const r = routes.find((x) => x.id === reply.openRouteId);
         if (r) openRoute(r);
       } else if (reply.action === "suggest_stops") {
-        setScreen("route");
+        go("route");
       } else if (reply.action === "draft_itinerary" && reply.itinerary) {
         // the server may re-fit nights to the requested days → keep its route
         const fitted = reply.selectedRoute ?? route;
         if (fitted) setSelected(fitted);
         const base = tripForRoute ?? newTrip(reply.intent);
         await persist({ ...base, intent: reply.intent, route: fitted, itinerary: reply.itinerary, status: "draft", title: titleFor(fitted, reply.itinerary.length) });
-        setScreen("itinerary");
+        go("itinerary");
       } else if (reply.action === "flights") {
-        setScreen("flights");
+        go("flights");
       } else {
-        setScreen("chat");
+        go("chat");
       }
     } catch (e) {
       const timedOut = e instanceof DOMException && e.name === "TimeoutError";
@@ -115,12 +118,14 @@ export function TabiApp() {
     } finally {
       setLoading(false);
     }
-  }, [loading, lastReply, trip, routes, selected, persist]);
+    // openRoute only calls state setters (selected + go), so it is safe to leave out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, lastReply, trip, routes, selected, persist, go]);
 
   /** Viewing a route never creates a trip; a trip is saved only when the user keeps something. */
   function openRoute(r: RouteOption) {
     setSelected(r);
-    setScreen("route");
+    go("route");
   }
 
   function addStop(h: Highlight) {
@@ -135,10 +140,10 @@ export function TabiApp() {
     setSelected(t.route ?? null);
     setRoutes(t.route ? [t.route] : []);
     setLastReply(null);
-    setScreen(t.itinerary ? "itinerary" : t.route ? "route" : "chat");
+    go(t.itinerary ? "itinerary" : t.route ? "route" : "chat");
   }
 
-  const nav = (s: Screen) => () => setScreen(s);
+  const nav = (s: Screen) => () => go(s);
 
   return (
     <div className="tabi">

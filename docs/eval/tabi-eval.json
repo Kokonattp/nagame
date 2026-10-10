@@ -1,0 +1,309 @@
+{
+  "metrics": {
+    "base": "http://localhost:3100",
+    "runAt": "2026-10-10T09:48:27.048Z",
+    "cases": 18,
+    "overall": {
+      "pass": 18,
+      "total": 18
+    },
+    "action": {
+      "pass": 17,
+      "total": 17
+    },
+    "month": {
+      "pass": 10,
+      "total": 10
+    },
+    "days": {
+      "pass": 8,
+      "total": 8
+    },
+    "date": {
+      "pass": 1,
+      "total": 1
+    },
+    "constraint": {
+      "pass": 10,
+      "total": 10
+    },
+    "grounded": {
+      "pass": 18,
+      "total": 18
+    },
+    "placesChecked": 73,
+    "jevShare": {
+      "jev": 18,
+      "total": 18
+    },
+    "latencyMs": {
+      "p50": 568,
+      "p95": 2152,
+      "max": 2152
+    }
+  },
+  "rows": [
+    {
+      "id": "discover-nature",
+      "msg": "อยากไปญี่ปุ่น 5 วันกลาง พ.ค. เน้นธรรมชาติ",
+      "ms": 2152,
+      "source": "jev",
+      "action": "suggest_routes",
+      "checks": {
+        "action": true,
+        "month": true,
+        "days": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 9
+    },
+    {
+      "id": "exact-date",
+      "msg": "ไป 10 ธ.ค. 5 วัน อยากเห็นหิมะ",
+      "ms": 1353,
+      "source": "jev",
+      "action": "suggest_routes",
+      "checks": {
+        "action": true,
+        "month": true,
+        "days": true,
+        "date": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 9
+    },
+    {
+      "id": "kyoto-autumn",
+      "msg": "อยากไปเกียวโต ดูใบไม้เปลี่ยนสี พ.ย. 5 วัน",
+      "ms": 499,
+      "source": "jev",
+      "action": "suggest_routes",
+      "checks": {
+        "action": true,
+        "month": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 2
+    },
+    {
+      "id": "hokkaido-only",
+      "msg": "ฮอกไกโด ธันวาคม 7 วัน หิมะ ออนเซ็น",
+      "ms": 454,
+      "source": "jev",
+      "action": "suggest_routes",
+      "checks": {
+        "action": true,
+        "month": true,
+        "days": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 3
+    },
+    {
+      "id": "family-first",
+      "msg": "พาลูกไปญี่ปุ่นครั้งแรก เมษา 6 วัน",
+      "ms": 862,
+      "source": "jev",
+      "action": "suggest_routes",
+      "checks": {
+        "action": true,
+        "month": true,
+        "days": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 9
+    },
+    {
+      "id": "tateyama",
+      "msg": "อยากไปทาเตยามะ ดูกำแพงหิมะ พ.ค.",
+      "ms": 460,
+      "source": "jev",
+      "action": "suggest_routes",
+      "checks": {
+        "action": true,
+        "month": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 2
+    },
+    {
+      "id": "two-weeks",
+      "msg": "เที่ยว 2 สัปดาห์ ช่วง พ.ย.",
+      "ms": 809,
+      "source": "jev",
+      "action": "suggest_routes",
+      "checks": {
+        "action": true,
+        "month": true,
+        "days": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 9
+    },
+    {
+      "id": "no-false-month",
+      "msg": "พาเด็กคนเล็กไปด้วย 5 วัน",
+      "ms": 953,
+      "source": "jev",
+      "action": "suggest_routes",
+      "checks": {
+        "month": true,
+        "days": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 9
+    },
+    {
+      "id": "fukuoka-food",
+      "msg": "ไปฟุกุโอกะ 4 วัน กินราเมน",
+      "ms": 516,
+      "source": "jev",
+      "action": "suggest_routes",
+      "checks": {
+        "action": true,
+        "days": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 2
+    },
+    {
+      "id": "okinawa",
+      "msg": "โอกินาว่า มิถุนา 5 วัน",
+      "ms": 807,
+      "source": "jev",
+      "action": "suggest_routes",
+      "checks": {
+        "action": true,
+        "month": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 4
+    },
+    {
+      "id": "vague",
+      "msg": "อยากไปญี่ปุ่น",
+      "ms": 484,
+      "source": "jev",
+      "action": "ask",
+      "checks": {
+        "action": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 0
+    },
+    {
+      "id": "greeting",
+      "msg": "สวัสดีทาบิ",
+      "ms": 431,
+      "source": "jev",
+      "action": "chat",
+      "checks": {
+        "action": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 0
+    },
+    {
+      "id": "booking-refused",
+      "msg": "ช่วยจองโรงแรมให้หน่อย",
+      "ms": 568,
+      "source": "jev",
+      "action": "chat",
+      "checks": {
+        "action": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 0
+    },
+    {
+      "id": "flight",
+      "msg": "ตั๋วไปโอซาก้าเดือนหน้าเท่าไร",
+      "ms": 452,
+      "source": "jev",
+      "action": "flights",
+      "checks": {
+        "action": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 0
+    },
+    {
+      "id": "refine-crowds",
+      "msg": "มีแบบคนน้อยกว่านี้ไหม",
+      "ms": 772,
+      "source": "jev",
+      "action": "suggest_routes",
+      "checks": {
+        "action": true,
+        "month": true,
+        "days": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 9
+    },
+    {
+      "id": "pick-first",
+      "msg": "อันแรกเลย",
+      "ms": 466,
+      "source": "jev",
+      "action": "open_route",
+      "checks": {
+        "action": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 0
+    },
+    {
+      "id": "draft",
+      "msg": "จัดเป็นแผนรายวันให้หน่อย",
+      "ms": 612,
+      "source": "jev",
+      "action": "draft_itinerary",
+      "checks": {
+        "action": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 6
+    },
+    {
+      "id": "detail",
+      "msg": "Mount Fuji คนเยอะไหม",
+      "ms": 480,
+      "source": "jev",
+      "action": "answer",
+      "checks": {
+        "action": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 0
+    }
+  ]
+}

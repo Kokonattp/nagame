@@ -1,0 +1,127 @@
+// Tabi agent evaluation (spec M3): fixed Thai scenarios → measured behaviour.
+// Metrics: action accuracy, slot accuracy (month/days/date), constraint checks,
+// grounding (every suggested place exists in the place store), latency, Jev vs fallback.
+//
+// Run against a server:  BASE=http://localhost:3000 node scripts/eval-tabi.mjs
+// Paced at ~11 req/min to stay under /api/tabi's 12/min per-IP limit.
+// Writes docs/eval/tabi-eval.md + docs/eval/tabi-eval.json
+
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+
+const BASE = (process.env.BASE ?? "http://localhost:3000").replace(/\/$/, "");
+const PACE_MS = Number(process.env.PACE_MS ?? 5500);
+const places = JSON.parse(readFileSync(new URL("../data/places/places.json", import.meta.url), "utf8"));
+const PLACE_IDS = new Set(places.map((p) => p.id));
+const REGION_OF = Object.fromEntries(places.map((p) => [p.baseCity, p.region]));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const ids = (r) => (r.routes ?? []).map(({ id, title }) => ({ id, title }));
+const stopsIn = (r) => (r.routes ?? []).flatMap((o) => o.stops.map((s) => s.city));
+const regionsOf = (r) => new Set(stopsIn(r).map((c) => REGION_OF[c]).filter(Boolean));
+
+// Each case: message, optional context builder (from earlier replies), expected action + checks.
+const CASES = [
+  { id: "discover-nature", msg: "อยากไปญี่ปุ่น 5 วันกลาง พ.ค. เน้นธรรมชาติ", action: "suggest_routes", month: 5, days: 5 },
+  { id: "exact-date", msg: "ไป 10 ธ.ค. 5 วัน อยากเห็นหิมะ", action: "suggest_routes", month: 12, days: 5, date: "2026-12-10" },
+  { id: "kyoto-autumn", msg: "อยากไปเกียวโต ดูใบไม้เปลี่ยนสี พ.ย. 5 วัน", action: "suggest_routes", month: 11, check: (r) => stopsIn(r).includes("Kyoto") },
+  { id: "hokkaido-only", msg: "ฮอกไกโด ธันวาคม 7 วัน หิมะ ออนเซ็น", action: "suggest_routes", month: 12, days: 7, check: (r) => [...regionsOf(r)].every((g) => g === "hokkaido") },
+  { id: "family-first", msg: "พาลูกไปญี่ปุ่นครั้งแรก เมษา 6 วัน", action: "suggest_routes", month: 4, days: 6 },
+  { id: "tateyama", msg: "อยากไปทาเตยามะ ดูกำแพงหิมะ พ.ค.", action: "suggest_routes", month: 5, check: (r) => stopsIn(r).includes("Toyama") },
+  { id: "two-weeks", msg: "เที่ยว 2 สัปดาห์ ช่วง พ.ย.", action: "suggest_routes", month: 11, days: 14 },
+  { id: "no-false-month", msg: "พาเด็กคนเล็กไปด้วย 5 วัน", month: null, days: 5 },
+  { id: "fukuoka-food", msg: "ไปฟุกุโอกะ 4 วัน กินราเมน", action: "suggest_routes", days: 4, check: (r) => [...regionsOf(r)].every((g) => g === "kyushu") },
+  { id: "okinawa", msg: "โอกินาว่า มิถุนา 5 วัน", action: "suggest_routes", month: 6, check: (r) => [...regionsOf(r)].every((g) => g === "okinawa") },
+  { id: "vague", msg: "อยากไปญี่ปุ่น", action: "ask" },
+  { id: "greeting", msg: "สวัสดีทาบิ", action: "chat" },
+  { id: "booking-refused", msg: "ช่วยจองโรงแรมให้หน่อย", action: "chat" },
+  { id: "flight", msg: "ตั๋วไปโอซาก้าเดือนหน้าเท่าไร", action: "flights", check: (r) => !/\d[\d,]*\s*(บาท|฿)/.test(r.bubbles.join(" ")) },
+  // multi-turn chain built on "discover-nature"
+  { id: "refine-crowds", after: "discover-nature", msg: "มีแบบคนน้อยกว่านี้ไหม", ctx: (p) => ({ intent: p.intent, shownRoutes: ids(p) }), action: "suggest_routes", month: 5, days: 5,
+    check: (r, p) => [...regionsOf(r)].some((g) => regionsOf(p).has(g)) },
+  { id: "pick-first", after: "refine-crowds", msg: "อันแรกเลย", ctx: (p) => ({ intent: p.intent, shownRoutes: ids(p) }), action: "open_route", check: (r, p) => r.openRouteId === p.routes[0].id },
+  { id: "draft", after: "refine-crowds", msg: "จัดเป็นแผนรายวันให้หน่อย", ctx: (p) => ({ intent: p.intent, selectedRoute: p.routes[0] }), action: "draft_itinerary", check: (r) => r.itinerary?.length === 5 },
+  { id: "detail", msg: "Mount Fuji คนเยอะไหม", action: "answer", check: (r) => r.bubbles.join(" ").includes("Mount Fuji") },
+];
+
+async function ask(message, context) {
+  const t = performance.now();
+  const res = await fetch(`${BASE}/api/tabi`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message, context }) });
+  const ms = Math.round(performance.now() - t);
+  const json = await res.json().catch(() => ({}));
+  return { status: res.status, ms, reply: json.reply, error: json.error };
+}
+
+const replies = {};
+const rows = [];
+for (const c of CASES) {
+  const prev = c.after ? replies[c.after] : undefined;
+  if (c.after && !prev) { rows.push({ id: c.id, skipped: `needs ${c.after}` }); continue; }
+  const { status, ms, reply, error } = await ask(c.msg, c.ctx ? c.ctx(prev) : {});
+  await sleep(PACE_MS);
+  if (!reply) { rows.push({ id: c.id, status, ms, error: error ?? "no reply", pass: false }); continue; }
+  replies[c.id] = reply;
+  const checks = {};
+  if (c.action) checks.action = reply.action === c.action;
+  if (c.month !== undefined) checks.month = (reply.intent.month ?? null) === c.month;
+  if (c.days !== undefined) checks.days = reply.intent.durationDays === c.days;
+  if (c.date) checks.date = reply.intent.startDate === c.date;
+  if (c.check) checks.constraint = Boolean(c.check(reply, prev));
+  const placeIds = [...(reply.routes ?? []).flatMap((o) => o.highlights.map((h) => h.id)), ...(reply.stops ?? []).map((s) => s.id), ...(reply.itinerary ?? []).flatMap((d) => d.items.map((i) => i.placeId).filter(Boolean))];
+  checks.grounded = placeIds.every((id) => PLACE_IDS.has(id));
+  rows.push({
+    id: c.id, msg: c.msg, ms, source: reply.source, action: reply.action, checks,
+    pass: Object.values(checks).every(Boolean), placesChecked: placeIds.length,
+  });
+  console.log(`${rows.at(-1).pass ? "PASS" : "FAIL"} ${c.id.padEnd(16)} ${String(ms).padStart(5)}ms ${reply.source} ${reply.action} ${JSON.stringify(checks)}`);
+}
+
+// ── metrics ──
+const done = rows.filter((r) => r.checks);
+const rate = (key) => {
+  const xs = done.filter((r) => key in r.checks);
+  return { pass: xs.filter((r) => r.checks[key]).length, total: xs.length };
+};
+const lat = done.map((r) => r.ms).sort((a, b) => a - b);
+const q = (p) => lat[Math.min(lat.length - 1, Math.floor(lat.length * p))];
+const metrics = {
+  base: BASE, runAt: new Date().toISOString(), cases: CASES.length,
+  overall: { pass: done.filter((r) => r.pass).length, total: done.length },
+  action: rate("action"), month: rate("month"), days: rate("days"), date: rate("date"),
+  constraint: rate("constraint"), grounded: rate("grounded"),
+  placesChecked: done.reduce((a, r) => a + r.placesChecked, 0),
+  jevShare: { jev: done.filter((r) => r.source === "jev").length, total: done.length },
+  latencyMs: { p50: q(0.5), p95: q(0.95), max: lat.at(-1) },
+};
+
+const pct = ({ pass, total }) => (total ? `${pass}/${total} (${Math.round((100 * pass) / total)}%)` : "–");
+const md = `# Tabi agent evaluation
+
+Run: ${metrics.runAt} · target: \`${BASE}\` · ${metrics.cases} scenarios (Thai, incl. a 4-turn conversation)
+
+| Metric | Result |
+|---|---|
+| All checks pass | ${pct(metrics.overall)} |
+| Right action (suggest / ask / open / draft / flights / answer / chat) | ${pct(metrics.action)} |
+| Month understood | ${pct(metrics.month)} |
+| Trip length understood | ${pct(metrics.days)} |
+| Exact date understood | ${pct(metrics.date)} |
+| Constraint kept (region, refine stays local, no price claims …) | ${pct(metrics.constraint)} |
+| Grounded — every suggested place exists in the place store | ${pct(metrics.grounded)} (${metrics.placesChecked} places checked) |
+| Answered by Jev (not keyword fallback) | ${metrics.jevShare.jev}/${metrics.jevShare.total} |
+| Latency p50 / p95 / max | ${metrics.latencyMs.p50} / ${metrics.latencyMs.p95} / ${metrics.latencyMs.max} ms |
+
+## Scenarios
+
+| Case | Message | Action | ms | Checks |
+|---|---|---|---|---|
+${rows.map((r) => r.checks
+  ? `| ${r.pass ? "✅" : "❌"} ${r.id} | ${r.msg} | ${r.action} | ${r.ms} | ${Object.entries(r.checks).map(([k, v]) => `${v ? "✓" : "✗"} ${k}`).join(", ")} |`
+  : `| ⚠️ ${r.id} | – | – | – | ${r.skipped ?? r.error} |`).join("\n")}
+
+Latency is measured from this machine, so it includes network time to \`${BASE}\`.
+`;
+
+mkdirSync(new URL("../docs/eval/", import.meta.url), { recursive: true });
+writeFileSync(new URL("../docs/eval/tabi-eval.md", import.meta.url), md);
+writeFileSync(new URL("../docs/eval/tabi-eval.json", import.meta.url), JSON.stringify({ metrics, rows }, null, 2));
+console.log("\n" + JSON.stringify(metrics, null, 2));

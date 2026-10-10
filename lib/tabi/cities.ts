@@ -39,13 +39,25 @@ export const GATEWAYS: { city: string; airport: string; searchName: string }[] =
 
 export type BaseCity = { name: string; th: string; lat: number; lon: number; region: Region };
 
-export const BASE_CITIES: BaseCity[] = japanMajorCities.map((c) => ({
-  name: c.name,
-  th: TH[c.name] ?? c.name,
-  lat: c.lat,
-  lon: c.lon,
-  region: PREFECTURE_REGION[c.prefecture] ?? "kanto",
-}));
+/**
+ * Extra bases Tabi needs that the /city pages don't have (kept here so the older
+ * city list, sitemap and /city/[slug] routes stay unchanged). Keep in sync with
+ * EXTRA_BASES in scripts/build-places.mjs.
+ */
+export const TABI_EXTRA_BASES = [
+  { name: "Toyama", th: "โทยามะ", lat: 36.6953, lon: 137.2113, prefecture: "Toyama" }, // Tateyama Alpine Route gateway (mockup 3)
+] as const;
+
+export const BASE_CITIES: BaseCity[] = [
+  ...japanMajorCities.map((c) => ({
+    name: c.name,
+    th: TH[c.name] ?? c.name,
+    lat: c.lat,
+    lon: c.lon,
+    region: PREFECTURE_REGION[c.prefecture] ?? "kanto",
+  })),
+  ...TABI_EXTRA_BASES.map((c) => ({ name: c.name, th: c.th, lat: c.lat, lon: c.lon, region: "chubu" as Region })),
+];
 
 export const CITY_BY_NAME = new Map(BASE_CITIES.map((c) => [c.name, c]));
 
@@ -57,7 +69,7 @@ export const REGION_TH: Record<Region, string> = {
 /** Thai/English words → base city or region. Longer aliases first so "โอซาก้า" wins over "โอ". */
 const EXTRA_ALIASES: [string, string][] = [
   ["โอซาก้", "Osaka"], ["ฟูจิ", "Kawaguchiko"], ["ภูเขาไฟฟูจิ", "Kawaguchiko"],
-  ["ทาเตยามะ", "region:chubu"], ["ทาเตะยามะ", "region:chubu"], ["คามิโคจิ", "Matsumoto"], ["ชิราคาวาโกะ", "Takayama"],
+  ["ทาเตยามะ", "Toyama"], ["ทาเตะยามะ", "Toyama"], ["tateyama", "Toyama"], ["คามิโคจิ", "Matsumoto"], ["ชิราคาวาโกะ", "Takayama"],
   ["hokkaido", "region:hokkaido"], ["kyushu", "region:kyushu"], ["okinawa", "region:okinawa"], ["โอกินาวา", "region:okinawa"],
 ];
 const ALIASES: [string, string][] = [

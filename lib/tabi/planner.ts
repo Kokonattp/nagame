@@ -56,6 +56,10 @@ function placeFit(p: Place, intent: TripIntent): number {
   }
   const season = seasonOf(intent.month);
   if (season) s += p.season === season ? 0.8 : p.season === "all_year" ? 0.2 : -0.3;
+  // Opposite-season peaks are a safety issue, not just taste: a summer climbing
+  // mountain (Mount Tsurugi) was suggested for a December snow trip.
+  if (season === "winter" && p.season === "summer" && p.type === "nature") s -= 2.5;
+  if (season === "summer" && p.season === "winter") s -= 1.5;
   if (prefs.includes("fewer_crowds")) s -= (p.crowd - 2) * 0.6;
   if (prefs.includes("family")) s += p.family ? 0.5 : -0.8;
   if (prefs.includes("easy_travel")) s += p.firstTimer ? 0.4 : -0.2;
