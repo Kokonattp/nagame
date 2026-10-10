@@ -34,6 +34,19 @@ const IDEAS = [
 /** Errors whose Thai message came from /api/tabi and is safe to show as-is. */
 class ApiError extends Error {}
 
+/** true at ≥ minWidth px; false during SSR/first paint (mobile-first). */
+function useMinWidth(minWidth: number) {
+  const [match, setMatch] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(`(min-width: ${minWidth}px)`);
+    const update = () => setMatch(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, [minWidth]);
+  return match;
+}
+
 const img = (wikiTitle: string) => `/api/tabi/image?title=${encodeURIComponent(wikiTitle)}`;
 /** No Wikipedia image → hide the <img>; the .tabi-img gradient behind it stays as the fallback. */
 const hideBroken = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -185,6 +198,10 @@ export function TabiApp() {
 
       <nav className="tabi-nav" aria-label="เมนูหลัก">
         <div className="tabi-nav-inner">
+          <button type="button" className="tabi-nav-brand" onClick={nav("home")} aria-label="Nagame หน้าแรก">
+            <FujiMark />
+            <span className="tabi-title text-[22px] font-bold leading-none tracking-tight text-[var(--t-navy)]">Nagame</span>
+          </button>
           <NavButton icon={<Home size={22} />} label="หน้าแรก" active={screen === "home"} onClick={nav("home")} />
           <NavButton icon={<MapIcon size={22} />} label="วางแผนทริป" active={["chat", "route", "itinerary", "flights", "trips"].includes(screen)} onClick={nav(turns.length ? "chat" : "trips")} />
           <NavButton icon={<Heart size={22} />} label="ทริปของฉัน" active={false} onClick={nav("trips")} />
@@ -252,13 +269,13 @@ const TAG_ICON: Record<string, string> = {
 
 function TopBar({ onBack, right }: { onBack?: () => void; right?: React.ReactNode }) {
   return (
-    <header className="mb-4 flex items-center gap-3">
+    <header className={`mb-4 flex items-center gap-3 ${!onBack && !right ? "lg:hidden" : ""}`}>
       {onBack && (
         <button type="button" onClick={onBack} aria-label="ย้อนกลับ" className="grid h-11 w-11 place-items-center rounded-full bg-white shadow-[var(--t-shadow-sm)]">
           <ChevronLeft size={22} />
         </button>
       )}
-      <div className="flex flex-1 items-center gap-2">
+      <div className="flex flex-1 items-center gap-2 lg:invisible">
         <FujiMark />
         <div>
           <p className="tabi-title text-[22px] font-bold leading-none tracking-tight">Nagame</p>
@@ -305,17 +322,19 @@ function HomeScreen({ onAsk }: { onAsk: (m: string) => void }) {
   return (
     <div className="tabi-rise space-y-6">
       <TopBar />
+      <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start lg:gap-10 lg:space-y-0">
       {/* Hero (mockup 1): Fuji + Chūreitō pagoda; a light wash keeps the heading readable */}
-      <section className="relative -mx-4 overflow-hidden sm:mx-0 sm:rounded-[28px]">
+      <section className="relative -mx-4 overflow-hidden sm:mx-0 sm:rounded-[28px] lg:sticky lg:top-[92px]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={img("Arakurayama Sengen Park")} alt="" onError={hideBroken} className="tabi-img h-[300px] w-full object-[50%_70%]" />
+        <img src={img("Arakurayama Sengen Park")} alt="" onError={hideBroken} className="tabi-img h-[300px] w-full object-[50%_70%] lg:h-[560px]" />
         <div className="absolute inset-0 bg-gradient-to-b from-[rgba(247,251,255,.97)] via-[rgba(247,251,255,.7)] to-transparent" />
-        <div className="absolute inset-x-0 top-0 px-4 pt-3 sm:px-5">
-          <h1 className="text-[34px] font-bold leading-[1.15] tracking-tight">เริ่มวางแผน<br />ทริปญี่ปุ่น 🌸</h1>
-          <p className="mt-2 max-w-[260px] font-medium text-[var(--t-navy)]">บอกทาบิว่าอยากไปช่วงไหน กี่วัน และชอบเที่ยวแนวไหน</p>
+        <div className="absolute inset-x-0 top-0 px-4 pt-3 sm:px-5 lg:px-8 lg:pt-8">
+          <h1 className="text-[34px] font-bold leading-[1.15] tracking-tight lg:text-[52px]">เริ่มวางแผน<br />ทริปญี่ปุ่น 🌸</h1>
+          <p className="mt-2 max-w-[260px] font-medium text-[var(--t-navy)] lg:max-w-[380px] lg:text-lg">บอกทาบิว่าอยากไปช่วงไหน กี่วัน และชอบเที่ยวแนวไหน</p>
         </div>
         <p className="absolute bottom-2 right-3 rounded-full bg-black/40 px-2 text-[10px] text-white">ภาพ: Wikipedia</p>
       </section>
+      <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Avatar size={52} animated />
         <div className="flex-1"><Composer onAsk={onAsk} loading={false} placeholder="เช่น 5 วัน พ.ค. เน้นธรรมชาติ" /></div>
@@ -329,9 +348,9 @@ function HomeScreen({ onAsk }: { onAsk: (m: string) => void }) {
       </div>
       <section>
         <h2 className="mb-3 text-lg font-bold">แรงบันดาลใจจากญี่ปุ่น</h2>
-        <div className="tabi-scroll-x -mx-4 px-4">
+        <div className="tabi-scroll-x tabi-ideas -mx-4 px-4 lg:mx-0 lg:px-0">
           {IDEAS.map((idea) => (
-            <button key={idea.title} type="button" onClick={() => onAsk(idea.prompt)} className="tabi-card w-[180px] shrink-0 overflow-hidden text-left">
+            <button key={idea.title} type="button" onClick={() => onAsk(idea.prompt)} className="tabi-card w-[180px] shrink-0 overflow-hidden text-left lg:w-auto">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={img(idea.wiki)} alt="" loading="lazy" onError={hideBroken} className="tabi-img h-[110px] w-full" />
               <div className="p-3">
@@ -350,6 +369,8 @@ function HomeScreen({ onAsk }: { onAsk: (m: string) => void }) {
           <p className="text-sm">ทาบิจะเสนอเส้นทางไม่เกิน 3 แบบ เลือกแล้วจัดเป็นแผนรายวันให้ ปรับได้ด้วยการพิมพ์บอก</p>
         </div>
       </section>
+      </div>
+      </div>
     </div>
   );
 }
@@ -363,8 +384,21 @@ function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack }: {
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [turns.length, loading]);
   const last = [...turns].reverse().find((t) => t.reply)?.reply;
   const points: MapPoint[] = useMemo(() => (routes[0] ? routes[0].stops.map((s) => ({ lat: s.lat, lon: s.lon, label: s.city, kind: "stop" as const })) : []), [routes]);
+  const desktop = useMinWidth(1024);
+  const showRoutes = last?.action === "suggest_routes" && routes.length > 0;
+  // one map instance: inline under the cards on phones, pinned in the side column on desktop
+  const mapCard = showRoutes && (
+    <div className="tabi-card p-3">
+      <p className="mb-2 text-sm font-semibold">แผนที่ของเส้นทางที่ 1</p>
+      <TabiMap points={points} height={desktop ? 380 : 170} interactive={false} />
+      <button type="button" className="tabi-btn tabi-btn--soft mt-2 w-full" onClick={() => onPick(routes[0])}>
+        <MapIcon size={18} />ดูเส้นทางนี้แบบเต็ม
+      </button>
+    </div>
+  );
 
   return (
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:gap-8">
     <div className="space-y-4">
       <TopBar onBack={onBack} />
       <ol className="space-y-3" aria-live="polite">
@@ -394,25 +428,36 @@ function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack }: {
       </ol>
       {error && <p role="alert" className="rounded-2xl bg-[#fff1e6] px-4 py-3 text-sm text-[#a5521a]">{error}</p>}
 
-      {last?.action === "suggest_routes" && routes.length > 0 && (
+      {showRoutes && (
         <section className="space-y-3" aria-label="เส้นทางที่ทาบิแนะนำ">
           {routes.map((r, i) => <RouteCard key={r.id} route={r} index={i} onPick={() => onPick(r)} />)}
           <p className="tabi-muted text-[11px]">ภาพ: Wikipedia · เวลาเดินทางเป็นค่าประมาณ</p>
-          <div className="tabi-card p-3">
-            <p className="mb-2 text-sm font-semibold">แผนที่ของเส้นทางที่ 1</p>
-            <TabiMap points={points} height={170} interactive={false} />
-            <button type="button" className="tabi-btn tabi-btn--soft mt-2 w-full" onClick={() => onPick(routes[0])}>
-              <MapIcon size={18} />ดูเส้นทางนี้แบบเต็ม
-            </button>
-          </div>
+          {!desktop && mapCard}
         </section>
       )}
       {last?.ask && <Chips items={last.ask.chips} onPick={onAsk} />}
       {last?.flight && <FlightCard link={last.flight} />}
       {!last?.ask && last?.chips && <Chips items={last.chips} onPick={onAsk} />}
       <div ref={end} className="h-16" aria-hidden />
-      <div className="sticky bottom-[84px] pt-2"><Composer onAsk={onAsk} loading={loading} /></div>
+      <div className="sticky bottom-[84px] pt-2 lg:bottom-6"><Composer onAsk={onAsk} loading={loading} /></div>
     </div>
+    {desktop && <aside className="tabi-sticky hidden lg:block">{mapCard || <ChatSideTip />}</aside>}
+    </div>
+  );
+}
+
+/** Desktop side column before any route exists: what Tabi can do. */
+function ChatSideTip() {
+  return (
+    <section className="tabi-card space-y-2 bg-[var(--t-sakura)] p-5">
+      <Avatar size={64} mood="happy" animated />
+      <p className="font-bold text-[var(--t-pink-ink)]">ลองบอกทาบิแบบนี้</p>
+      <ul className="list-disc space-y-1 pl-5 text-sm">
+        <li>ไป 10 ธ.ค. 5 วัน อยากเห็นหิมะ</li>
+        <li>พาลูกไปญี่ปุ่นครั้งแรก เมษา 6 วัน</li>
+        <li>อยากไปเกียวโต ดูใบไม้เปลี่ยนสี</li>
+      </ul>
+    </section>
   );
 }
 
@@ -463,6 +508,7 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
     ],
     [route, stops],
   );
+  const desktop = useMinWidth(1024);
   return (
     <div className="tabi-rise space-y-4">
       <TopBar
@@ -473,8 +519,10 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
           </button>
         }
       />
+      <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:space-y-0">
+      <div className="tabi-sticky space-y-4">
       <section>
-        <h1 className="text-2xl font-bold">เส้นทางที่แนะนำ</h1>
+        <h1 className="text-2xl font-bold lg:text-3xl">เส้นทางที่แนะนำ</h1>
         <p className="tabi-muted">{route.stops.map((s) => `${s.cityTh} ${s.nights} คืน`).join(" → ")}</p>
       </section>
       {/* city strip with a photo per stop (mockup 3) */}
@@ -497,7 +545,7 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
           );
         })}
       </ol>
-      <div className="tabi-card p-2"><TabiMap points={points} height={240} /></div>
+      <div className="tabi-card p-2"><TabiMap points={points} height={desktop ? 420 : 240} /></div>
       <section className="tabi-card flex gap-3 bg-[var(--t-sakura)] p-4">
         <Avatar size={48} mood="happy" animated />
         <div>
@@ -505,6 +553,8 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
           <p className="text-sm">{route.reason}{route.tradeoff ? ` · ข้อแลก: ${route.tradeoff}` : ""}</p>
         </div>
       </section>
+      </div>
+      <div className="space-y-4">
       <section className="space-y-3">
         <h2 className="text-lg font-bold">{reply?.action === "suggest_stops" ? "จุดแวะที่ทาบิหาเพิ่มให้" : "จุดเด่นระหว่างทาง"}</h2>
         {stops.map((h) => {
@@ -528,6 +578,8 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
       </section>
       <button type="button" className="tabi-btn tabi-btn--primary w-full" disabled={loading} onClick={() => onAsk("จัดเป็นแผนรายวันให้หน่อย")}><CalendarDays size={18} />จัดแผนรายวัน</button>
       <Chips items={["ขอแวะออนเซ็นระหว่างทาง", "ขอแวะที่คนน้อย", "ขอแวะที่วิวสวยถ่ายรูป"]} onPick={onAsk} />
+      </div>
+      </div>
     </div>
   );
 }
@@ -565,6 +617,8 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
   return (
     <div className="tabi-rise space-y-4">
       <TopBar onBack={onBack} />
+      <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:space-y-0">
+      <div className="space-y-4">
       <section className="tabi-card overflow-hidden">
         <div className="relative h-[120px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -598,7 +652,7 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
           </label>
         </div>
       </section>
-      <section className="tabi-card flex gap-3 bg-[var(--t-sakura)] p-4">
+      <section className="tabi-card flex gap-3 lg:hidden bg-[var(--t-sakura)] p-4">
         <Avatar size={44} mood="happy" />
         <p className="text-sm"><b className="text-[var(--t-pink-ink)]">นี่คือร่างทริปคร่าว ๆ</b> เวลาเดินทางเป็นค่าประมาณ บอกทาบิให้ปรับได้ตลอดนะ</p>
       </section>
@@ -676,6 +730,12 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
         <p className="tabi-muted px-1 text-[11px]">ภาพ: Wikipedia</p>
       </section>
 
+      </div>
+      <div className="tabi-sticky space-y-4">
+      <section className="tabi-card hidden gap-3 lg:flex bg-[var(--t-sakura)] p-4">
+        <Avatar size={44} mood="happy" />
+        <p className="text-sm"><b className="text-[var(--t-pink-ink)]">นี่คือร่างทริปคร่าว ๆ</b> เวลาเดินทางเป็นค่าประมาณ บอกทาบิให้ปรับได้ตลอดนะ</p>
+      </section>
       <section className="tabi-card p-4">
         <h2 className="mb-2 font-bold">เตรียมก่อนเดินทาง</h2>
         <ul className="space-y-1">
@@ -694,6 +754,8 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
         <button type="button" className="tabi-btn tabi-btn--soft whitespace-nowrap px-2 text-sm" onClick={onMap}><MapIcon size={18} />แผนที่</button>
         <button type="button" className="tabi-btn tabi-btn--pink whitespace-nowrap px-2 text-sm" onClick={() => onAsk("ดูตั๋วเครื่องบินให้หน่อย")}><Plane size={18} />หาตั๋ว</button>
         <button type="button" className="tabi-btn tabi-btn--primary whitespace-nowrap px-2 text-sm" onClick={() => onAsk("อยากปรับแผนหน่อย")}><Pencil size={18} />ปรับแผน</button>
+      </div>
+      </div>
       </div>
     </div>
   );
@@ -764,9 +826,11 @@ function FlightsScreen({ reply, trip, onBack, onChat, onPickDate }: {
       </section>
       {link?.legs?.length ? (
         <>
-          {link.legs.map((leg, i) => (
-            <BoardingPass key={leg.dir} leg={leg} index={i} href={leg.dir === "return" && link.returnUrl ? link.returnUrl : link.url} />
-          ))}
+          <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
+            {link.legs.map((leg, i) => (
+              <BoardingPass key={leg.dir} leg={leg} index={i} href={leg.dir === "return" && link.returnUrl ? link.returnUrl : link.url} />
+            ))}
+          </div>
           <p className="tabi-muted text-xs">{link.note}</p>
           {!link.legs[0].date && trip?.itinerary && (
             <button type="button" className="tabi-btn tabi-btn--pink w-full" onClick={onPickDate}>
@@ -795,7 +859,7 @@ function TripsScreen({ trips, onOpen, onNew }: { trips: SavedTrip[]; onOpen: (t:
           <button type="button" className="tabi-btn tabi-btn--primary w-full" onClick={onNew}>เริ่มวางแผนทริป</button>
         </section>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
           {trips.map((t) => (
             <li key={t.id}>
               <button type="button" onClick={() => onOpen(t)} className="tabi-card flex w-full items-center gap-3 p-4 text-left">

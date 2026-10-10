@@ -178,3 +178,17 @@
 @media (prefers-reduced-motion: reduce) {
   .tabi .tabi-sprite img { animation: none !important; transform: none; }
 }
+
+/* ── desktop (≥1024px): wider canvas, the bottom nav becomes a top bar ── */
+.tabi-nav .tabi-nav-brand { display: none; } /* beats ".tabi-nav button { display: flex }" */
+@media (min-width: 1024px) {
+  .tabi-shell { max-width: 1160px; padding: 92px 32px 56px; }
+  .tabi-nav { inset: 0 0 auto 0; padding: 10px 32px; border-top: 0; border-bottom: 1px solid var(--t-line); }
+  .tabi-nav-inner { display: flex; align-items: center; gap: 8px; max-width: 1160px; }
+  .tabi-nav .tabi-nav-brand { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-right: auto; min-height: 48px; }
+  .tabi-nav button:not(.tabi-nav-brand) { flex-direction: row; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; font-size: 15px; }
+  .tabi-nav button[aria-current="page"] { background: var(--t-blue-soft); }
+  .tabi-sticky { position: sticky; top: 92px; }
+  /* .tabi-scroll-x sets display:flex outside Tailwind's layers, so the grid lives here */
+  .tabi-ideas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
+}

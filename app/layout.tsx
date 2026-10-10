@@ -1,16 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+const TITLE = "Nagame 眺め — วางทริปญี่ปุ่นกับทาบิ";
+const DESCRIPTION = "คุยกับทาบิ แมวผู้ช่วยวางทริปญี่ปุ่น บอกช่วงเวลาและแนวที่ชอบ แล้วได้เส้นทางและร่างทริปรายวัน";
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://nagame.vercel.app"),
-  title: "Nagame 眺め — เพื่อนช่วยเตรียมทริปญี่ปุ่น",
-  description: "คุยกับกร๊วกเพื่อเลือกเมือง เตรียมทริป และเช็กข้อมูลญี่ปุ่นที่เกี่ยวข้องในที่เดียว",
+  title: TITLE,
+  description: DESCRIPTION,
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/tabi/icon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/tabi/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/tabi/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: "/apple-touch-icon.png",
+    apple: "/tabi/apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,
@@ -18,23 +22,23 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
   },
   openGraph: {
-    title: "Nagame 眺め — เพื่อนช่วยเตรียมทริปญี่ปุ่น",
-    description: "คุยกับกร๊วกเพื่อเลือกเมือง เตรียมทริป และเช็กข้อมูลญี่ปุ่นที่เกี่ยวข้องในที่เดียว",
+    title: TITLE,
+    description: DESCRIPTION,
     siteName: "Nagame",
     type: "website",
     locale: "th_TH",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Nagame 眺め — เพื่อนช่วยเตรียมทริปญี่ปุ่น",
-    description: "คุยกับกร๊วกเพื่อเลือกเมือง เตรียมทริป และเช็กข้อมูลญี่ปุ่นที่เกี่ยวข้องในที่เดียว",
+    title: TITLE,
+    description: DESCRIPTION,
   },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f8f5ef",
+  themeColor: "#f7fbff",
 };
 
 export default function RootLayout({
