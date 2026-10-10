@@ -33,6 +33,8 @@ export type Place = {
 export type TripIntent = {
   month?: number; // 1–12
   durationDays?: number;
+  /** departure date "YYYY-MM-DD" once known (from chat or the date picker) */
+  startDate?: string;
   preferences: Preference[];
   /** base-city names or region ids the traveller mentioned */
   focus: string[];
@@ -68,7 +70,19 @@ export type RouteOption = {
   totalKm: number;
 };
 
-export type ItineraryItem = { kind: "move" | "see" | "stay"; text: string; placeId?: string; wikiTitle?: string; approx?: boolean };
+export type DaySlot = "morning" | "afternoon" | "evening";
+/** How a move happens — drives the coloured chip on the timeline (video reference). */
+export type TravelMode = "flight" | "train" | "airport";
+export type ItineraryItem = {
+  kind: "move" | "see" | "stay";
+  text: string;
+  /** part of the day instead of a clock time: we have no live timetables */
+  slot?: DaySlot;
+  mode?: TravelMode;
+  placeId?: string;
+  wikiTitle?: string;
+  approx?: boolean;
+};
 /** `photo` = Wikipedia title of the day's first sight (card thumbnail). */
 export type ItineraryDay = { day: number; city: string; title: string; items: ItineraryItem[]; photo?: string };
 
@@ -82,7 +96,16 @@ export type TabiAction =
   | "answer"
   | "chat";
 
-export type FlightLink = { label: string; url: string; note: string };
+export type FlightLeg = { dir: "outbound" | "return"; from: string; fromCode: string; to: string; toCode: string; date?: string };
+export type FlightLink = {
+  label: string;
+  url: string;
+  note: string;
+  /** boarding-pass cards: Bangkok → arrival airport, departure airport → Bangkok */
+  legs?: FlightLeg[];
+  /** separate search when flying home from a different airport (open-jaw) */
+  returnUrl?: string;
+};
 
 export type TabiReply = {
   bubbles: string[];

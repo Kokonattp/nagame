@@ -19,6 +19,7 @@ export type Understanding = {
   preferences: Preference[];
   month?: number;
   durationDays?: number;
+  startDate?: string;
   focus: string[];
   source: "jev" | "fallback";
 };
@@ -45,6 +46,25 @@ export function parseMonth(text: string): number | undefined {
     if (m && (!best || m.index < best.index)) best = { month, index: m.index };
   }
   return best?.month;
+}
+
+/**
+ * "10 ธ.ค." / "วันที่ 3 มกรา" / "Dec 10" → "YYYY-MM-DD", the next such date from `today`.
+ * Only a day number glued to a month counts, so "5 วัน พ.ค." is not a date.
+ */
+export function parseStartDate(text: string, today = new Date()): string | undefined {
+  const m = /(?:วันที่\s*)?(\d{1,2})\s*(?=(ม\.ค\.|ก\.พ\.|มี\.ค\.|เม\.ย\.|พ\.ค\.|มิ\.ย\.|ก\.ค\.|ส\.ค\.|ก\.ย\.|ต\.ค\.|พ\.ย\.|ธ\.ค\.|มกรา|กุมภา|มีนา|เมษา|พฤษภา|มิถุนา|กรกฎา|สิงหา|กันยา|ตุลา|พฤศจิกา|ธันวา|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))/i.exec(text);
+  if (!m) return undefined;
+  const day = Number(m[1]);
+  const month = parseMonth(text.slice(m.index));
+  if (!month || day < 1 || day > 31) return undefined;
+  let year = today.getFullYear();
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  if (candidate.getTime() < todayUtc) year += 1;
+  const d = new Date(Date.UTC(year, month - 1, day));
+  if (d.getUTCMonth() !== month - 1) return undefined; // e.g. 31 ก.พ.
+  return d.toISOString().slice(0, 10);
 }
 
 export function parseDays(text: string): number | undefined {
@@ -83,9 +103,11 @@ const PREF_TEXT: Record<Preference, string> = {
 };
 
 export async function understand(message: string, ctx: TabiContext): Promise<Understanding> {
+  const startDate = parseStartDate(message);
   const base = {
-    month: parseMonth(message),
+    month: startDate ? Number(startDate.slice(5, 7)) : parseMonth(message),
     durationDays: parseDays(message),
+    startDate,
     focus: findFocus(message),
   };
   if (!systemOneConfigured()) return { ...base, ...keywordFallback(message, ctx), source: "fallback" };
@@ -172,6 +194,8 @@ export function mergeIntent(prev: TripIntent | undefined, u: Understanding): Tri
   return {
     month: u.month ?? (startOver ? undefined : prev?.month),
     durationDays: u.durationDays ?? (startOver ? undefined : prev?.durationDays),
+    // a new month without a day invalidates an old exact date
+    startDate: u.startDate ?? (startOver || (u.month && prev?.startDate && Number(prev.startDate.slice(5, 7)) !== u.month) ? undefined : prev?.startDate),
     preferences: [...new Set([...prevPrefs, ...u.preferences])],
     focus: u.focus.length ? u.focus : startOver ? [] : prev?.focus ?? [],
   };

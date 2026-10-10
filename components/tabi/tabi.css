@@ -28,6 +28,12 @@
   font-family: "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Headings in Prompt (owner's pick, closer to the mockup's rounded bold Thai); body stays Plex. */
+.tabi h1, .tabi h2, .tabi .tabi-title {
+  font-family: var(--font-prompt, "Prompt"), "IBM Plex Sans Thai", ui-sans-serif, sans-serif;
+  letter-spacing: -0.01em;
+}
+
 .tabi-shell {
   position: relative;
   max-width: 480px;

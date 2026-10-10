@@ -7,7 +7,7 @@ import closuresData from "@/data/places/seasonal-closures.json";
 import { BASE_CITIES, CITY_BY_NAME, km, nearestGateway, type BaseCity, type Region } from "./cities";
 import { askSystemOne, systemOneConfigured } from "./system-one";
 import type {
-  Highlight, ItineraryDay, ItineraryItem, Place, Preference, RouteOption, RouteStop, Season, TripIntent,
+  DaySlot, Highlight, ItineraryDay, ItineraryItem, Place, Preference, RouteOption, RouteStop, Season, TripIntent,
 } from "./types";
 
 const PLACES = placesData as Place[];
@@ -278,19 +278,21 @@ export function draftItinerary(route: RouteOption, intent: TripIntent, extraStop
     const staying = Math.max(stop.nights, 1);
     for (let n = 0; n < staying && day < days; n++, day++) {
       const items: ItineraryItem[] = [];
-      if (day === 1) items.push({ kind: "move", text: `บินถึง${CITY_BY_NAME.get(route.gateway.city)?.th ?? route.gateway.city} แล้วเข้า${stop.cityTh}`, approx: true });
+      // Parts of the day, not clock times: we have no live timetables (spec §2.2).
+      if (day === 1) items.push({ kind: "move", slot: "morning", mode: "flight", text: `บินถึง${CITY_BY_NAME.get(route.gateway.city)?.th ?? route.gateway.city} แล้วเข้า${stop.cityTh}`, approx: true });
       else if (n === 0) {
         const prev = route.stops[i - 1];
         const hours = Math.max(1, Math.round(km(prev, stop) / 150));
-        items.push({ kind: "move", text: `${prev.cityTh} → ${stop.cityTh} ประมาณ ${hours} ชม.`, approx: true });
+        items.push({ kind: "move", slot: "morning", mode: "train", text: `${prev.cityTh} → ${stop.cityTh} ประมาณ ${hours} ชม.`, approx: true });
       }
       const extras = extraStops.filter((h) => h.city === stop.city && !used.has(h.id));
       const picks = [
         ...extras.map((h) => ({ id: h.id, name: h.name, wikiTitle: h.wikiTitle })),
         ...topPlacesFor(stop.city, intent, used, 3).map((p) => ({ id: p.id, name: p.nameEn, wikiTitle: p.wikiTitle })),
       ].slice(0, day === 1 || n === 0 ? 1 : 2);
-      for (const p of picks) { used.add(p.id); items.push({ kind: "see", text: p.name, placeId: p.id, wikiTitle: p.wikiTitle }); }
-      items.push({ kind: "stay", text: `พักที่ ${stop.cityTh}` });
+      const sightSlots: DaySlot[] = items.length ? ["afternoon"] : ["morning", "afternoon"];
+      picks.forEach((p, k) => { used.add(p.id); items.push({ kind: "see", slot: sightSlots[k] ?? "afternoon", text: p.name, placeId: p.id, wikiTitle: p.wikiTitle }); });
+      items.push({ kind: "stay", slot: "evening", text: `พักที่ ${stop.cityTh}` });
       plan.push({ day, city: stop.city, title: n === 0 && i > 0 ? `${route.stops[i - 1].city} → ${stop.city}` : stop.city, items, photo: picks[0]?.wikiTitle });
     }
   });
@@ -299,7 +301,10 @@ export function draftItinerary(route: RouteOption, intent: TripIntent, extraStop
   if (plan.length < days) {
     plan.push({
       day: plan.length + 1, city: last.city, title: `${last.city} → กลับไทย`,
-      items: [{ kind: "move", text: `เดินทางไปสนามบิน ${departureCity(route)}`, approx: true }],
+      items: [
+        { kind: "move", slot: "morning", mode: "airport", text: `เดินทางไปสนามบิน${departureCity(route)}`, approx: true },
+        { kind: "move", slot: "afternoon", mode: "flight", text: "บินกลับกรุงเทพ" },
+      ],
     });
   }
   return plan;

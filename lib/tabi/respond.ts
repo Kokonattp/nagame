@@ -2,7 +2,7 @@
 // Thai wording comes from the phrase bank below; data comes from the planner.
 
 import { buildOutbound } from "@/lib/outbound";
-import { CITY_BY_NAME, GATEWAYS, REGION_TH, type Region } from "./cities";
+import { CITY_BY_NAME, GATEWAYS, nearestGateway, REGION_TH, type Region } from "./cities";
 import { closedIn, draftItinerary, findPlaceByText, fitRouteToDays, partlyOpenIn, PREF_TH, seasonOf, suggestRoutes, suggestStops } from "./planner";
 import type { FlightLink, Place, Preference, TabiContext, TabiReply, TripIntent } from "./types";
 import { mergeIntent, understand } from "./understand";
@@ -30,19 +30,46 @@ function tripLabel(intent: TripIntent) {
   return parts.join(" ");
 }
 
-export function flightLink(intent: TripIntent, gatewayCity = "Tokyo"): FlightLink {
-  const gw = GATEWAYS.find((g) => g.city === gatewayCity) ?? GATEWAYS[0];
-  const now = new Date();
-  let q = `Flights to ${gw.searchName} from Bangkok`;
-  if (intent.month) {
+const googleFlights = (q: string) => `https://www.google.com/travel/flights?hl=th&curr=THB&q=${encodeURIComponent(q)}`;
+
+function addDays(iso: string, n: number) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Google Flights search links for the trip. With an exact start date the search
+ * carries both dates (Google then shows its "prices are high/low" insight for them);
+ * with only a month it searches that month. Flying home from a different airport
+ * (open-jaw) gets its own one-way search for the return leg.
+ */
+export function flightLink(intent: TripIntent, arriveCity = "Tokyo", departCity = arriveCity): FlightLink {
+  const arrive = GATEWAYS.find((g) => g.city === arriveCity) ?? GATEWAYS[0];
+  const depart = GATEWAYS.find((g) => g.city === departCity) ?? arrive;
+  const openJaw = depart.city !== arrive.city;
+  const outDate = intent.startDate;
+  const retDate = outDate && intent.durationDays ? addDays(outDate, Math.max(intent.durationDays - 1, 0)) : undefined;
+
+  let when = "";
+  if (outDate) when = retDate && !openJaw ? ` on ${outDate} through ${retDate}` : ` on ${outDate}${openJaw ? " one way" : ""}`;
+  else if (intent.month) {
+    const now = new Date();
     const year = intent.month >= now.getMonth() + 1 ? now.getFullYear() : now.getFullYear() + 1;
-    q += ` in ${MONTH_EN[intent.month]} ${year}`;
+    when = ` in ${MONTH_EN[intent.month]} ${year}`;
   }
-  const target = `https://www.google.com/travel/flights?hl=th&curr=THB&q=${encodeURIComponent(q)}`;
+  const th = (c: string) => CITY_BY_NAME.get(c)?.th ?? c;
   return {
-    label: `ดูตั๋ว กรุงเทพ → ${CITY_BY_NAME.get(gw.city)?.th ?? gw.city}`,
-    url: buildOutbound(target, { kind: "flight", label: `BKK→${gw.airport}` }),
+    label: `ดูตั๋ว กรุงเทพ → ${th(arrive.city)}`,
+    url: buildOutbound(googleFlights(`Flights to ${arrive.searchName} from Bangkok${when}`), { kind: "flight", label: `BKK→${arrive.airport}` }),
     note: "เปิดใน Google Flights ดูได้ว่าราคาตอนนี้สูงหรือต่ำกว่าปกติ พร้อมกราฟราคา · ทาบิยังไม่ได้เช็กราคาเอง",
+    legs: [
+      { dir: "outbound", from: "กรุงเทพ", fromCode: "BKK", to: th(arrive.city), toCode: arrive.airport, date: outDate },
+      { dir: "return", from: th(depart.city), fromCode: depart.airport, to: "กรุงเทพ", toCode: "BKK", date: retDate },
+    ],
+    returnUrl: openJaw
+      ? buildOutbound(googleFlights(`Flights to Bangkok from ${depart.searchName}${retDate ? ` on ${retDate} one way` : when}`), { kind: "flight", label: `${depart.airport}→BKK` })
+      : undefined,
   };
 }
 
@@ -76,7 +103,9 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
       return { ...base, action: "chat", bubbles: ["เรื่องจองหรือจ่ายเงิน ทาบิยังทำให้ไม่ได้นะ แต่ช่วยวางเส้นทางกับร่างทริปได้ แล้วค่อยกดไปจองที่เว็บต้นทาง"], chips: ctx.selectedRoute ? ["จัดแผนรายวัน", "ดูตั๋วเครื่องบิน"] : START_CHIPS };
 
     case "ask_flight": {
-      const flight = flightLink(intent, ctx.selectedRoute?.gateway.city ?? focusGateway(intent));
+      const arrive = ctx.selectedRoute?.gateway.city ?? focusGateway(intent);
+      const last = ctx.selectedRoute?.stops[ctx.selectedRoute.stops.length - 1];
+      const flight = flightLink(intent, arrive, last ? nearestGateway(last).g.city : arrive);
       return { ...base, action: "flights", flight, bubbles: [pick(["ตั๋วราคาสดทาบิยังเช็กเองไม่ได้ แต่เปิดหน้าค้นหาที่ตรงกับทริปไว้ให้แล้ว กดดูได้เลย ✈️", "ราคาตั๋วเปลี่ยนทุกวัน ทาบิพาไปหน้าค้นหาที่ตั้งเส้นทางไว้ให้แล้วนะ"], message)] };
     }
 

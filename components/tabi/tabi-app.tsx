@@ -159,9 +159,21 @@ export function TabiApp() {
           />
         )}
         {screen === "itinerary" && trip?.itinerary && (
-          <ItineraryScreen trip={trip} onBack={nav("route")} onAsk={send} onMap={nav("route")} onToggle={(id) => persist({ ...trip, checklist: trip.checklist.map((c) => (c.id === id ? { ...c, done: !c.done } : c)) })} />
+          <ItineraryScreen
+            trip={trip}
+            onBack={nav("route")}
+            onAsk={send}
+            onMap={nav("route")}
+            onToggle={(id) => persist({ ...trip, checklist: trip.checklist.map((c) => (c.id === id ? { ...c, done: !c.done } : c)) })}
+            onSetDate={(iso) => {
+              // the date fixes month and length too, so the next turn (e.g. "หาตั๋ว") searches these exact days
+              const intent = { ...trip.intent, startDate: iso, month: Number(iso.slice(5, 7)), durationDays: trip.itinerary?.length ?? trip.intent.durationDays };
+              void persist({ ...trip, intent, status: "planned" });
+              setLastReply((r) => (r ? { ...r, intent } : r));
+            }}
+          />
         )}
-        {screen === "flights" && <FlightsScreen reply={lastReply} trip={trip} onBack={nav(trip?.itinerary ? "itinerary" : "chat")} onChat={nav("chat")} />}
+        {screen === "flights" && <FlightsScreen reply={lastReply} trip={trip} onBack={nav(trip?.itinerary ? "itinerary" : "chat")} onChat={nav("chat")} onPickDate={nav("itinerary")} />}
         {screen === "trips" && <TripsScreen trips={trips} onOpen={openTrip} onNew={nav("home")} />}
         {screen === "soon" && <SoonScreen />}
       </div>
@@ -244,7 +256,7 @@ function TopBar({ onBack, right }: { onBack?: () => void; right?: React.ReactNod
       <div className="flex flex-1 items-center gap-2">
         <FujiMark />
         <div>
-          <p className="text-[22px] font-bold leading-none tracking-tight">Nagame</p>
+          <p className="tabi-title text-[22px] font-bold leading-none tracking-tight">Nagame</p>
           <p className="tabi-muted text-xs">วางทริปญี่ปุ่นกับทาบิ</p>
         </div>
       </div>
@@ -318,7 +330,7 @@ function HomeScreen({ onAsk }: { onAsk: (m: string) => void }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={img(idea.wiki)} alt="" loading="lazy" onError={hideBroken} className="tabi-img h-[110px] w-full" />
               <div className="p-3">
-                <p className="font-bold">{idea.title}</p>
+                <p className="tabi-title font-bold">{idea.title}</p>
                 <p className="tabi-muted text-xs leading-snug">{idea.sub}</p>
               </div>
             </button>
@@ -416,7 +428,7 @@ function RouteCard({ route, index, onPick }: { route: RouteOption; index: number
       </div>
       <div className="min-w-0 flex-1 space-y-1.5 p-3">
         <div className="flex items-start gap-2">
-          <p className="flex-1 font-bold leading-snug">{route.title}</p>
+          <p className="tabi-title flex-1 font-bold leading-snug">{route.title}</p>
           {route.recommended && <span className="shrink-0 rounded-full bg-[var(--t-sakura)] px-2 py-0.5 text-[11px] font-semibold text-[var(--t-pink-ink)]">แนะนำสุด</span>}
         </div>
         <p className="tabi-muted text-[13px] leading-snug">{route.reason}</p>
@@ -497,7 +509,7 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={img(h.wikiTitle)} alt="" loading="lazy" onError={hideBroken} className="tabi-img h-[88px] w-[96px] shrink-0 rounded-[14px]" />
               <div className="min-w-0 flex-1 py-1">
-                <p className="font-bold leading-snug">{h.name}</p>
+                <p className="tabi-title font-bold leading-snug">{h.name}</p>
                 {h.nameJa && <p className="tabi-muted text-xs">{h.nameJa}</p>}
                 <p className="tabi-muted text-xs">{h.approxDetourMin ? `จาก ${h.city} ประมาณ ${h.approxDetourMin} นาที` : `อยู่ใน ${h.city}`}{h.reason ? ` · ${h.reason}` : ""}</p>
               </div>
@@ -516,12 +528,35 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
 }
 
 // ── 4. Draft itinerary (video-style stepper + timeline) ──
-function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle }: {
+const MONTH_SHORT = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+const WEEKDAY_SHORT = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
+const SLOT_TH = { morning: "เช้า", afternoon: "บ่าย", evening: "เย็น" } as const;
+/** Coloured chips per step, as in the video's timeline (taxi / subway / flight labels). */
+const CHIP = {
+  flight: { label: "✈️ เครื่องบิน", bg: "#e8f1ff", fg: "#1a66d9" },
+  train: { label: "🚆 รถไฟ", bg: "#e8f8f0", fg: "#17734b" },
+  airport: { label: "🧳 ไปสนามบิน", bg: "#fff1e6", fg: "#a5521a" },
+  see: { label: "📍 เที่ยว", bg: "#ffe9f2", fg: "#c2185b" },
+  stay: { label: "🛏️ ที่พัก", bg: "#eef1f7", fg: "#4b5878" },
+} as const;
+
+const isoDay = (iso: string, plus = 0) => {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + plus);
+  return d;
+};
+const thaiDate = (d: Date) => `${d.getUTCDate()} ${MONTH_SHORT[d.getUTCMonth() + 1]}`;
+const todayIso = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+
+function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
   trip: SavedTrip; onBack: () => void; onAsk: (m: string) => void; onMap: () => void; onToggle: (id: string) => void;
+  onSetDate: (iso: string) => void;
 }) {
   const days = trip.itinerary ?? [];
   const [active, setActive] = useState(0);
   const month = trip.intent.month;
+  const start = trip.intent.startDate;
+  const countdown = start ? Math.round((isoDay(start).getTime() - isoDay(todayIso()).getTime()) / 86_400_000) : null;
   return (
     <div className="tabi-rise space-y-4">
       <TopBar onBack={onBack} />
@@ -531,9 +566,31 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle }: {
           {trip.route?.highlights[0] && <img src={img(trip.route.highlights[0].wikiTitle)} alt="" onError={hideBroken} className="tabi-img absolute inset-0 h-full w-full" />}
           <div className="absolute inset-0 bg-gradient-to-t from-[rgba(12,31,74,.75)] to-transparent" />
           <div className="absolute bottom-3 left-4 text-white" data-on-image>
-            <p className="text-xl font-bold">{trip.title}</p>
-            <p className="text-sm opacity-90">{days.length} วัน {days.length - 1} คืน{month ? ` · ช่วง ${["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."][month]}` : ""}</p>
+            <p className="tabi-title text-xl font-bold">{trip.title}</p>
+            <p className="text-sm opacity-90">
+              {days.length} วัน {days.length - 1} คืน
+              {start ? ` · ${thaiDate(isoDay(start))} – ${thaiDate(isoDay(start, days.length - 1))}` : month ? ` · ช่วง ${MONTH_SHORT[month]}` : ""}
+            </p>
           </div>
+        </div>
+        {/* departure date: unlocks real dates on the stepper, the countdown and dated flight searches */}
+        <div className="flex flex-wrap items-center gap-3 p-3">
+          {countdown !== null && countdown >= 0 && (
+            <span key={start} className="tabi-pop rounded-full bg-[#ffd166] px-3 py-1 text-sm font-bold text-[var(--t-navy)]">
+              {countdown === 0 ? "ออกเดินทางวันนี้!" : `อีก ${countdown} วันออกเดินทาง`}
+            </span>
+          )}
+          <label className="flex min-h-[44px] flex-1 items-center gap-2 text-sm">
+            <CalendarDays size={18} className="text-[var(--t-blue)]" aria-hidden />
+            <span className="shrink-0">วันออกเดินทาง</span>
+            <input
+              type="date"
+              min={todayIso()}
+              value={start ?? ""}
+              onChange={(e) => e.target.value && onSetDate(e.target.value)}
+              className="min-h-[40px] flex-1 rounded-xl border border-[var(--t-line)] bg-white px-2"
+            />
+          </label>
         </div>
       </section>
       <section className="tabi-card flex gap-3 bg-[var(--t-sakura)] p-4">
@@ -546,12 +603,16 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle }: {
           <span className="tabi-stepper-rider" style={{ left: `${((active + 0.5) / days.length) * 100}%` }} aria-hidden>
             <Avatar size={40} animated />
           </span>
-          {days.map((d, i) => (
-            <button key={d.day} type="button" aria-pressed={i === active} onClick={() => setActive(i)}>
-              <span className="dot" />
-              วัน {d.day}
-            </button>
-          ))}
+          {days.map((d, i) => {
+            const date = start ? isoDay(start, i) : null;
+            return (
+              <button key={d.day} type="button" aria-pressed={i === active} onClick={() => setActive(i)} aria-label={date ? `วันที่ ${d.day} ${thaiDate(date)}` : `วันที่ ${d.day}`}>
+                <span className="dot" />
+                <span className={i === active ? "rounded-full bg-[var(--t-sakura)] px-2 text-[var(--t-pink-ink)]" : ""}>{date ? thaiDate(date) : `วัน ${d.day}`}</span>
+                {date && <span className="-mt-1 text-[11px]">{WEEKDAY_SHORT[date.getUTCDay()]}</span>}
+              </button>
+            );
+          })}
         </div>
       </section>
 
@@ -567,30 +628,40 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle }: {
             const sights = d.items.filter((it) => it.kind === "see").map((it) => it.text);
             return (
               <li key={d.day} className="relative border-t border-[var(--t-line)] first:border-t-0">
-                <button type="button" aria-expanded={open} onClick={() => setActive(i)} className="flex w-full items-center gap-3 py-3 text-left">
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  onClick={() => setActive(i)}
+                  className="flex w-full items-center gap-3 rounded-[16px] px-1 py-3 text-left transition-colors"
+                  style={open ? { background: `${DAY_COLORS[i % DAY_COLORS.length]}1f` } : undefined}
+                >
                   <span className="flex w-12 shrink-0 flex-col items-start">
                     <span className="h-3 w-3 rounded-full" style={{ background: DAY_COLORS[i % DAY_COLORS.length] }} aria-hidden />
-                    <span className="text-sm font-bold">Day {d.day}</span>
+                    <span className="tabi-title text-sm font-bold">Day {d.day}</span>
+                    {start && <span className="tabi-muted text-[11px]">{thaiDate(isoDay(start, i))}</span>}
                   </span>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={img(d.photo ?? d.city)} alt="" loading="lazy" onError={hideBroken} className="tabi-img h-[56px] w-[72px] shrink-0 rounded-[12px]" />
                   <span className="min-w-0 flex-1">
-                    <span className="block font-bold leading-snug">{d.title}</span>
+                    <span className="tabi-title block font-bold leading-snug">{d.title}</span>
                     <span className="tabi-muted block truncate text-xs">{sights.length ? sights.join(" · ") : d.items[0]?.text}</span>
                   </span>
                   <ChevronLeft size={18} className={`shrink-0 text-[var(--t-muted)] transition-transform ${open ? "-rotate-90" : "rotate-180"}`} aria-hidden />
                 </button>
                 {open && (
-                  <ol className="tabi-timeline relative mb-3 ml-[60px] space-y-3 border-l-2 border-[var(--t-line)] pl-4">
-                    {d.items.map((it, j) => (
-                      <li key={j} className="relative">
-                        <span className={`absolute -left-[23px] top-1.5 h-3 w-3 rounded-full border-2 border-white ${it.kind === "move" ? "bg-[var(--t-orange)]" : it.kind === "stay" ? "bg-[var(--t-muted)]" : "bg-[var(--t-blue)]"}`} />
-                        <p className={it.kind === "see" ? "font-semibold" : "tabi-muted text-sm"}>
-                          {it.kind === "move" ? "🚆 " : it.kind === "stay" ? "🛏️ " : "📍 "}{it.text}
+                  <ol className="tabi-timeline relative mb-3 ml-[52px] mt-2 space-y-3 border-l-2 border-dashed border-[var(--t-line)] pl-4">
+                    {d.items.map((it, j) => {
+                      const chip = CHIP[it.kind === "move" ? it.mode ?? "train" : it.kind];
+                      return (
+                        <li key={j} className="relative">
+                          <span className="absolute -left-[23px] top-1.5 h-3 w-3 rounded-full border-2 border-white" style={{ background: chip.fg }} />
+                          <span className="absolute -left-[58px] top-0.5 w-8 text-right text-[11px] text-[var(--t-muted)]">{it.slot ? SLOT_TH[it.slot] : ""}</span>
+                          <span className="mr-2 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: chip.bg, color: chip.fg }}>{chip.label}</span>
+                          <span className={it.kind === "see" ? "font-semibold" : "text-sm"}>{it.text}</span>
                           {it.approx && <span className="ml-1 rounded bg-[var(--t-blue-soft)] px-1 text-[10px] text-[var(--t-blue)]">ประมาณ</span>}
-                        </p>
-                      </li>
-                    ))}
+                        </li>
+                      );
+                    })}
                   </ol>
                 )}
               </li>
@@ -637,21 +708,70 @@ function FlightCard({ link }: { link: NonNullable<TabiReply["flight"]> }) {
   );
 }
 
-function FlightsScreen({ reply, trip, onBack, onChat }: { reply: TabiReply | null; trip: SavedTrip | null; onBack: () => void; onChat: () => void }) {
+/** Boarding-pass style leg (video reference): coloured header, big airport codes, search button. */
+function BoardingPass({ leg, href, index }: { leg: NonNullable<NonNullable<TabiReply["flight"]>["legs"]>[number]; href: string; index: number }) {
+  const out = leg.dir === "outbound";
+  const date = leg.date ? isoDay(leg.date) : null;
+  return (
+    <article className="tabi-card tabi-rise overflow-hidden" style={{ animationDelay: `${index * 90}ms` }}>
+      <header className="flex items-center justify-between px-4 py-2 text-sm font-semibold" style={{ background: out ? "#e8f1ff" : "#dff5e8", color: out ? "#1a66d9" : "#17734b" }}>
+        <span>{out ? "ขาไป" : "ขากลับ"}{date ? ` · ${thaiDate(date)} (${WEEKDAY_SHORT[date.getUTCDay()]})` : ""}</span>
+        <Plane size={16} className={out ? "" : "rotate-180"} aria-hidden />
+      </header>
+      <div className="flex items-center gap-3 px-4 py-4">
+        <div className="text-left">
+          <p className="tabi-title text-3xl font-bold leading-none">{leg.fromCode}</p>
+          <p className="tabi-muted mt-1 text-xs">{leg.from}</p>
+        </div>
+        <div className="flex flex-1 items-center gap-1 text-[var(--t-muted)]" aria-hidden>
+          <span className="h-px flex-1 border-t-2 border-dotted border-[var(--t-line)]" />
+          <Plane size={18} />
+          <span className="h-px flex-1 border-t-2 border-dotted border-[var(--t-line)]" />
+        </div>
+        <div className="text-right">
+          <p className="tabi-title text-3xl font-bold leading-none">{leg.toCode}</p>
+          <p className="tabi-muted mt-1 text-xs">{leg.to}</p>
+        </div>
+      </div>
+      <a href={href} target="_blank" rel="noopener noreferrer" className="tabi-btn tabi-btn--soft mx-4 mb-4 flex">
+        ดูเที่ยวบินใน Google Flights <ArrowRight size={18} />
+      </a>
+    </article>
+  );
+}
+
+function FlightsScreen({ reply, trip, onBack, onChat, onPickDate }: {
+  reply: TabiReply | null; trip: SavedTrip | null; onBack: () => void; onChat: () => void; onPickDate: () => void;
+}) {
+  const link = reply?.flight;
   return (
     <div className="tabi-rise space-y-4">
       <TopBar onBack={onBack} />
       {trip?.route && (
         <section className="tabi-card p-4">
-          <p className="font-bold">{trip.title}</p>
+          <p className="tabi-title font-bold">{trip.title}</p>
           <p className="tabi-muted text-sm">บินเข้า {trip.route.gateway.city} ({trip.route.gateway.airport})</p>
         </section>
       )}
       <section className="flex items-start gap-2">
-        <Avatar size={44} />
+        <Avatar size={44} animated />
         <p className="tabi-card flex-1 px-4 py-3">{reply?.bubbles.join(" ") ?? "เปิดหน้าค้นหาตั๋วที่ตรงกับทริปให้แล้วนะ"}</p>
       </section>
-      {reply?.flight && <FlightCard link={reply.flight} />}
+      {link?.legs?.length ? (
+        <>
+          {link.legs.map((leg, i) => (
+            <BoardingPass key={leg.dir} leg={leg} index={i} href={leg.dir === "return" && link.returnUrl ? link.returnUrl : link.url} />
+          ))}
+          <p className="tabi-muted text-xs">{link.note}</p>
+          {!link.legs[0].date && trip?.itinerary && (
+            <button type="button" className="tabi-btn tabi-btn--pink w-full" onClick={onPickDate}>
+              <CalendarDays size={18} />ตั้งวันเดินทาง เพื่อค้นตั๋วตามวันจริง
+            </button>
+          )}
+        </>
+      ) : (
+        link && <FlightCard link={link} />
+      )}
       <button type="button" className="tabi-btn tabi-btn--soft w-full" onClick={onChat}>คุยกับทาบิต่อ</button>
     </div>
   );
