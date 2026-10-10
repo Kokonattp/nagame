@@ -1,7 +1,7 @@
 {
   "metrics": {
-    "base": "http://localhost:3100",
-    "runAt": "2026-10-10T09:48:27.048Z",
+    "base": "https://nagame.vercel.app",
+    "runAt": "2026-10-10T13:10:39.442Z",
     "cases": 18,
     "overall": {
       "pass": 18,
@@ -37,16 +37,16 @@
       "total": 18
     },
     "latencyMs": {
-      "p50": 568,
-      "p95": 2152,
-      "max": 2152
+      "p50": 566,
+      "p95": 772,
+      "max": 772
     }
   },
   "rows": [
     {
       "id": "discover-nature",
       "msg": "อยากไปญี่ปุ่น 5 วันกลาง พ.ค. เน้นธรรมชาติ",
-      "ms": 2152,
+      "ms": 772,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -61,7 +61,7 @@
     {
       "id": "exact-date",
       "msg": "ไป 10 ธ.ค. 5 วัน อยากเห็นหิมะ",
-      "ms": 1353,
+      "ms": 710,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -77,7 +77,7 @@
     {
       "id": "kyoto-autumn",
       "msg": "อยากไปเกียวโต ดูใบไม้เปลี่ยนสี พ.ย. 5 วัน",
-      "ms": 499,
+      "ms": 504,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -92,7 +92,7 @@
     {
       "id": "hokkaido-only",
       "msg": "ฮอกไกโด ธันวาคม 7 วัน หิมะ ออนเซ็น",
-      "ms": 454,
+      "ms": 566,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -108,7 +108,7 @@
     {
       "id": "family-first",
       "msg": "พาลูกไปญี่ปุ่นครั้งแรก เมษา 6 วัน",
-      "ms": 862,
+      "ms": 681,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -123,7 +123,7 @@
     {
       "id": "tateyama",
       "msg": "อยากไปทาเตยามะ ดูกำแพงหิมะ พ.ค.",
-      "ms": 460,
+      "ms": 525,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -138,7 +138,7 @@
     {
       "id": "two-weeks",
       "msg": "เที่ยว 2 สัปดาห์ ช่วง พ.ย.",
-      "ms": 809,
+      "ms": 686,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -153,7 +153,7 @@
     {
       "id": "no-false-month",
       "msg": "พาเด็กคนเล็กไปด้วย 5 วัน",
-      "ms": 953,
+      "ms": 674,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -167,7 +167,7 @@
     {
       "id": "fukuoka-food",
       "msg": "ไปฟุกุโอกะ 4 วัน กินราเมน",
-      "ms": 516,
+      "ms": 528,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -182,7 +182,7 @@
     {
       "id": "okinawa",
       "msg": "โอกินาว่า มิถุนา 5 วัน",
-      "ms": 807,
+      "ms": 630,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -197,7 +197,7 @@
     {
       "id": "vague",
       "msg": "อยากไปญี่ปุ่น",
-      "ms": 484,
+      "ms": 569,
       "source": "jev",
       "action": "ask",
       "checks": {
@@ -210,7 +210,7 @@
     {
       "id": "greeting",
       "msg": "สวัสดีทาบิ",
-      "ms": 431,
+      "ms": 503,
       "source": "jev",
       "action": "chat",
       "checks": {
@@ -223,7 +223,7 @@
     {
       "id": "booking-refused",
       "msg": "ช่วยจองโรงแรมให้หน่อย",
-      "ms": 568,
+      "ms": 507,
       "source": "jev",
       "action": "chat",
       "checks": {
@@ -236,7 +236,7 @@
     {
       "id": "flight",
       "msg": "ตั๋วไปโอซาก้าเดือนหน้าเท่าไร",
-      "ms": 452,
+      "ms": 561,
       "source": "jev",
       "action": "flights",
       "checks": {
@@ -250,7 +250,7 @@
     {
       "id": "refine-crowds",
       "msg": "มีแบบคนน้อยกว่านี้ไหม",
-      "ms": 772,
+      "ms": 645,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -266,7 +266,7 @@
     {
       "id": "pick-first",
       "msg": "อันแรกเลย",
-      "ms": 466,
+      "ms": 495,
       "source": "jev",
       "action": "open_route",
       "checks": {
@@ -280,7 +280,7 @@
     {
       "id": "draft",
       "msg": "จัดเป็นแผนรายวันให้หน่อย",
-      "ms": 612,
+      "ms": 524,
       "source": "jev",
       "action": "draft_itinerary",
       "checks": {
@@ -294,7 +294,7 @@
     {
       "id": "detail",
       "msg": "Mount Fuji คนเยอะไหม",
-      "ms": 480,
+      "ms": 532,
       "source": "jev",
       "action": "answer",
       "checks": {
