@@ -5,7 +5,7 @@
 export const TABI_ART = {
   idle: { src: "/tabi/tabi-idle.png", face: "/tabi/tabi-idle-face.png", sprite: "/tabi/tabi-idle-sprite.png", alt: "ทาบิ" },
   happy: { src: "/tabi/tabi-happy.png", face: "/tabi/tabi-happy-face.png", sprite: "/tabi/tabi-happy-sprite.png", alt: "ทาบิดีใจ" },
-  worried: { src: "/tabi/tabi-worried.png", face: "/tabi/tabi-worried-face.png", alt: "ทาบิไม่แน่ใจ" },
+  worried: { src: "/tabi/tabi-worried.png", face: "/tabi/tabi-worried-face.png", sprite: "/tabi/tabi-worried-sprite.png", alt: "ทาบิไม่แน่ใจ" },
 } as const;
 
 export type TabiMood = keyof typeof TABI_ART;

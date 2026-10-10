@@ -159,6 +159,7 @@ function pose(t) {
   const blink = t > 0.48 && t < 0.56 ? 0.12 : 1;
   for (const e of eyes) e.scale.y = 1.25 * blink;
   if (mood === "happy") rightPaw.position.y = base.pawY + 0.08 * Math.sin(w * 4);
+  if (mood === "worried") head.rotation.z = base.headZ + 0.12 * Math.sin(w); // slow "hmm…" head tilt
 }
 
 // lights

@@ -4,8 +4,8 @@
 // The server is stateless; this component owns trip context and sends it each turn.
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ArrowUp, CalendarDays, ChevronLeft, Heart, Home, Map as MapIcon, Pencil, Plane, Plus, User } from "lucide-react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, ArrowUp, CalendarDays, ChevronLeft, CircleHelp, Heart, Home, Map as MapIcon, Pencil, Plane, Plus, User } from "lucide-react";
 import { TABI_ART, type TabiMood } from "@/lib/tabi/mascot";
 import { listTrips, newTrip, saveTrip, type SavedTrip } from "@/lib/tabi/store";
 import type { Highlight, RouteOption, TabiReply } from "@/lib/tabi/types";
@@ -30,6 +30,17 @@ const IDEAS = [
   { title: "Tateyama", sub: "กำแพงหิมะช่วง เม.ย.–มิ.ย.", wiki: "Tateyama Kurobe Alpine Route", prompt: "อยากไปทาเตยามะ ดูกำแพงหิมะ พ.ค. 5 วัน" },
   { title: "Kyoto", sub: "วัดสวย ใบไม้เปลี่ยนสี", wiki: "Kyoto", prompt: "อยากไปเกียวโต ดูใบไม้เปลี่ยนสี พ.ย. 5 วัน" },
 ];
+
+/** First-visit guide: each numbered tip appears once, on the screen where that step happens. */
+const TOUR = [
+  "พิมพ์บอกทาบิว่าอยากไปช่วงไหน กี่วัน ชอบเที่ยวแนวไหน หรือกดปุ่มลัดด้านล่างก็ได้",
+  "เลือกเส้นทางที่ชอบ หรือพิมพ์ปรับ เช่น “ขอที่คนน้อยกว่านี้”",
+  "กด “ใส่ในทริป” ที่จุดที่อยากแวะ แล้วกด “จัดแผนรายวัน”",
+  "ตั้งวันออกเดินทาง แล้วกด “หาตั๋ว” ทาบิจะเปิดหน้าค้นเที่ยวบินตามวันนั้นให้",
+];
+const TOUR_KEY = "nagame-tabi-tour-v1";
+type Tour = { ready: boolean; seen: number[]; dismiss: (step: number) => void; skip: () => void; replay: () => void };
+const TourContext = createContext<Tour | null>(null);
 
 /** Errors whose Thai message came from /api/tabi and is safe to show as-is. */
 class ApiError extends Error {}
@@ -68,6 +79,26 @@ export function TabiApp() {
   const [trips, setTrips] = useState<SavedTrip[]>([]);
 
   useEffect(() => { listTrips().then(setTrips); }, []);
+
+  // guide progress lives in this browser only; storage can throw (private mode) → just show the guide
+  const [tourSeen, setTourSeen] = useState<number[] | null>(null);
+  useEffect(() => {
+    try { setTourSeen(JSON.parse(localStorage.getItem(TOUR_KEY) ?? "[]")); } catch { setTourSeen([]); }
+  }, []);
+  const tour = useMemo<Tour>(() => {
+    const store = (seen: number[]) => {
+      setTourSeen(seen);
+      try { localStorage.setItem(TOUR_KEY, JSON.stringify(seen)); } catch { /* not remembered; fine */ }
+    };
+    const seen = tourSeen ?? [];
+    return {
+      ready: tourSeen !== null,
+      seen,
+      dismiss: (step) => store([...new Set([...seen, step])]),
+      skip: () => store(TOUR.map((_, i) => i + 1)),
+      replay: () => { store([]); go("home"); window.scrollTo({ top: 0 }); },
+    };
+  }, [tourSeen, go]);
 
   const persist = useCallback(async (next: SavedTrip) => {
     setTrip(next);
@@ -159,6 +190,7 @@ export function TabiApp() {
   const nav = (s: Screen) => () => go(s);
 
   return (
+    <TourContext.Provider value={tour}>
     <div className="tabi">
       <div className="tabi-shell">
         {screen === "home" && <HomeScreen onAsk={send} />}
@@ -206,9 +238,11 @@ export function TabiApp() {
           <NavButton icon={<MapIcon size={22} />} label="วางแผนทริป" active={["chat", "route", "itinerary", "flights", "trips"].includes(screen)} onClick={nav(turns.length ? "chat" : "trips")} />
           <NavButton icon={<Heart size={22} />} label="ทริปของฉัน" active={false} onClick={nav("trips")} />
           <NavButton icon={<User size={22} />} label="โปรไฟล์" active={screen === "soon"} onClick={nav("soon")} />
+          <button type="button" className="tabi-nav-help" onClick={tour.replay}><CircleHelp size={22} />วิธีใช้</button>
         </div>
       </nav>
     </div>
+    </TourContext.Provider>
   );
 }
 
@@ -219,12 +253,12 @@ function titleFor(route: RouteOption | undefined, days?: number) {
 }
 
 // ── shared bits ──
-/** `animated` plays the 12-frame three.js loop (breathe, sway, tail wag, blink) when one exists for the mood. */
-function Avatar({ mood = "idle", size = 44, wag = false, animated = false }: { mood?: TabiMood; size?: number; wag?: boolean; animated?: boolean }) {
+/** Plays the 12-frame three.js loop (breathe, sway, tail wag, blink) unless `animated={false}`. */
+function Avatar({ mood = "idle", size = 44, wag = false, animated = true }: { mood?: TabiMood; size?: number; wag?: boolean; animated?: boolean }) {
   const art = TABI_ART[mood];
   const sprite = animated && "sprite" in art ? art.sprite : null;
   return (
-    <span className="relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full border-2 border-white bg-[var(--t-sakura)] shadow-[var(--t-shadow-sm)]" style={{ width: size, height: size }}>
+    <span className="tabi-avatar relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full border-2 border-white bg-[var(--t-sakura)] shadow-[var(--t-shadow-sm)]" style={{ width: size, height: size }}>
       {sprite ? (
         <span className="tabi-sprite" role="img" aria-label={art.alt}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -243,6 +277,34 @@ function NavButton({ icon, label, active, onClick }: { icon: React.ReactNode; la
     <button type="button" onClick={onClick} aria-current={active ? "page" : undefined}>
       {icon}
       {label}
+    </button>
+  );
+}
+
+/** Numbered guide bubble, placed in the flow next to the control it explains (never covers it). */
+function TourTip({ step, pointer = "down" }: { step: number; pointer?: "up" | "down" }) {
+  const tour = useContext(TourContext);
+  if (!tour?.ready || tour.seen.includes(step)) return null;
+  return (
+    <div role="note" aria-label={`วิธีใช้ ขั้นที่ ${step} จาก ${TOUR.length}`} className={`tabi-tip tabi-pop tabi-tip--${pointer}`}>
+      <span className="tabi-tip-num" aria-hidden>{step}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium">{TOUR[step - 1]}</p>
+        <div className="mt-2 flex items-center gap-2">
+          <button type="button" className="tabi-tip-ok" onClick={() => tour.dismiss(step)}>{step < TOUR.length ? "เข้าใจแล้ว" : "เริ่มใช้เลย"}</button>
+          {step < TOUR.length && <button type="button" className="tabi-tip-skip" onClick={tour.skip}>ข้ามวิธีใช้</button>}
+          <span className="ml-auto text-xs opacity-80">{step}/{TOUR.length}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HelpButton() {
+  const tour = useContext(TourContext);
+  return (
+    <button type="button" onClick={tour?.replay} aria-label="วิธีใช้งาน" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-[var(--t-blue)] shadow-[var(--t-shadow-sm)] lg:hidden">
+      <CircleHelp size={22} />
     </button>
   );
 }
@@ -283,6 +345,7 @@ function TopBar({ onBack, right }: { onBack?: () => void; right?: React.ReactNod
         </div>
       </div>
       {right}
+      <HelpButton />
     </header>
   );
 }
@@ -335,14 +398,15 @@ function HomeScreen({ onAsk }: { onAsk: (m: string) => void }) {
         <p className="absolute bottom-2 right-3 rounded-full bg-black/40 px-2 text-[10px] text-white">ภาพ: Wikipedia</p>
       </section>
       <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Avatar size={52} animated />
+      <div className="tabi-ask-row flex items-center gap-3">
+        <Avatar size={52} />
         <div className="flex-1"><Composer onAsk={onAsk} loading={false} placeholder="เช่น 5 วัน พ.ค. เน้นธรรมชาติ" /></div>
       </div>
+      <TourTip step={1} pointer="up" />
       <div className="grid grid-cols-3 gap-2">
         {INSPIRATION.map((c) => (
           <button key={c.label} type="button" className="tabi-chip justify-center" onClick={() => onAsk(c.prompt)}>
-            <span aria-hidden>{c.emoji}</span>{c.label}
+            <span aria-hidden className="tabi-emoji">{c.emoji}</span>{c.label}
           </button>
         ))}
       </div>
@@ -383,6 +447,7 @@ function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack }: {
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [turns.length, loading]);
   const last = [...turns].reverse().find((t) => t.reply)?.reply;
+  const lastTabi = turns.findLastIndex((t) => t.role === "tabi");
   const points: MapPoint[] = useMemo(() => (routes[0] ? routes[0].stops.map((s) => ({ lat: s.lat, lon: s.lon, label: s.city, kind: "stop" as const })) : []), [routes]);
   const desktop = useMinWidth(1024);
   const showRoutes = last?.action === "suggest_routes" && routes.length > 0;
@@ -409,7 +474,8 @@ function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack }: {
             </li>
           ) : (
             <li key={i} className="tabi-rise flex items-start gap-2">
-              <Avatar size={38} mood={t.reply?.action === "ask" ? "worried" : "idle"} />
+              {/* only the newest reply moves: a column of moving cats is noisy and costly on phones */}
+              <Avatar size={38} mood={t.reply?.action === "ask" ? "worried" : "idle"} animated={i === lastTabi && !loading} />
               <div className="max-w-[82%] space-y-1">
                 <p className="text-xs font-semibold text-[var(--t-pink-ink)]">ทาบิ</p>
                 {t.text.split("\n").map((b, j) => (
@@ -430,6 +496,7 @@ function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack }: {
 
       {showRoutes && (
         <section className="space-y-3" aria-label="เส้นทางที่ทาบิแนะนำ">
+          <TourTip step={2} />
           {routes.map((r, i) => <RouteCard key={r.id} route={r} index={i} onPick={() => onPick(r)} />)}
           <p className="tabi-muted text-[11px]">ภาพ: Wikipedia · เวลาเดินทางเป็นค่าประมาณ</p>
           {!desktop && mapCard}
@@ -557,6 +624,7 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
       <div className="space-y-4">
       <section className="space-y-3">
         <h2 className="text-lg font-bold">{reply?.action === "suggest_stops" ? "จุดแวะที่ทาบิหาเพิ่มให้" : "จุดเด่นระหว่างทาง"}</h2>
+        <TourTip step={3} />
         {stops.map((h) => {
           const saved = savedIds.has(h.id);
           return (
@@ -652,6 +720,7 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
           </label>
         </div>
       </section>
+      <TourTip step={4} pointer="up" />
       <section className="tabi-card flex gap-3 lg:hidden bg-[var(--t-sakura)] p-4">
         <Avatar size={44} mood="happy" />
         <p className="text-sm"><b className="text-[var(--t-pink-ink)]">นี่คือร่างทริปคร่าว ๆ</b> เวลาเดินทางเป็นค่าประมาณ บอกทาบิให้ปรับได้ตลอดนะ</p>
