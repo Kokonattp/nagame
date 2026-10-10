@@ -210,6 +210,35 @@
 }
 .tabi :is(.tabi-btn:not([disabled]), .tabi-chip, .tabi-input + button:not([disabled])):active { animation: tabi-press 120ms ease-out both; }
 
+/* ── boarding pass: plane glides along the dotted path; a tear line with notches above the button ── */
+@keyframes tabi-glide { 0% { left: 0; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: calc(100% - 20px); opacity: 0; } }
+.tabi-pass-path { position: relative; flex: 1; height: 24px; background: radial-gradient(circle, var(--t-line) 1.5px, transparent 2px) 0 50% / 9px 9px repeat-x; }
+.tabi-pass-plane { position: absolute; top: 2px; left: calc(50% - 10px); animation: tabi-glide 3.2s ease-in-out infinite; }
+.tabi-pass-tear { position: relative; margin: 0 0 14px; border-top: 2px dashed var(--t-line); }
+.tabi-pass-tear::before, .tabi-pass-tear::after { content: ""; position: absolute; top: -11px; width: 20px; height: 20px; border-radius: 50%; background: var(--t-bg); border: 1px solid var(--t-line); }
+.tabi-pass-tear::before { left: -11px; }
+.tabi-pass-tear::after { right: -11px; }
+@media (prefers-reduced-motion: reduce) { .tabi .tabi-pass-plane { animation: none !important; left: calc(50% - 10px); opacity: 1; } }
+
+/* ── "ดูทาง" pills and the subway-map travel card ── */
+.tabi-leg-link { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 999px; background: var(--t-blue-soft); color: var(--t-blue); font-size: 12px; font-weight: 600; transition: translate 200ms ease; }
+.tabi-leg-link:focus-visible { outline: 3px solid rgba(45, 127, 249, 0.45); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .tabi-leg-link:hover { translate: 0 -2px; } }
+.tabi-track { position: relative; display: grid; gap: 4px; padding-left: 34px; }
+.tabi-track::before { content: ""; position: absolute; left: 13px; top: 14px; bottom: 14px; border-left: 3px dashed var(--t-line); }
+.tabi-track > li { position: relative; display: grid; gap: 4px; min-height: 30px; }
+.tabi-track-node { position: absolute; left: -34px; top: 0; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 3px solid #fff; background: var(--t-sakura); box-shadow: var(--t-shadow-sm); font-size: 14px; }
+.tabi-track-hop { display: grid; gap: 2px; padding: 4px 0 8px; }
+@keyframes tabi-chug { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-2px) rotate(-3deg); } }
+.tabi-train { display: inline-block; animation: tabi-chug 900ms ease-in-out infinite; }
+
+/* ── JMA hazard card: the one place Tabi raises its voice ── */
+.tabi-hazard { padding: 14px 16px; border-radius: var(--t-radius-sm); background: #fff4e5; border: 2px solid #ffb35c; color: #6b3500; }
+.tabi-hazard-level { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #fff; }
+.tabi-hazard-level--30 { background: #a84b00; }
+.tabi-hazard-level--40 { background: #b3261e; }
+.tabi-hazard-level--50 { background: #5c1a8c; }
+
 /* ── numbered guide bubbles (first visit; "?" / วิธีใช้ shows them again) ── */
 .tabi-tip {
   position: relative;

@@ -6,8 +6,11 @@
 import dynamic from "next/dynamic";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, ArrowUp, CalendarDays, ChevronLeft, CircleHelp, Heart, Home, Map as MapIcon, Pencil, Plane, Plus, User } from "lucide-react";
+import type { HazardAlert } from "@/lib/tabi/alerts";
+import { nearestGateway } from "@/lib/tabi/cities";
 import { TABI_ART, type TabiMood } from "@/lib/tabi/mascot";
 import { listTrips, newTrip, saveTrip, type SavedTrip } from "@/lib/tabi/store";
+import { AIRPORTS, jrPassWorthIt, legLinks, type LegLink } from "@/lib/tabi/transport";
 import type { Highlight, RouteOption, TabiReply } from "@/lib/tabi/types";
 import type { MapPoint } from "./tabi-map";
 import "./tabi.css";
@@ -682,6 +685,19 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
   const month = trip.intent.month;
   const start = trip.intent.startDate;
   const countdown = start ? Math.round((isoDay(start).getTime() - isoDay(todayIso()).getTime()) / 86_400_000) : null;
+  // live hazard warnings matter only when the trip is close: from a week before until the last day
+  const nearTrip = countdown !== null && countdown <= 7 && countdown > -days.length;
+  const alertCities = trip.route?.stops.map((s) => s.city).join(",") ?? "";
+  const [alerts, setAlerts] = useState<HazardAlert[]>([]);
+  useEffect(() => {
+    if (!nearTrip || !alertCities) return;
+    let live = true;
+    fetch(`/api/tabi/alerts?cities=${encodeURIComponent(alertCities)}`)
+      .then((r) => (r.ok ? r.json() : { alerts: [] }))
+      .then((d: { alerts?: HazardAlert[] }) => { if (live) setAlerts(d.alerts ?? []); })
+      .catch(() => { /* no alert shown is the safe failure: JMA stays one tap away for the traveller */ });
+    return () => { live = false; };
+  }, [nearTrip, alertCities]);
   return (
     <div className="tabi-rise space-y-4">
       <TopBar onBack={onBack} />
@@ -720,6 +736,7 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
           </label>
         </div>
       </section>
+      {nearTrip && alerts.length > 0 && <HazardCard alerts={alerts} />}
       <TourTip step={4} pointer="up" />
       <section className="tabi-card flex gap-3 lg:hidden bg-[var(--t-sakura)] p-4">
         <Avatar size={44} mood="happy" />
@@ -787,6 +804,7 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
                           <span className="mr-2 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: chip.bg, color: chip.fg }}>{chip.label}</span>
                           <span className={it.kind === "see" ? "font-semibold" : "text-sm"}>{it.text}</span>
                           {it.approx && <span className="ml-1 rounded bg-[var(--t-blue-soft)] px-1 text-[10px] text-[var(--t-blue)]">ประมาณ</span>}
+                          <LegLinks links={legLinks(it.from, it.to)} />
                         </li>
                       );
                     })}
@@ -805,6 +823,7 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
         <Avatar size={44} mood="happy" />
         <p className="text-sm"><b className="text-[var(--t-pink-ink)]">นี่คือร่างทริปคร่าว ๆ</b> เวลาเดินทางเป็นค่าประมาณ บอกทาบิให้ปรับได้ตลอดนะ</p>
       </section>
+      {trip.route && <TransportCard route={trip.route} />}
       <section className="tabi-card p-4">
         <h2 className="mb-2 font-bold">เตรียมก่อนเดินทาง</h2>
         <ul className="space-y-1">
@@ -830,6 +849,87 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
   );
 }
 
+/** "ดูทาง" → Google Maps transit (live trains). Tokyo has two airports, so one pill per airport. */
+function LegLinks({ links }: { links: LegLink[] }) {
+  if (!links.length) return null;
+  return (
+    <span className="mt-1 flex flex-wrap items-center gap-1">
+      {links.map((l) => (
+        <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="tabi-leg-link">
+          🗺️ ดูทาง{l.label ? ` ${l.label}` : ""} ↗
+        </a>
+      ))}
+    </span>
+  );
+}
+
+/** Subway-map style overview: airport → cities → airport, each hop opens live trains, plus one JR Pass verdict. */
+function TransportCard({ route }: { route: RouteOption }) {
+  const first = route.stops[0];
+  const last = route.stops[route.stops.length - 1];
+  const out = nearestGateway(last).g.airport;
+  const airportNames = (code: string) => (AIRPORTS[code] ?? []).map((a) => a.th).join(" / ");
+  const hops = [
+    { label: "เข้าเมือง", links: legLinks(`airport:${route.gateway.airport}`, first.city) },
+    // no hour estimate here: straight-line guesses miss transfers badly; Google Maps shows the real time
+    ...route.stops.slice(1).map((s, i) => ({ label: "ไปเมืองถัดไป", links: legLinks(route.stops[i].city, s.city) })),
+    { label: "ไปสนามบิน", links: legLinks(last.city, `airport:${out}`) },
+  ];
+  const nodes = [
+    { key: "in", icon: "🛬", title: `สนามบิน${airportNames(route.gateway.airport)}` },
+    ...route.stops.map((s) => ({ key: s.city, icon: "", title: `${s.cityTh} · ${s.nights} คืน` })),
+    { key: "out", icon: "🛫", title: `บินกลับจาก${airportNames(out)}` },
+  ];
+  return (
+    <section className="tabi-card p-4" aria-label="การเดินทางในญี่ปุ่น">
+      <h2 className="mb-3 flex items-center gap-2 font-bold"><span className="tabi-train" aria-hidden>🚃</span>เดินทางในญี่ปุ่น</h2>
+      <ol className="tabi-track">
+        {nodes.map((n, i) => (
+          <li key={n.key}>
+            <span className="tabi-track-node" style={n.icon ? undefined : { background: DAY_COLORS[(i - 1) % DAY_COLORS.length] }} aria-hidden>{n.icon}</span>
+            <span className="tabi-title text-sm font-bold">{n.title}</span>
+            {i < hops.length && (
+              <span className="tabi-track-hop">
+                <span className="tabi-muted text-xs">🚆 {hops[i].label}</span>
+                <LegLinks links={hops[i].links} />
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+      <p className="mt-3 rounded-2xl bg-[var(--t-green)] px-3 py-2 text-sm text-[var(--t-green-ink)]">
+        {jrPassWorthIt(route) ? (
+          <>🎫 ทริปนี้นั่งรถไฟไกลหลายช่วง ลอง<a className="underline" href="https://japanrailpass.net/" target="_blank" rel="noopener noreferrer">เทียบราคา JR Pass</a>ก่อนซื้อตั๋ว</>
+        ) : (
+          <>🎫 <b>ไม่ต้องซื้อ JR Pass</b> ทริปนี้ซื้อตั๋วรายเที่ยวถูกกว่า ส่วนรถไฟในเมืองแตะบัตร IC (Suica, ICOCA) ได้เลย</>
+        )}
+      </p>
+    </section>
+  );
+}
+
+const LEVEL_JA = { 30: "警報", 40: "危険警報", 50: "特別警報" } as const;
+const LEVEL_TH = { 30: "เตือนภัย", 40: "อันตราย", 50: "อันตรายสูงสุด" } as const;
+
+/** JMA warnings (警報+) near the travel dates. Links straight to 気象庁, the page people in Japan use. */
+function HazardCard({ alerts }: { alerts: HazardAlert[] }) {
+  return (
+    <section role="alert" className="tabi-hazard tabi-pop">
+      <p className="flex items-center gap-2 font-bold"><span aria-hidden>⚠️</span>ประกาศเตือนภัยจากกรมอุตุฯ ญี่ปุ่นตอนนี้</p>
+      <p className="mt-1 text-sm">รถไฟอาจหยุดหรือล่าช้า เช็กประกาศก่อนออกจากที่พักนะ</p>
+      <ul className="mt-2 space-y-2">
+        {alerts.map((a) => (
+          <li key={`${a.city}-${a.hazard}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <span className={`tabi-hazard-level tabi-hazard-level--${a.level}`}>{LEVEL_JA[a.level]} · {LEVEL_TH[a.level]}</span>
+            <span><b>{a.cityTh}</b> {a.hazard}</span>
+            <a href={a.url} target="_blank" rel="noopener noreferrer" className="ml-auto font-semibold underline underline-offset-2">ดูประกาศ 気象庁 ↗</a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // ── 5. Flights ──
 function FlightCard({ link }: { link: NonNullable<TabiReply["flight"]> }) {
   return (
@@ -849,7 +949,7 @@ function BoardingPass({ leg, href, index }: { leg: NonNullable<NonNullable<TabiR
   const out = leg.dir === "outbound";
   const date = leg.date ? isoDay(leg.date) : null;
   return (
-    <article className="tabi-card tabi-rise overflow-hidden" style={{ animationDelay: `${index * 90}ms` }}>
+    <article className="tabi-card tabi-pass tabi-rise overflow-hidden" style={{ animationDelay: `${index * 90}ms` }}>
       <header className="flex items-center justify-between px-4 py-2 text-sm font-semibold" style={{ background: out ? "#e8f1ff" : "#dff5e8", color: out ? "#1a66d9" : "#17734b" }}>
         <span>{out ? "ขาไป" : "ขากลับ"}{date ? ` · ${thaiDate(date)} (${WEEKDAY_SHORT[date.getUTCDay()]})` : ""}</span>
         <Plane size={16} className={out ? "" : "rotate-180"} aria-hidden />
@@ -859,16 +959,15 @@ function BoardingPass({ leg, href, index }: { leg: NonNullable<NonNullable<TabiR
           <p className="tabi-title text-3xl font-bold leading-none">{leg.fromCode}</p>
           <p className="tabi-muted mt-1 text-xs">{leg.from}</p>
         </div>
-        <div className="flex flex-1 items-center gap-1 text-[var(--t-muted)]" aria-hidden>
-          <span className="h-px flex-1 border-t-2 border-dotted border-[var(--t-line)]" />
-          <Plane size={18} />
-          <span className="h-px flex-1 border-t-2 border-dotted border-[var(--t-line)]" />
+        <div className="tabi-pass-path" aria-hidden>
+          <span className="tabi-pass-plane" style={{ color: out ? "#1a66d9" : "#17734b" }}><Plane size={20} className={out ? "" : "-scale-x-100"} /></span>
         </div>
         <div className="text-right">
           <p className="tabi-title text-3xl font-bold leading-none">{leg.toCode}</p>
           <p className="tabi-muted mt-1 text-xs">{leg.to}</p>
         </div>
       </div>
+      <div className="tabi-pass-tear" aria-hidden />
       <a href={href} target="_blank" rel="noopener noreferrer" className="tabi-btn tabi-btn--soft mx-4 mb-4 flex">
         ดูเที่ยวบินใน Google Flights <ArrowRight size={18} />
       </a>

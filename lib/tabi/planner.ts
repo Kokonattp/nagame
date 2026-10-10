@@ -283,11 +283,11 @@ export function draftItinerary(route: RouteOption, intent: TripIntent, extraStop
     for (let n = 0; n < staying && day < days; n++, day++) {
       const items: ItineraryItem[] = [];
       // Parts of the day, not clock times: we have no live timetables (spec §2.2).
-      if (day === 1) items.push({ kind: "move", slot: "morning", mode: "flight", text: `บินถึง${CITY_BY_NAME.get(route.gateway.city)?.th ?? route.gateway.city} แล้วเข้า${stop.cityTh}`, approx: true });
+      if (day === 1) items.push({ kind: "move", slot: "morning", mode: "flight", text: `บินถึง${CITY_BY_NAME.get(route.gateway.city)?.th ?? route.gateway.city} แล้วเข้า${stop.cityTh}`, approx: true, from: `airport:${route.gateway.airport}`, to: stop.city });
       else if (n === 0) {
         const prev = route.stops[i - 1];
         const hours = Math.max(1, Math.round(km(prev, stop) / 150));
-        items.push({ kind: "move", slot: "morning", mode: "train", text: `${prev.cityTh} → ${stop.cityTh} ประมาณ ${hours} ชม.`, approx: true });
+        items.push({ kind: "move", slot: "morning", mode: "train", text: `${prev.cityTh} → ${stop.cityTh} ประมาณ ${hours} ชม.`, approx: true, from: prev.city, to: stop.city });
       }
       const extras = extraStops.filter((h) => h.city === stop.city && !used.has(h.id));
       const picks = [
@@ -306,7 +306,7 @@ export function draftItinerary(route: RouteOption, intent: TripIntent, extraStop
     plan.push({
       day: plan.length + 1, city: last.city, title: `${last.city} → กลับไทย`,
       items: [
-        { kind: "move", slot: "morning", mode: "airport", text: `เดินทางไปสนามบิน${departureCity(route)}`, approx: true },
+        { kind: "move", slot: "morning", mode: "airport", text: `เดินทางไปสนามบิน${departureCity(route)}`, approx: true, from: last.city, to: `airport:${nearestGateway(last).g.airport}` },
         { kind: "move", slot: "afternoon", mode: "flight", text: "บินกลับกรุงเทพ" },
       ],
     });

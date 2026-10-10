@@ -82,6 +82,9 @@ export type ItineraryItem = {
   placeId?: string;
   wikiTitle?: string;
   approx?: boolean;
+  /** move ends for the "ดูทาง" link: a base-city name, or `airport:<gateway code>` */
+  from?: string;
+  to?: string;
 };
 /** `photo` = Wikipedia title of the day's first sight (card thumbnail). */
 export type ItineraryDay = { day: number; city: string; title: string; items: ItineraryItem[]; photo?: string };
