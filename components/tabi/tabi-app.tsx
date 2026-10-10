@@ -10,6 +10,7 @@ import type { HazardAlert } from "@/lib/tabi/alerts";
 import { nearestGateway } from "@/lib/tabi/cities";
 import { TABI_ART, type TabiMood } from "@/lib/tabi/mascot";
 import { listTrips, newTrip, saveTrip, type SavedTrip } from "@/lib/tabi/store";
+import { durationTh, travelTime } from "@/lib/tabi/rail-times";
 import { AIRPORTS, jrPassWorthIt, legLinks, type LegLink } from "@/lib/tabi/transport";
 import type { Highlight, RouteOption, TabiReply } from "@/lib/tabi/types";
 import type { MapPoint } from "./tabi-map";
@@ -663,6 +664,8 @@ const SLOT_TH = { morning: "เช้า", afternoon: "บ่าย", evening: "
 const CHIP = {
   flight: { label: "✈️ เครื่องบิน", bg: "#e8f1ff", fg: "#1a66d9" },
   train: { label: "🚆 รถไฟ", bg: "#e8f8f0", fg: "#17734b" },
+  bus: { label: "🚌 รถบัส", bg: "#fff6d6", fg: "#7a5a00" },
+  ferry: { label: "⛴️ เรือ", bg: "#e3f6fb", fg: "#0d6a80" },
   airport: { label: "🧳 ไปสนามบิน", bg: "#fff1e6", fg: "#a5521a" },
   see: { label: "📍 เที่ยว", bg: "#ffe9f2", fg: "#c2185b" },
   stay: { label: "🛏️ ที่พัก", bg: "#eef1f7", fg: "#4b5878" },
@@ -863,6 +866,13 @@ function LegLinks({ links }: { links: LegLink[] }) {
   );
 }
 
+const HOP_ICON = { train: "🚆", bus: "🚌", ferry: "⛴️", flight: "✈️" } as const;
+/** "🚆 เข้าเมือง ~3 ชม. 15 นาที" from rail-times; the label alone when the hop is unknown. */
+function hopLabel(from: string, to: string, what: string) {
+  const t = travelTime(from, to);
+  return t ? `${HOP_ICON[t.mode]} ${what} ~${durationTh(t.minutes)}` : `🚆 ${what}`;
+}
+
 /** Subway-map style overview: airport → cities → airport, each hop opens live trains, plus one JR Pass verdict. */
 function TransportCard({ route }: { route: RouteOption }) {
   const first = route.stops[0];
@@ -870,10 +880,9 @@ function TransportCard({ route }: { route: RouteOption }) {
   const out = nearestGateway(last).g.airport;
   const airportNames = (code: string) => (AIRPORTS[code] ?? []).map((a) => a.th).join(" / ");
   const hops = [
-    { label: "เข้าเมือง", links: legLinks(`airport:${route.gateway.airport}`, first.city) },
-    // no hour estimate here: straight-line guesses miss transfers badly; Google Maps shows the real time
-    ...route.stops.slice(1).map((s, i) => ({ label: "ไปเมืองถัดไป", links: legLinks(route.stops[i].city, s.city) })),
-    { label: "ไปสนามบิน", links: legLinks(last.city, `airport:${out}`) },
+    { label: hopLabel(`airport:${route.gateway.airport}`, first.city, "เข้าเมือง"), links: legLinks(`airport:${route.gateway.airport}`, first.city) },
+    ...route.stops.slice(1).map((s, i) => ({ label: hopLabel(route.stops[i].city, s.city, "ไปเมืองถัดไป"), links: legLinks(route.stops[i].city, s.city) })),
+    { label: hopLabel(last.city, `airport:${out}`, "ไปสนามบิน"), links: legLinks(last.city, `airport:${out}`) },
   ];
   const nodes = [
     { key: "in", icon: "🛬", title: `สนามบิน${airportNames(route.gateway.airport)}` },
@@ -890,7 +899,7 @@ function TransportCard({ route }: { route: RouteOption }) {
             <span className="tabi-title text-sm font-bold">{n.title}</span>
             {i < hops.length && (
               <span className="tabi-track-hop">
-                <span className="tabi-muted text-xs">🚆 {hops[i].label}</span>
+                <span className="tabi-muted text-xs">{hops[i].label}</span>
                 <LegLinks links={hops[i].links} />
               </span>
             )}

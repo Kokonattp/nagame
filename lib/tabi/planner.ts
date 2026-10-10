@@ -5,6 +5,7 @@
 import placesData from "@/data/places/places.json";
 import closuresData from "@/data/places/seasonal-closures.json";
 import { BASE_CITIES, CITY_BY_NAME, km, nearestGateway, type BaseCity, type Region } from "./cities";
+import { durationTh, travelTime } from "./rail-times";
 import { askSystemOne, systemOneConfigured } from "./system-one";
 import type {
   DaySlot, Highlight, ItineraryDay, ItineraryItem, Place, Preference, RouteOption, RouteStop, Season, TripIntent,
@@ -283,11 +284,14 @@ export function draftItinerary(route: RouteOption, intent: TripIntent, extraStop
     for (let n = 0; n < staying && day < days; n++, day++) {
       const items: ItineraryItem[] = [];
       // Parts of the day, not clock times: we have no live timetables (spec §2.2).
-      if (day === 1) items.push({ kind: "move", slot: "morning", mode: "flight", text: `บินถึง${CITY_BY_NAME.get(route.gateway.city)?.th ?? route.gateway.city} แล้วเข้า${stop.cityTh}`, approx: true, from: `airport:${route.gateway.airport}`, to: stop.city });
-      else if (n === 0) {
+      if (day === 1) {
+        const arrive = travelTime(`airport:${route.gateway.airport}`, stop.city);
+        items.push({ kind: "move", slot: "morning", mode: "flight", text: `บินถึง${CITY_BY_NAME.get(route.gateway.city)?.th ?? route.gateway.city} แล้วเข้า${stop.cityTh}${arrive ? ` ประมาณ ${durationTh(arrive.minutes)}` : ""}`, approx: true, from: `airport:${route.gateway.airport}`, to: stop.city });
+      } else if (n === 0) {
         const prev = route.stops[i - 1];
-        const hours = Math.max(1, Math.round(km(prev, stop) / 150));
-        items.push({ kind: "move", slot: "morning", mode: "train", text: `${prev.cityTh} → ${stop.cityTh} ประมาณ ${hours} ชม.`, approx: true, from: prev.city, to: stop.city });
+        // rail-times.ts: real connections (e.g. Kawaguchiko → Nikko goes via Tokyo, ~4 h); straight line only as a last resort
+        const t = travelTime(prev.city, stop.city) ?? { minutes: (km(prev, stop) * 1.3 / 80) * 60 + 30, mode: "train" as const };
+        items.push({ kind: "move", slot: "morning", mode: t.mode, text: `${prev.cityTh} → ${stop.cityTh} ประมาณ ${durationTh(t.minutes)}`, approx: true, from: prev.city, to: stop.city });
       }
       const extras = extraStops.filter((h) => h.city === stop.city && !used.has(h.id));
       const picks = [
@@ -302,11 +306,12 @@ export function draftItinerary(route: RouteOption, intent: TripIntent, extraStop
   });
   // departure day (a 1-day trip departs on the same day)
   const last = route.stops[route.stops.length - 1];
+  const depart = travelTime(last.city, `airport:${nearestGateway(last).g.airport}`);
   if (plan.length < days) {
     plan.push({
       day: plan.length + 1, city: last.city, title: `${last.city} → กลับไทย`,
       items: [
-        { kind: "move", slot: "morning", mode: "airport", text: `เดินทางไปสนามบิน${departureCity(route)}`, approx: true, from: last.city, to: `airport:${nearestGateway(last).g.airport}` },
+        { kind: "move", slot: "morning", mode: "airport", text: `เดินทางไปสนามบิน${departureCity(route)}${depart ? ` ประมาณ ${durationTh(depart.minutes)}` : ""}`, approx: true, from: last.city, to: `airport:${nearestGateway(last).g.airport}` },
         { kind: "move", slot: "afternoon", mode: "flight", text: "บินกลับกรุงเทพ" },
       ],
     });

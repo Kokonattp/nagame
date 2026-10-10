@@ -72,7 +72,7 @@ export type RouteOption = {
 
 export type DaySlot = "morning" | "afternoon" | "evening";
 /** How a move happens — drives the coloured chip on the timeline (video reference). */
-export type TravelMode = "flight" | "train" | "airport";
+export type TravelMode = "flight" | "train" | "bus" | "ferry" | "airport";
 export type ItineraryItem = {
   kind: "move" | "see" | "stay";
   text: string;
