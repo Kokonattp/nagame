@@ -64,3 +64,17 @@ create index if not exists clickouts_ts_idx on clickouts (ts);
 --   earned_at bigint not null,
 --   primary key (device_id, city_slug, stamp_key)
 -- );
+
+-- ── Tabi funnel events (POST /api/tabi/event) — anonymous: random per-browser id, no IP/name/text ──
+-- SQL สำหรับวิเคราะห์ funnel / retention อยู่ที่ docs/analytics/tabi-funnel.md
+create table if not exists tabi_events (
+  id         bigint generated always as identity primary key,
+  session_id text not null,                 -- random UUID ต่อเบราว์เซอร์ (localStorage)
+  event      text not null,                 -- home_view | ask | routes_shown | … (lib/tabi/track.ts)
+  props      jsonb not null default '{}',   -- month, days, stops, source, ref …
+  path       text,
+  ts         timestamptz not null default now()
+);
+
+create index if not exists tabi_events_event_ts_idx on tabi_events (event, ts);
+create index if not exists tabi_events_session_idx on tabi_events (session_id, ts);

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { restoreRoute, restoreStops } from "@/lib/tabi/planner";
 import { respond } from "@/lib/tabi/respond";
-import { PREFERENCES, type Preference, type TabiContext } from "@/lib/tabi/types";
+import { sanitizeIntent } from "@/lib/tabi/sanitize";
+import type { TabiContext } from "@/lib/tabi/types";
 
 // Same cost guards as /api/assistant: short prompts, per-IP budget.
 // Replies depend on the client's trip context, so nothing is cached.
@@ -47,18 +48,7 @@ function sanitizeContext(raw: unknown): TabiContext {
   if (!raw || typeof raw !== "object") return {};
   const c = raw as Record<string, unknown>;
   const ctx: TabiContext = {};
-  if (c.intent && typeof c.intent === "object") {
-    const i = c.intent as Record<string, unknown>;
-    ctx.intent = {
-      month: Number.isInteger(i.month) && (i.month as number) >= 1 && (i.month as number) <= 12 ? (i.month as number) : undefined,
-      durationDays: Number.isInteger(i.durationDays) && (i.durationDays as number) >= 1 && (i.durationDays as number) <= 21 ? (i.durationDays as number) : undefined,
-      startDate: validDate(i.startDate),
-      preferences: Array.isArray(i.preferences)
-        ? [...new Set(i.preferences.filter((p): p is Preference => PREFERENCES.includes(p as Preference)))]
-        : [],
-      focus: Array.isArray(i.focus) ? i.focus.filter((f): f is string => typeof f === "string").slice(0, 5).map((f) => f.slice(0, 40)) : [],
-    };
-  }
+  if (c.intent && typeof c.intent === "object") ctx.intent = sanitizeIntent(c.intent);
   if (Array.isArray(c.shownRoutes)) {
     ctx.shownRoutes = c.shownRoutes
       .filter((r): r is { id: string; title: string } => !!r && typeof r === "object" && typeof (r as { id: unknown }).id === "string" && typeof (r as { title: unknown }).title === "string")
@@ -69,15 +59,6 @@ function sanitizeContext(raw: unknown): TabiContext {
   if (route) ctx.selectedRoute = route;
   ctx.savedStops = restoreStops(c.savedStopIds, ctx.intent);
   return ctx;
-}
-
-/** "YYYY-MM-DD" that is a real calendar date within the next ~2 years, else undefined. */
-function validDate(v: unknown): string | undefined {
-  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return undefined;
-  const d = new Date(`${v}T00:00:00Z`);
-  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v) return undefined;
-  const days = (d.getTime() - Date.now()) / 86_400_000;
-  return days > -2 && days < 800 ? v : undefined;
 }
 
 function takeBudget(ip: string) {

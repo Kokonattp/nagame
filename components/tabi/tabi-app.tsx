@@ -4,16 +4,21 @@
 // The server is stateless; this component owns trip context and sends it each turn.
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ArrowUp, CalendarDays, ChevronLeft, CircleHelp, Heart, Home, Map as MapIcon, Pencil, Plane, Plus, User } from "lucide-react";
+import { ArrowRight, ArrowUp, CalendarDays, ChevronLeft, CircleHelp, Heart, Home, Map as MapIcon, Pencil, Plane, Plus, Send, User } from "lucide-react";
 import type { HazardAlert } from "@/lib/tabi/alerts";
 import { nearestGateway } from "@/lib/tabi/cities";
 import { TABI_ART, type TabiMood } from "@/lib/tabi/mascot";
+import { encodeShare, shareRef, tripTitle } from "@/lib/tabi/share";
+import type { SharedTrip } from "@/lib/tabi/share-server";
 import { listTrips, newTrip, saveTrip, type SavedTrip } from "@/lib/tabi/store";
+import { track } from "@/lib/tabi/track";
 import { durationTh, travelTime } from "@/lib/tabi/rail-times";
 import { AIRPORTS, jrPassWorthIt, legLinks, type LegLink } from "@/lib/tabi/transport";
 import type { Highlight, RouteOption, TabiReply } from "@/lib/tabi/types";
 import type { MapPoint } from "./tabi-map";
+import { renderShareImage } from "./share-image";
 import "./tabi.css";
 
 const TabiMap = dynamic(() => import("./tabi-map").then((m) => m.TabiMap), {
@@ -68,17 +73,23 @@ const hideBroken = (e: React.SyntheticEvent<HTMLImageElement>) => {
   e.currentTarget.style.visibility = "hidden";
 };
 
-export function TabiApp() {
-  const [screen, setScreen] = useState<Screen>("home");
+/** A trip opened from a share link starts on its day plan as an unsaved copy (saved on first keep/edit). */
+function fromShared(shared: SharedTrip): SavedTrip {
+  return { ...newTrip(shared.intent), title: shared.title, route: shared.route, itinerary: shared.itinerary, savedStops: shared.savedStops, status: "draft" };
+}
+
+export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; initialAsk?: string; source?: string } = {}) {
+  const [screen, setScreen] = useState<Screen>(shared ? "itinerary" : "home");
   // Each screen root carries .tabi-rise, so a screen change already slides in.
   // (View Transitions were tried and dropped: with React state they left the old screen in place.)
   const go = setScreen;
   const [turns, setTurns] = useState<Turn[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [routes, setRoutes] = useState<RouteOption[]>([]);
-  const [selected, setSelected] = useState<RouteOption | null>(null);
-  const [trip, setTrip] = useState<SavedTrip | null>(null);
+  const [routes, setRoutes] = useState<RouteOption[]>(() => (shared ? [shared.route] : []));
+  const [selected, setSelected] = useState<RouteOption | null>(shared?.route ?? null);
+  const [trip, setTrip] = useState<SavedTrip | null>(() => (shared ? fromShared(shared) : null));
+  const [sharedState, setSharedState] = useState<"none" | "unsaved" | "saved">(shared ? "unsaved" : "none");
   const [lastReply, setLastReply] = useState<TabiReply | null>(null);
   const [trips, setTrips] = useState<SavedTrip[]>([]);
 
@@ -98,14 +109,15 @@ export function TabiApp() {
     return {
       ready: tourSeen !== null,
       seen,
-      dismiss: (step) => store([...new Set([...seen, step])]),
-      skip: () => store(TOUR.map((_, i) => i + 1)),
+      dismiss: (step) => { if (step === TOUR.length) track("tour_done"); store([...new Set([...seen, step])]); },
+      skip: () => { track("tour_skipped", { step: TOUR.length - seen.length }); store(TOUR.map((_, i) => i + 1)); },
       replay: () => { store([]); go("home"); window.scrollTo({ top: 0 }); },
     };
   }, [tourSeen, go]);
 
   const persist = useCallback(async (next: SavedTrip) => {
     setTrip(next);
+    setSharedState((s) => (s === "unsaved" ? "saved" : s));
     await saveTrip(next);
     setTrips(await listTrips());
   }, []);
@@ -113,6 +125,7 @@ export function TabiApp() {
   const send = useCallback(async (message: string) => {
     const text = message.trim();
     if (!text || loading) return;
+    track("ask", { first: turns.length === 0 });
     setError(null);
     setTurns((t) => [...t, { role: "user", text }]);
     go((s) => (s === "home" || s === "trips" ? "chat" : s));
@@ -141,6 +154,7 @@ export function TabiApp() {
       setTurns((t) => [...t, { role: "tabi", text: reply.bubbles.join("\n"), reply }]);
 
       if (reply.action === "suggest_routes" && reply.routes) {
+        track("routes_shown", { refine: routes.length > 0, month: reply.intent.month ?? 0, days: reply.intent.durationDays ?? 0 });
         setRoutes(reply.routes);
         go("chat");
       } else if (reply.action === "open_route" && reply.openRouteId) {
@@ -153,9 +167,11 @@ export function TabiApp() {
         const fitted = reply.selectedRoute ?? route;
         if (fitted) setSelected(fitted);
         const base = tripForRoute ?? newTrip(reply.intent);
-        await persist({ ...base, intent: reply.intent, route: fitted, itinerary: reply.itinerary, status: "draft", title: titleFor(fitted, reply.itinerary.length) });
+        await persist({ ...base, intent: reply.intent, route: fitted, itinerary: reply.itinerary, status: "draft", title: tripTitle(fitted, reply.itinerary.length) });
+        track("itinerary_drafted", { days: reply.itinerary.length, stops: fitted?.stops.length ?? 0 });
         go("itinerary");
       } else if (reply.action === "flights") {
+        track("flights_opened");
         go("flights");
       } else {
         go("chat");
@@ -168,10 +184,24 @@ export function TabiApp() {
     }
     // openRoute only calls state setters (selected + go), so it is safe to leave out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, lastReply, trip, routes, selected, persist, go]);
+  }, [loading, lastReply, trip, routes, selected, persist, go, turns.length]);
+
+  // first view: count the visit; a /?q= link (month pages) asks Tabi straight away, once
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    if (shared) track("shared_trip_opened", { ref: shared.ref, days: shared.itinerary.length });
+    else track("home_view", { source: source ?? (initialAsk ? "month_page" : "direct") });
+    if (initialAsk || source) window.history.replaceState(null, "", "/");
+    if (initialAsk) {
+      void send(initialAsk);
+    }
+  }, [shared, initialAsk, source, send]);
 
   /** Viewing a route never creates a trip; a trip is saved only when the user keeps something. */
   function openRoute(r: RouteOption) {
+    track("route_opened", { route: r.id, stops: r.stops.length });
     setSelected(r);
     go("route");
   }
@@ -180,7 +210,8 @@ export function TabiApp() {
     if (!selected) return;
     const base = trip && trip.route?.id === selected.id ? trip : newTrip(lastReply?.intent ?? trip?.intent ?? { preferences: [], focus: [] });
     if (base.savedStops.some((s) => s.id === h.id)) return;
-    void persist({ ...base, route: selected, title: titleFor(selected), savedStops: [...base.savedStops, h] });
+    track("stop_added");
+    void persist({ ...base, route: selected, title: tripTitle(selected), savedStops: [...base.savedStops, h] });
   }
 
   function openTrip(t: SavedTrip) {
@@ -219,7 +250,11 @@ export function TabiApp() {
             onAsk={send}
             onMap={nav("route")}
             onToggle={(id) => persist({ ...trip, checklist: trip.checklist.map((c) => (c.id === id ? { ...c, done: !c.done } : c)) })}
+            sharedState={sharedState}
+            onKeep={() => { track("shared_trip_saved", { ref: shared?.ref ?? "" }); void persist(trip); }}
+            onShare={() => shareTrip(trip)}
             onSetDate={(iso) => {
+              track("date_set", { month: Number(iso.slice(5, 7)) });
               // the date fixes month and length too, so the next turn (e.g. "หาตั๋ว") searches these exact days
               const intent = { ...trip.intent, startDate: iso, month: Number(iso.slice(5, 7)), durationDays: trip.itinerary?.length ?? trip.intent.durationDays };
               void persist({ ...trip, intent, status: "planned" });
@@ -250,10 +285,46 @@ export function TabiApp() {
   );
 }
 
-function titleFor(route: RouteOption | undefined, days?: number) {
-  if (!route) return "ทริปญี่ปุ่น";
-  const nights = route.stops.reduce((a, s) => a + s.nights, 0);
-  return `${route.stops[0].city} → ${route.stops[route.stops.length - 1].city} · ${days ?? nights + 1} วัน`;
+type ShareResult = "shared" | "copied" | "failed";
+
+/**
+ * Phone: the system share sheet with the trip image + link (LINE, Messenger…).
+ * Desktop without a share sheet: copy the link and download the image.
+ */
+async function shareTrip(trip: SavedTrip): Promise<ShareResult> {
+  const code = encodeShare(trip);
+  if (!code) return "failed";
+  const url = `${location.origin}/t/${code}`;
+  const text = `ทริป ${trip.route?.stops.map((s) => s.cityTh).join(" → ")} ${trip.itinerary?.length ?? ""} วัน — ทาบิจัดให้`;
+  const file = await renderShareImage(trip).catch(() => null);
+  try {
+    if (file && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: trip.title, text: `${text}\n${url}` });
+      track("trip_shared", { method: "image", ref: shareRef(code) });
+      return "shared";
+    }
+    if (navigator.share) {
+      await navigator.share({ title: trip.title, text, url });
+      track("trip_shared", { method: "link", ref: shareRef(code) });
+      return "shared";
+    }
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") return "failed"; // closed the sheet
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    if (file) {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(file);
+      a.download = file.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+    track("trip_shared", { method: "copy", ref: shareRef(code) });
+    return "copied";
+  } catch {
+    return "failed";
+  }
 }
 
 // ── shared bits ──
@@ -437,6 +508,11 @@ function HomeScreen({ onAsk }: { onAsk: (m: string) => void }) {
           <p className="text-sm">ทาบิจะเสนอเส้นทางไม่เกิน 3 แบบ เลือกแล้วจัดเป็นแผนรายวันให้ ปรับได้ด้วยการพิมพ์บอก</p>
         </div>
       </section>
+      <Link href="/japan" className="tabi-card flex items-center gap-3 p-4">
+        <span className="text-2xl" aria-hidden>🗓️</span>
+        <span className="flex-1"><b className="tabi-title block">ไปญี่ปุ่นเดือนไหนดี?</b><span className="tabi-muted text-sm">ดูที่เที่ยวเด่นและที่ปิดในแต่ละเดือน</span></span>
+        <ArrowRight size={18} className="text-[var(--t-blue)]" />
+      </Link>
       </div>
       </div>
     </div>
@@ -679,7 +755,8 @@ const isoDay = (iso: string, plus = 0) => {
 const thaiDate = (d: Date) => `${d.getUTCDate()} ${MONTH_SHORT[d.getUTCMonth() + 1]}`;
 const todayIso = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 
-function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
+function ItineraryScreen({ trip, sharedState, onKeep, onShare, onBack, onAsk, onMap, onToggle, onSetDate }: {
+  sharedState: "none" | "unsaved" | "saved"; onKeep: () => void; onShare: () => Promise<ShareResult>;
   trip: SavedTrip; onBack: () => void; onAsk: (m: string) => void; onMap: () => void; onToggle: (id: string) => void;
   onSetDate: (iso: string) => void;
 }) {
@@ -740,6 +817,15 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
         </div>
       </section>
       {nearTrip && alerts.length > 0 && <HazardCard alerts={alerts} />}
+      {sharedState !== "none" && (
+        <section className="tabi-card tabi-pop flex flex-wrap items-center gap-3 bg-[var(--t-sakura)] p-4">
+          <span className="text-2xl" aria-hidden>💌</span>
+          <p className="min-w-0 flex-1 text-sm"><b className="text-[var(--t-pink-ink)]">เพื่อนแชร์ทริปนี้มา</b> ปรับต่อได้ตามใจ ทริปของเพื่อนไม่เปลี่ยน</p>
+          {sharedState === "unsaved"
+            ? <button type="button" className="tabi-btn tabi-btn--primary px-4 text-sm" onClick={onKeep}><Heart size={16} />เก็บไว้ในทริปของฉัน</button>
+            : <span className="tabi-pop rounded-full bg-white px-3 py-1 text-sm font-semibold text-[var(--t-green-ink)]">✓ เก็บแล้ว</span>}
+        </section>
+      )}
       <TourTip step={4} pointer="up" />
       <section className="tabi-card flex gap-3 lg:hidden bg-[var(--t-sakura)] p-4">
         <Avatar size={44} mood="happy" />
@@ -846,6 +932,7 @@ function ItineraryScreen({ trip, onBack, onAsk, onMap, onToggle, onSetDate }: {
         <button type="button" className="tabi-btn tabi-btn--pink whitespace-nowrap px-2 text-sm" onClick={() => onAsk("ดูตั๋วเครื่องบินให้หน่อย")}><Plane size={18} />หาตั๋ว</button>
         <button type="button" className="tabi-btn tabi-btn--primary whitespace-nowrap px-2 text-sm" onClick={() => onAsk("อยากปรับแผนหน่อย")}><Pencil size={18} />ปรับแผน</button>
       </div>
+      <ShareButton onShare={onShare} />
       </div>
       </div>
     </div>
@@ -858,7 +945,7 @@ function LegLinks({ links }: { links: LegLink[] }) {
   return (
     <span className="mt-1 flex flex-wrap items-center gap-1">
       {links.map((l) => (
-        <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="tabi-leg-link">
+        <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="tabi-leg-link" onClick={() => track("leg_map_clicked")}>
           🗺️ ดูทาง{l.label ? ` ${l.label}` : ""} ↗
         </a>
       ))}
@@ -939,6 +1026,26 @@ function HazardCard({ alerts }: { alerts: HazardAlert[] }) {
   );
 }
 
+/** One share action: image + link to LINE/Facebook on phones; copies the link (and saves the image) elsewhere. */
+function ShareButton({ onShare }: { onShare: () => Promise<ShareResult> }) {
+  const [state, setState] = useState<"idle" | "busy" | ShareResult>("idle");
+  return (
+    <div>
+      <button
+        type="button"
+        className="tabi-btn tabi-btn--pink w-full"
+        disabled={state === "busy"}
+        onClick={async () => { setState("busy"); setState(await onShare()); }}
+      >
+        <Send size={18} />{state === "busy" ? "กำลังทำรูปทริป…" : "แชร์ทริปให้เพื่อน"}
+      </button>
+      <p className="tabi-muted mt-1 min-h-[1.25rem] text-center text-xs" role="status">
+        {state === "copied" ? "คัดลอกลิงก์และบันทึกรูปทริปแล้ว วางในแชทได้เลย" : state === "shared" ? "ส่งแล้ว เพื่อนเปิดลิงก์ดูแผนเดียวกันได้" : ""}
+      </p>
+    </div>
+  );
+}
+
 // ── 5. Flights ──
 function FlightCard({ link }: { link: NonNullable<TabiReply["flight"]> }) {
   return (
@@ -977,7 +1084,7 @@ function BoardingPass({ leg, href, index }: { leg: NonNullable<NonNullable<TabiR
         </div>
       </div>
       <div className="tabi-pass-tear" aria-hidden />
-      <a href={href} target="_blank" rel="noopener noreferrer" className="tabi-btn tabi-btn--soft mx-4 mb-4 flex">
+      <a href={href} target="_blank" rel="noopener noreferrer" className="tabi-btn tabi-btn--soft mx-4 mb-4 flex" onClick={() => track("flight_clicked", { method: leg.dir })}>
         ดูเที่ยวบินใน Google Flights <ArrowRight size={18} />
       </a>
     </article>
@@ -1063,6 +1170,7 @@ function SoonScreen() {
         <Avatar size={64} />
         <p className="font-bold">โปรไฟล์ยังไม่เปิดใช้</p>
         <p className="tabi-muted text-sm">ตอนนี้ยังไม่ต้องสมัครสมาชิก ทริปทั้งหมดเก็บไว้ในเครื่องนี้</p>
+        <p className="tabi-muted text-xs">Nagame นับสถิติการใช้งานแบบไม่ระบุตัวตน เช่น จำนวนคนที่จัดแผนสำเร็จ เพื่อปรับปรุงทาบิ ไม่เก็บชื่อ อีเมล หรือข้อความที่พิมพ์</p>
       </section>
     </div>
   );

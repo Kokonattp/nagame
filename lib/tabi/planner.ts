@@ -376,3 +376,29 @@ function departureCity(route: RouteOption) {
   const city = nearestGateway(last).g.city;
   return CITY_BY_NAME.get(city)?.th ?? city;
 }
+
+// ── month guide pages (/japan/[month]) ──
+/** Places worth a trip in `month` across Japan (≤2 per city so one city can't fill the page). */
+export function monthHighlights(month: number, n = 9): Highlight[] {
+  const intent: TripIntent = { month, preferences: [], focus: [] };
+  const perCity = new Map<string, number>();
+  return usablePlaces(intent)
+    .map((p) => ({ p, s: placeFit(p, intent) + (p.season === seasonOf(month) ? 0.6 : 0) }))
+    .sort((a, b) => b.s - a.s)
+    .filter(({ p }) => {
+      const c = perCity.get(p.baseCity) ?? 0;
+      perCity.set(p.baseCity, c + 1);
+      return c < 2;
+    })
+    .slice(0, n)
+    .map(({ p }) => toHighlight(p, intent));
+}
+
+/** Verified seasonal closures that affect `month` (fully closed or open only part of it). */
+export function closuresIn(month: number) {
+  return CLOSURES.filter((c) => c.closedMonths.includes(month) || (c.partialMonths ?? []).includes(month)).map((c) => ({
+    note: c.note,
+    source: c.source,
+    closed: c.closedMonths.includes(month),
+  }));
+}
