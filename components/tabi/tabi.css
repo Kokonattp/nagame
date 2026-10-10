@@ -1,0 +1,174 @@
+/* Tabi theme (spec §6): white + sky blue + sakura. Scoped under .tabi so the
+   older /city screens keep their own dark theme from app/globals.css. */
+
+.tabi {
+  --t-bg: #f7fbff;
+  --t-card: #ffffff;
+  --t-blue: #1a66d9; /* 5.3:1 with white text (was #2d7ff9, 3.8:1) */
+  --t-blue-soft: #e8f1ff;
+  --t-navy: #0c1f4a;
+  --t-muted: #5b6b8c;
+  --t-sakura: #ffe9f2;
+  --t-pink: #ff5c9d; /* decorative only */
+  --t-pink-ink: #c2185b; /* pink text: 5.1:1 on sakura */
+  --t-green: #e8f8f0;
+  --t-green-ink: #17734b;
+  --t-orange: #ff9e45;
+  --t-line: #dde7f5;
+  --t-shadow: 0 10px 30px rgba(12, 31, 74, 0.08);
+  --t-shadow-sm: 0 4px 14px rgba(12, 31, 74, 0.07);
+  --t-radius: 24px;
+  --t-radius-sm: 18px;
+
+  min-height: 100dvh;
+  background:
+    radial-gradient(1200px 500px at 50% -120px, #dcebff 0%, transparent 70%),
+    linear-gradient(180deg, #f7fbff 0%, #fdf6fa 100%);
+  color: var(--t-navy);
+  font-family: "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
+}
+
+.tabi-shell {
+  position: relative;
+  max-width: 480px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 16px 16px 112px;
+}
+
+.tabi-card {
+  background: var(--t-card);
+  border: 1px solid var(--t-line);
+  border-radius: var(--t-radius);
+  box-shadow: var(--t-shadow-sm);
+}
+
+.tabi-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--t-line);
+  background: #fff;
+  color: var(--t-navy);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: transform 160ms ease, background 160ms ease;
+}
+.tabi-chip:hover { background: var(--t-blue-soft); }
+.tabi-chip:active { transform: scale(0.96); }
+.tabi-chip:focus-visible, .tabi-btn:focus-visible, .tabi-input:focus-visible { outline: 3px solid rgba(45, 127, 249, 0.45); outline-offset: 2px; }
+
+.tabi-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 16px;
+  font-weight: 600;
+  transition: transform 160ms ease, filter 160ms ease;
+}
+.tabi-btn:active { transform: scale(0.97); }
+.tabi-btn--primary { background: var(--t-blue); color: #fff; }
+.tabi-btn--soft { background: var(--t-blue-soft); color: var(--t-blue); }
+.tabi-btn--pink { background: var(--t-sakura); color: #c2185b; }
+.tabi-btn[disabled] { opacity: 0.5; }
+
+.tabi-input {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 999px;
+  border: 1px solid var(--t-line);
+  background: #fff;
+  padding: 0 56px 0 20px;
+  color: var(--t-navy);
+  box-shadow: var(--t-shadow-sm);
+}
+
+.tabi-muted { color: var(--t-muted); }
+.tabi-scroll-x { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.tabi-scroll-x::-webkit-scrollbar { display: none; }
+
+.tabi-nav {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--t-line);
+}
+.tabi-nav-inner { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; max-width: 480px; }
+.tabi-nav button { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 52px; font-size: 12px; color: var(--t-muted); }
+.tabi-nav button[aria-current="page"] { color: var(--t-blue); font-weight: 600; }
+
+.tabi-img {
+  background: linear-gradient(135deg, var(--t-blue-soft), var(--t-sakura));
+  object-fit: cover;
+}
+
+/* ── motion (spec §6 / video reference) — transform + opacity only ── */
+@keyframes tabi-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes tabi-pop { 0% { transform: scale(0.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes tabi-bounce { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
+@keyframes tabi-dot { 0%, 80%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@keyframes tabi-wag { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@keyframes tabi-select { 0% { transform: scale(1); } 40% { transform: scale(1.03); } 100% { transform: scale(1); } }
+
+.tabi-rise { animation: tabi-rise 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.tabi-pop { animation: tabi-pop 320ms ease-out both; }
+.tabi-bounce { animation: tabi-bounce 900ms ease-in-out 1 both; }
+.tabi-select { animation: tabi-select 300ms ease-out; }
+.tabi-typing span { display: inline-block; width: 6px; height: 6px; margin: 0 2px; border-radius: 50%; background: var(--t-blue); animation: tabi-dot 1s infinite ease-in-out; }
+.tabi-typing span:nth-child(2) { animation-delay: 120ms; }
+.tabi-typing span:nth-child(3) { animation-delay: 240ms; }
+.tabi-wag { animation: tabi-wag 700ms ease-in-out infinite; transform-origin: 50% 90%; }
+
+/* day stepper: Tabi rides along the line to the selected day */
+.tabi-stepper { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding-top: 44px; }
+.tabi-stepper::before { content: ""; position: absolute; left: 10%; right: 10%; top: 58px; height: 3px; border-radius: 3px; background: var(--t-line); }
+.tabi-stepper-rider {
+  position: absolute;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  margin-left: -20px;
+  transition: left 420ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.tabi-stepper button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 48px; font-size: 13px; color: var(--t-muted); }
+.tabi-stepper button .dot { width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--t-line); background: #fff; transition: border-color 200ms ease, transform 200ms ease; }
+.tabi-stepper button[aria-pressed="true"] { color: var(--t-navy); font-weight: 600; }
+.tabi-stepper button[aria-pressed="true"] .dot { border-color: var(--t-blue); transform: scale(1.2); }
+
+.tabi-timeline > li { animation: tabi-rise 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.tabi-timeline > li:nth-child(2) { animation-delay: 70ms; }
+.tabi-timeline > li:nth-child(3) { animation-delay: 140ms; }
+.tabi-timeline > li:nth-child(4) { animation-delay: 210ms; }
+.tabi-timeline > li:nth-child(5) { animation-delay: 280ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tabi *, .tabi *::before, .tabi *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+.tabi .maplibregl-map { font: inherit; background: var(--t-blue-soft); }
+.tabi .maplibregl-ctrl-group button { width: 44px; height: 44px; }
+.tabi .maplibregl-ctrl-attrib { font-size: 10px; line-height: 1.3; }
+
+/* Tabi idle loop: a 12-frame strip slid one frame per step (sprite rendered by three.js). */
+@keyframes tabi-sprite { to { transform: translateX(-100%); } }
+.tabi-sprite { position: absolute; inset: 0; overflow: hidden; }
+.tabi-sprite img { display: block; width: 1200%; max-width: none; height: 100%; animation: tabi-sprite 2.4s steps(12) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .tabi .tabi-sprite img { animation: none !important; transform: none; }
+}

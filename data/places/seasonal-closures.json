@@ -1,0 +1,38 @@
+{
+  "_note": "Seasonal closures Jev must not be trusted with alone. closedMonths = closed for the whole month (planner excludes the place); partialMonths = open only part of the month (planner keeps it, Tabi warns). Checked 2026-10-10: Jev read each source (scripts/verify-closures.mjs → closure-check.json), Claude compared Jev's month answers with the quoted dates. Re-check every season.",
+  "closures": [
+    {
+      "match": "Tateyama|Mount Tate|Kurobe|Murodō",
+      "closedMonths": [12, 1, 2, 3],
+      "partialMonths": [4],
+      "note": "Tateyama Kurobe Alpine Route ปี 2026 เปิด 15 เม.ย. – 30 พ.ย.",
+      "source": "https://www.alpen-route.com/en/",
+      "evidence": "Period of Operation 2026.4.15 - 11.30",
+      "verified": true,
+      "verifiedBy": "jev+claude",
+      "reviewNote": "Jev misread Sep (0.45) and Nov (0.49) as likely closed although the page says open until 11.30 — corrected by review."
+    },
+    {
+      "match": "Kamikōchi|Kamikochi",
+      "closedMonths": [12, 1, 2, 3],
+      "partialMonths": [4, 11],
+      "note": "คามิโคจิเปิด 17 เม.ย. – 15 พ.ย.",
+      "source": "https://www.japan-guide.com/e/e6040.html",
+      "evidence": "It is open from April 17 until November 15 and shuts down during winter.",
+      "verified": true,
+      "verifiedBy": "jev+claude",
+      "reviewNote": "Secondary source (official kamikochi.or.jp page not found). Jev's months matched the quote."
+    },
+    {
+      "match": "Shiretoko Five Lakes|Shiretoko Goko",
+      "closedMonths": [12, 1, 2, 3],
+      "partialMonths": [4, 11],
+      "note": "Shiretoko Goko เปิด 20 เม.ย. – 8 พ.ย. (10 พ.ค. – 31 ก.ค. เดินทางเดินดินได้เฉพาะทัวร์มีไกด์ เพราะช่วงหมี)",
+      "source": "https://www.goko.go.jp/multilingual_eng/access.html",
+      "evidence": "Field house table: 4/20 … 11/1 - 11/8",
+      "verified": true,
+      "verifiedBy": "jev+claude",
+      "reviewNote": "Jev's months matched the table (April and November mostly closed)."
+    }
+  ]
+}

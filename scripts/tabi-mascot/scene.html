@@ -1,0 +1,189 @@
+<!doctype html>
+<!-- Tabi mascot, modelled in three.js and rendered to PNG by render.cjs.
+     Open directly with ?mood=idle|happy|worried to preview. -->
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>html, body { margin: 0; background: transparent; } canvas { display: block; }</style>
+  <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from "three";
+
+const params = new URLSearchParams(location.search);
+const mood = params.get("mood") ?? "idle";
+// frame=face → head close-up for round avatars; default = full body
+const face = params.get("frame") === "face";
+const SIZE = Number(params.get("size") ?? 512);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(SIZE, SIZE);
+renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
+camera.position.set(0, face ? 1.4 : 1.05, face ? 6.0 : 8.2);
+camera.lookAt(0, face ? 1.32 : 0.85, 0);
+
+// 3-step toon ramp → soft anime shading
+const ramp = new THREE.DataTexture(new Uint8Array([150, 150, 150, 255, 215, 215, 215, 255, 255, 255, 255, 255]), 3, 1);
+ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
+ramp.needsUpdate = true;
+const toon = (color) => new THREE.MeshToonMaterial({ color, gradientMap: ramp });
+const flat = (color, opacity = 1) => new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity });
+const INK = new THREE.MeshBasicMaterial({ color: 0x3a2a2a, side: THREE.BackSide });
+
+const C = { fur: 0xfffaf2, ginger: 0xffb066, pink: 0xffa3c0, blush: 0xff8fb1, blue: 0x2d7ff9, ink: 0x2b2224, white: 0xffffff, sakura: 0xffc6db, gold: 0xffd166 };
+
+const cat = new THREE.Group();
+scene.add(cat);
+
+function mesh(geo, mat, pos = [0, 0, 0], scale = [1, 1, 1], rot = [0, 0, 0], outline = 0) {
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(...pos); m.scale.set(...scale); m.rotation.set(...rot);
+  if (outline) {
+    const o = new THREE.Mesh(geo, INK);
+    o.scale.setScalar(1 + outline);
+    m.add(o);
+  }
+  return m;
+}
+const sphere = (r = 1, w = 48) => new THREE.SphereGeometry(r, w, w / 2);
+
+// ── body & head ──
+const body = mesh(sphere(0.78), toon(C.fur), [0, 0.05, 0], [1, 0.92, 0.88], [0, 0, 0], 0.035);
+cat.add(body);
+const head = new THREE.Group();
+head.position.set(0, 1.18, 0.05);
+cat.add(head);
+head.add(mesh(sphere(1), toon(C.fur), [0, 0, 0], [1.16, 0.98, 0.98], [0, 0, 0], 0.03));
+// ginger patch over the left eye + a little stripe on top
+head.add(mesh(sphere(0.42), toon(C.ginger), [-0.52, 0.42, 0.62], [1.1, 0.75, 0.55], [0, 0, 0.4]));
+head.add(mesh(sphere(0.2), toon(C.ginger), [0.05, 0.92, 0.25], [1.4, 0.45, 0.9]));
+
+// ears
+for (const side of [-1, 1]) {
+  const ear = mesh(new THREE.ConeGeometry(0.34, 0.62, 32), toon(side < 0 ? C.ginger : C.fur), [0.62 * side, 0.92, 0], [1, 1, 0.8], [0, 0, -0.42 * side], 0.06);
+  ear.add(mesh(new THREE.ConeGeometry(0.2, 0.4, 24), toon(C.pink), [0, -0.05, 0.12], [1, 1, 0.5]));
+  head.add(ear);
+}
+
+// eyes
+const eyeY = 0.02, eyeX = 0.4, eyeZ = 0.9;
+const eyes = []; // open eyes, squashed for blinking
+if (mood === "happy") {
+  for (const side of [-1, 1]) {
+    head.add(mesh(new THREE.TorusGeometry(0.13, 0.035, 12, 24, Math.PI), flat(C.ink), [eyeX * side, eyeY - 0.02, eyeZ + 0.02]));
+  }
+} else {
+  for (const side of [-1, 1]) {
+    const eye = mesh(sphere(0.15, 32), flat(C.ink), [eyeX * side, eyeY, eyeZ], [1, 1.25, 0.6]);
+    eye.add(mesh(sphere(0.05, 16), flat(C.white), [0.05, 0.06, 0.6]));
+    eye.add(mesh(sphere(0.025, 12), flat(C.white), [-0.05, -0.06, 0.6]));
+    head.add(eye);
+    eyes.push(eye);
+  }
+}
+if (mood === "worried") {
+  for (const side of [-1, 1]) {
+    head.add(mesh(new THREE.CapsuleGeometry(0.03, 0.18, 6, 12), flat(C.ink), [eyeX * side, 0.3, 0.92], [1, 1, 1], [0, 0, 0.55 * side]));
+  }
+  // sweat drop
+  head.add(mesh(sphere(0.11, 24), flat(0x9fd3ff, 0.95), [1.22, 0.62, 0.3], [0.8, 1.25, 0.5], [0, 0, 0], 0.08));
+}
+
+// blush, nose, mouth
+for (const side of [-1, 1]) head.add(mesh(sphere(0.16, 24), flat(C.blush, 0.55), [0.66 * side, -0.2, 0.78], [1.2, 0.6, 0.3]));
+head.add(mesh(sphere(0.06, 16), flat(C.pink), [0, -0.12, 0.98], [1.3, 0.9, 0.6]));
+const mouthOpen = mood === "happy";
+for (const side of [-1, 1]) {
+  head.add(mesh(new THREE.TorusGeometry(0.075, 0.02, 8, 16, Math.PI), flat(C.ink), [0.075 * side, -0.24, 0.96], [1, 1, 1], [0, 0, Math.PI]));
+}
+if (mouthOpen) head.add(mesh(sphere(0.07, 16), flat(0xff6f91), [0, -0.33, 0.93], [1, 0.8, 0.4]));
+// whiskers
+for (const side of [-1, 1]) for (const k of [0, 1]) {
+  head.add(mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.38, 6), flat(0xc9b8b0), [0.98 * side, -0.1 - k * 0.1, 0.62], [1, 1, 1], [0, 0, Math.PI / 2 + (k ? -0.15 : 0.12) * side]));
+}
+
+// sakura on the right ear
+const sakura = new THREE.Group();
+sakura.position.set(0.58, 0.72, 0.62);
+for (let i = 0; i < 5; i++) {
+  const a = (i / 5) * Math.PI * 2;
+  sakura.add(mesh(sphere(0.09, 16), toon(C.sakura), [Math.cos(a) * 0.1, Math.sin(a) * 0.1, 0], [1, 1, 0.35]));
+}
+sakura.add(mesh(sphere(0.045, 12), flat(C.gold), [0, 0, 0.04]));
+head.add(sakura);
+
+// scarf (Tabi blue) with a little tail
+const scarf = mesh(new THREE.TorusGeometry(0.74, 0.15, 16, 48), toon(C.blue), [0, 0.42, 0.04], [1, 1, 0.92], [Math.PI / 2 - 0.18, 0, 0], 0.04);
+cat.add(scarf);
+cat.add(mesh(new THREE.CapsuleGeometry(0.12, 0.3, 6, 12), toon(C.blue), [0.36, 0.12, 0.72], [1, 1, 0.6], [0.2, 0, 0.35], 0.06));
+
+// paws (right paw waves when happy)
+cat.add(mesh(sphere(0.2, 24), toon(C.fur), [-0.34, -0.55, 0.55], [1, 0.8, 1], [0, 0, 0], 0.05));
+const rightPaw = mood === "happy"
+  ? mesh(sphere(0.2, 24), toon(C.fur), [0.78, 0.55, 0.45], [0.9, 1.1, 0.9], [0, 0, 0.3], 0.05)
+  : mesh(sphere(0.2, 24), toon(C.fur), [0.34, -0.55, 0.55], [1, 0.8, 1], [0, 0, 0], 0.05);
+cat.add(rightPaw);
+
+// tail with a ginger tip, curling up behind the right side
+const curve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(0.45, -0.35, -0.5), new THREE.Vector3(1.05, -0.2, -0.35),
+  new THREE.Vector3(1.2, 0.35, -0.2), new THREE.Vector3(1.0, 0.75, -0.1),
+]);
+// tail swings around its root, so it lives in a group pivoted there
+const tailRoot = new THREE.Vector3(0.45, -0.35, -0.5);
+const tailGroup = new THREE.Group();
+tailGroup.position.copy(tailRoot);
+const tail = mesh(new THREE.TubeGeometry(curve, 40, 0.13, 16), toon(C.fur), [-tailRoot.x, -tailRoot.y, -tailRoot.z], [1, 1, 1], [0, 0, 0], 0.05);
+tailGroup.add(tail);
+tailGroup.add(mesh(sphere(0.16, 24), toon(C.ginger), [1.0 - tailRoot.x, 0.78 - tailRoot.y, -0.1 - tailRoot.z]));
+cat.add(tailGroup);
+
+// pose: t in [0, 1) is one loop of the idle animation (breathe, sway, tail wag, blink)
+const base = { headY: head.position.y, headZ: mood === "happy" ? 0.12 : mood === "worried" ? -0.08 : 0, pawY: rightPaw.position.y };
+if (mood === "worried") base.headY -= 0.04;
+cat.rotation.y = -0.28;
+function pose(t) {
+  const w = Math.PI * 2 * t;
+  cat.scale.set(1 + 0.012 * Math.sin(w * 2), 1 - 0.018 * Math.sin(w * 2), 1);
+  head.position.y = base.headY + 0.035 * Math.sin(w * 2);
+  head.rotation.z = base.headZ + 0.07 * Math.sin(w);
+  tailGroup.rotation.z = 0.28 * Math.sin(w * 2);
+  tailGroup.rotation.y = 0.15 * Math.sin(w * 2 + 1);
+  const blink = t > 0.48 && t < 0.56 ? 0.12 : 1;
+  for (const e of eyes) e.scale.y = 1.25 * blink;
+  if (mood === "happy") rightPaw.position.y = base.pawY + 0.08 * Math.sin(w * 4);
+}
+
+// lights
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd6e6ff, 1.6));
+const key = new THREE.DirectionalLight(0xffffff, 2.2);
+key.position.set(-3, 5, 6);
+scene.add(key);
+
+// ?sprite=N → render N frames side by side into one strip (CSS steps() plays it back)
+const frames = Number(params.get("sprite") ?? 0);
+if (frames > 0) {
+  const strip = document.createElement("canvas");
+  strip.width = SIZE * frames; strip.height = SIZE;
+  const ctx = strip.getContext("2d");
+  for (let i = 0; i < frames; i++) {
+    pose(i / frames);
+    renderer.render(scene, camera);
+    ctx.drawImage(renderer.domElement, i * SIZE, 0);
+  }
+  window.__sprite = strip.toDataURL("image/png");
+} else {
+  pose(0);
+  renderer.render(scene, camera);
+}
+window.__done = true;
+</script>
+</body>
+</html>

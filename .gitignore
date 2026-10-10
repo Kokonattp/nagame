@@ -39,9 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+**/__pycache__/
 
 docs/BUILD-STATE.md.autoloop.json
 docs/BUILD-STATE.md.autoloop.log
 
 # autoloop runtime sidecar (ไม่ใช่ของโปรเจกต์)
 docs/BUILD-STATE.md.autoloop.*
+
+# Tabi place-store build cache (Wikipedia text used only as Jev input)
+data/places/_cache/
+
+# copied from node_modules by scripts/copy-maplibre-worker.mjs (postinstall)
+public/maplibre/

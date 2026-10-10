@@ -1,0 +1,178 @@
+// Turn one Thai message into structured intent.
+// Code extracts numbers (days, month, places); System One judges meaning.
+// Thresholds come from M0 (spec §9): noul ≥ 0.7; preferences judged on the
+// message alone, never with route context (context made Jev over-tag).
+
+import { findFocus } from "./cities";
+import { askSystemOne, systemOneConfigured } from "./system-one";
+import { PREFERENCES, type Preference, type TabiContext, type TripIntent } from "./types";
+
+export type Intent =
+  | "start_trip" | "refine" | "pick_option" | "ask_detail" | "add_stop"
+  | "draft_itinerary" | "ask_flight" | "smalltalk" | "other";
+
+export type Understanding = {
+  intent: Intent;
+  confidence: number;
+  needsFresh: boolean;
+  pickPosition: number | null;
+  preferences: Preference[];
+  month?: number;
+  durationDays?: number;
+  focus: string[];
+  source: "jev" | "fallback";
+};
+
+const NOUL_THRESHOLD = 0.7;
+
+// ── numbers & names: code, not the model ──
+// Abbreviations require their dots: optional dots made consonant pairs inside ordinary
+// words match (review: "พาเด็กคนเล็ก" → ก.ค., "อยากชมคาวากุจิ" → ม.ค.).
+const MONTHS: [RegExp, number][] = [
+  [/ม\.ค\.|มกรา|\bjan(uary)?\b|ปีใหม่/i, 1], [/ก\.พ\.|กุมภา|\bfeb(ruary)?\b/i, 2],
+  [/มี\.ค\.|มีนา|\bmar(ch)?\b/i, 3], [/เม\.ย\.|เมษา|\bapr(il)?\b|สงกรานต์/i, 4],
+  [/พ\.ค\.|พฤษภา|\bmay\b/i, 5], [/มิ\.ย\.|มิถุนา|\bjune?\b/i, 6],
+  [/ก\.ค\.|กรกฎา|\bjuly?\b/i, 7], [/ส\.ค\.|สิงหา|\baug(ust)?\b/i, 8],
+  [/ก\.ย\.|กันยา|\bsep(tember)?\b/i, 9], [/ต\.ค\.|ตุลา|\boct(ober)?\b/i, 10],
+  [/พ\.ย\.|พฤศจิกา|\bnov(ember)?\b/i, 11], [/ธ\.ค\.|ธันวา|\bdec(ember)?\b/i, 12],
+];
+
+/** First month mentioned wins ("ม.ค." never matches inside "มี.ค." because of the vowel). */
+export function parseMonth(text: string): number | undefined {
+  let best: { month: number; index: number } | undefined;
+  for (const [re, month] of MONTHS) {
+    const m = re.exec(text);
+    if (m && (!best || m.index < best.index)) best = { month, index: m.index };
+  }
+  return best?.month;
+}
+
+export function parseDays(text: string): number | undefined {
+  const m = /(\d{1,2})\s*(วัน|days?)/i.exec(text);
+  if (m) return Math.min(Number(m[1]), 21);
+  const weeks = /(\d)\s*(สัปดาห์|อาทิตย์|weeks?)/i.exec(text);
+  if (weeks) return Math.min(Number(weeks[1]) * 7, 21);
+  if (/อาทิตย์นึง|หนึ่งอาทิตย์|สัปดาห์|week/i.test(text)) return 7;
+  return undefined;
+}
+
+// ── judgement: System One ──
+const INTENTS: Record<Intent, string> = {
+  start_trip: "Starts planning a new Japan trip or describes what kind of trip they want",
+  refine: "Wants to change or adjust the options or route already shown (e.g. fewer crowds, easier, different day)",
+  pick_option: "Selects one of the options currently shown, e.g. 'the first one'",
+  ask_detail: "Asks a question about a specific place or route already mentioned",
+  add_stop: "Wants to add a stop or activity to the current route",
+  draft_itinerary: "Wants the route turned into a day-by-day plan",
+  ask_flight: "Asks about flights, tickets, airfare, or airlines",
+  smalltalk: "Greeting, thanks, or chit-chat with no planning request",
+  other: "Anything else, including requests the travel planner cannot do such as booking or payment",
+};
+
+const PREF_TEXT: Record<Preference, string> = {
+  nature: "nature, mountains, scenery outdoors",
+  snow: "wants to see snow",
+  onsen: "hot springs / onsen",
+  food: "food is a main goal",
+  shopping: "shopping",
+  culture: "temples, shrines, history, culture",
+  fewer_crowds: "wants fewer crowds / quieter places",
+  easy_travel: "wants easy or short travel, first-timer friendly, little detour",
+  family: "travelling with children or family",
+  scenic_photo: "wants photogenic views, seasonal colors, photos",
+};
+
+export async function understand(message: string, ctx: TabiContext): Promise<Understanding> {
+  const base = {
+    month: parseMonth(message),
+    durationDays: parseDays(message),
+    focus: findFocus(message),
+  };
+  if (!systemOneConfigured()) return { ...base, ...keywordFallback(message, ctx), source: "fallback" };
+
+  const context = {
+    stage: ctx.selectedRoute ? "a route is selected" : ctx.shownRoutes?.length ? "Tabi just showed route options" : "no trip yet",
+    shown_options: (ctx.shownRoutes ?? []).map((r, i) => ({ position: i + 1, title: r.title })),
+    selected_route: ctx.selectedRoute?.title ?? null,
+  };
+
+  try {
+    const [meaning, prefs] = await Promise.all([
+      askSystemOne({ message, context }, {
+        intent: {
+          type: "choice",
+          instructions: "What does the traveller want from the Japan trip planner with `message`? Use `context` to resolve references.",
+          criteria: INTENTS,
+        },
+        needs_fresh_data: {
+          type: "noul",
+          instructions: "Does answering `message` correctly require live or current information such as current prices, schedules, opening months, or closures?",
+        },
+        pick_position: {
+          type: "choice",
+          instructions: "If `message` selects one of `context.shown_options`, which position? Otherwise none.",
+          criteria: { "1": "First option", "2": "Second option", "3": "Third option", none: "No option is being selected" },
+        },
+      }),
+      askSystemOne({ message }, Object.fromEntries(
+        PREFERENCES.map((p) => [p, { type: "noul" as const, instructions: `Does \`message\` itself express this travel preference: ${PREF_TEXT[p]}?` }]),
+      )),
+    ]);
+
+    const pick = meaning.pick_position.choice;
+    return {
+      ...base,
+      intent: meaning.intent.choice as Intent,
+      confidence: meaning.intent.confidence,
+      needsFresh: meaning.needs_fresh_data.noul >= NOUL_THRESHOLD,
+      pickPosition: pick === "none" ? null : Number(pick),
+      preferences: PREFERENCES.filter((p) => prefs[p].noul >= NOUL_THRESHOLD),
+      source: "jev",
+    };
+  } catch {
+    return { ...base, ...keywordFallback(message, ctx), source: "fallback" };
+  }
+}
+
+// Used only when System One is unreachable: honest, narrow keyword rules.
+function keywordFallback(message: string, ctx: TabiContext) {
+  const t = message.toLowerCase();
+  const has = (re: RegExp) => re.test(t);
+  const preferences = (
+    [
+      ["nature", /ธรรมชาติ|ภูเขา|ทะเลสาบ|nature/], ["snow", /หิมะ|snow/], ["onsen", /ออนเซ็น|onsen|บ่อน้ำร้อน/],
+      ["food", /กิน|อาหาร|ซูชิ|ราเมง|food/], ["shopping", /ช้อป|shopping/], ["culture", /วัด|ศาลเจ้า|ปราสาท|วัฒนธรรม/],
+      ["fewer_crowds", /คนน้อย|เงียบ/], ["easy_travel", /ง่าย|ครั้งแรก|ไม่อ้อม|ไม่ไกล/], ["family", /ลูก|เด็ก|ครอบครัว/],
+      ["scenic_photo", /ถ่ายรูป|วิว|ใบไม้|ซากุระ/],
+    ] as [Preference, RegExp][]
+  ).filter(([, re]) => has(re)).map(([p]) => p);
+
+  // "ครั้งแรก" (first time) is not a pick — only option words count.
+  const pickMatch = /(อันแรก|เส้นแรก|ตัวแรก|(?:อัน|เส้น)ที่ ?1)|((?:อัน|เส้น)ที่ ?(?:สอง|2))|((?:อัน|เส้น)ที่ ?(?:สาม|3))/.exec(t);
+  const pickPosition = pickMatch ? (pickMatch[1] ? 1 : pickMatch[2] ? 2 : 3) : null;
+  const hasOptions = Boolean(ctx.shownRoutes?.length || ctx.selectedRoute);
+
+  let intent: Intent = "start_trip";
+  if (has(/ตั๋ว|ไฟลท์|เครื่องบิน|flight/)) intent = "ask_flight";
+  else if (has(/สวัสดี|ขอบคุณ|\bhello\b|\bhi\b/)) intent = "smalltalk";
+  else if (has(/จอง|จ่ายเงิน/)) intent = "other";
+  else if (pickPosition && hasOptions) intent = "pick_option";
+  else if (has(/รายวัน|แผน.*วัน|ตาราง/)) intent = "draft_itinerary";
+  else if (has(/แวะ|เพิ่ม/) && hasOptions) intent = "add_stop";
+  else if (hasOptions && preferences.length) intent = "refine";
+  // A trip is in progress: an unmatched follow-up ("ขอ 7 วัน") adjusts it instead of wiping it.
+  else if ((hasOptions || ctx.intent) && !has(/ทริปใหม่|เริ่มใหม่/)) intent = "refine";
+
+  return { intent, confidence: 0.5, needsFresh: intent === "ask_flight", pickPosition, preferences };
+}
+
+export function mergeIntent(prev: TripIntent | undefined, u: Understanding): TripIntent {
+  const startOver = u.intent === "start_trip";
+  const prevPrefs = startOver ? [] : prev?.preferences ?? [];
+  return {
+    month: u.month ?? (startOver ? undefined : prev?.month),
+    durationDays: u.durationDays ?? (startOver ? undefined : prev?.durationDays),
+    preferences: [...new Set([...prevPrefs, ...u.preferences])],
+    focus: u.focus.length ? u.focus : startOver ? [] : prev?.focus ?? [],
+  };
+}
