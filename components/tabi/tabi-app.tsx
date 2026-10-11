@@ -15,6 +15,7 @@ import type { SharedTrip } from "@/lib/tabi/share-server";
 import { listTrips, newTrip, saveTrip, type SavedTrip } from "@/lib/tabi/store";
 import { track } from "@/lib/tabi/track";
 import { FARES_CHECKED, legFare, yenRange, type LegFare } from "@/lib/tabi/fares";
+import { FLIGHTS_CHECKED_AT, flightSnapFor, type FlightSnap } from "@/lib/tabi/flight-snapshot";
 import { durationTh, travelTime } from "@/lib/tabi/rail-times";
 import { STAY_AREA } from "@/lib/tabi/stay";
 import { AIRPORTS, jrPassWorthIt, legLinks, type LegLink } from "@/lib/tabi/transport";
@@ -1221,9 +1222,10 @@ function FlightCard({ link }: { link: NonNullable<TabiReply["flight"]> }) {
 
 /** Boarding-pass style leg (video reference): coloured header, big airport codes, search button. */
 /** Boarding-pass style leg (video reference). Flips (↻) to show the airport ↔ city leg in Japan. */
-function BoardingPass({ leg, href, index, ground }: {
+function BoardingPass({ leg, href, index, ground, fare }: {
   leg: NonNullable<NonNullable<TabiReply["flight"]>["legs"]>[number]; href: string; index: number;
   ground?: { title: string; time?: string; links: LegLink[] };
+  fare?: { snap: FlightSnap; exact: boolean } | null;
 }) {
   const out = leg.dir === "outbound";
   const date = leg.date ? isoDay(leg.date) : null;
@@ -1257,6 +1259,18 @@ function BoardingPass({ leg, href, index, ground }: {
               <p className="tabi-muted mt-1 text-xs">{leg.to}</p>
             </div>
           </div>
+          {fare?.snap.cheapest && (
+            <div className="mx-4 mb-3 rounded-2xl bg-[#fff8e6] px-3 py-2 text-sm text-[var(--t-navy)]">
+              <p>
+                💰 ไป-กลับเริ่ม <b>~฿{fare.snap.cheapest.toLocaleString("en-US")}</b>
+                {fare.snap.nonstop && <> · บินตรง ~฿{fare.snap.nonstop.price.toLocaleString("en-US")} <span className="tabi-muted">({fare.snap.nonstop.airline})</span></>}
+              </p>
+              <p className="tabi-muted text-[11px]">
+                ทาบิเช็กใน Google Flights เมื่อ {thaiDate(isoDay(FLIGHTS_CHECKED_AT.slice(0, 10)))} สำหรับไป {thaiDate(isoDay(fare.snap.depart))}–{thaiDate(isoDay(fare.snap.back))}
+                {fare.exact ? "" : " (เดือนที่ราคาดีสุด)"} · ราคาวันของพี่ดูในปุ่มด้านล่าง
+              </p>
+            </div>
+          )}
           <div className="tabi-pass-tear" aria-hidden />
           <a href={href} target="_blank" rel="noopener noreferrer" className="tabi-btn tabi-btn--soft mx-4 mb-4 flex" onClick={() => track("flight_clicked", { method: leg.dir })}>
             ดูเที่ยวบินใน Google Flights <ArrowRight size={18} />
@@ -1299,7 +1313,7 @@ function FlightsScreen({ reply, trip, onBack, onChat, onPickDate }: {
         <>
           <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
             {link.legs.map((leg, i) => (
-              <BoardingPass key={leg.dir} leg={leg} index={i} href={leg.dir === "return" && link.returnUrl ? link.returnUrl : link.url} ground={groundLeg(trip, leg.dir)} />
+              <BoardingPass key={leg.dir} leg={leg} index={i} href={leg.dir === "return" && link.returnUrl ? link.returnUrl : link.url} ground={groundLeg(trip, leg.dir)} fare={leg.dir === "outbound" ? flightSnapFor(leg.toCode, trip?.intent.startDate ? Number(trip.intent.startDate.slice(5, 7)) : trip?.intent.month ?? reply?.intent.month) : null} />
             ))}
           </div>
           <p className="tabi-muted text-xs">{link.note}</p>

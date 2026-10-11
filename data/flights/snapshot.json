@@ -1,0 +1,535 @@
+{
+  "checkedAt": "2026-10-11T10:23:05.822Z",
+  "source": "Google Flights (economy, 1 adult, round trip)",
+  "currency": "THB",
+  "routes": [
+    {
+      "gateway": "TYO",
+      "month": "2026-11",
+      "depart": "2026-11-10",
+      "back": "2026-11-15",
+      "cheapest": 13540,
+      "nonstop": {
+        "price": 15272,
+        "airline": "Thai AirAsia X",
+        "duration": "6 hr 5 min",
+        "route": "DMK–NRT",
+        "nonstop": true
+      },
+      "results": 20
+    },
+    {
+      "gateway": "TYO",
+      "month": "2026-12",
+      "depart": "2026-12-10",
+      "back": "2026-12-15",
+      "cheapest": 13540,
+      "nonstop": {
+        "price": 13540,
+        "airline": "Thai AirAsia X",
+        "duration": "6 hr 5 min",
+        "route": "DMK–NRT",
+        "nonstop": true
+      },
+      "results": 19
+    },
+    {
+      "gateway": "TYO",
+      "month": "2027-01",
+      "depart": "2027-01-10",
+      "back": "2027-01-15",
+      "cheapest": 17070,
+      "nonstop": {
+        "price": 17420,
+        "airline": "ANA (บินโดย Air Japan)",
+        "duration": "5 hr 50 min",
+        "route": "BKK–HND",
+        "nonstop": true
+      },
+      "results": 17
+    },
+    {
+      "gateway": "TYO",
+      "month": "2027-02",
+      "depart": "2027-02-10",
+      "back": "2027-02-15",
+      "cheapest": 14524,
+      "nonstop": {
+        "price": 17765,
+        "airline": "ANA (บินโดย Air Japan)",
+        "duration": "5 hr 55 min",
+        "route": "BKK–NRT",
+        "nonstop": true
+      },
+      "results": 18
+    },
+    {
+      "gateway": "TYO",
+      "month": "2027-03",
+      "depart": "2027-03-10",
+      "back": "2027-03-15",
+      "cheapest": 14369,
+      "nonstop": {
+        "price": 14562,
+        "airline": "Thai AirAsia X",
+        "duration": "6 hr 5 min",
+        "route": "DMK–NRT",
+        "nonstop": true
+      },
+      "results": 22
+    },
+    {
+      "gateway": "TYO",
+      "month": "2027-04",
+      "depart": "2027-04-10",
+      "back": "2027-04-15",
+      "cheapest": 15616,
+      "nonstop": {
+        "price": 16932,
+        "airline": "Thai AirAsia X",
+        "duration": "6 hr 30 min",
+        "route": "DMK–NRT",
+        "nonstop": true
+      },
+      "results": 19
+    },
+    {
+      "gateway": "OSA",
+      "month": "2026-11",
+      "depart": "2026-11-10",
+      "back": "2026-11-15",
+      "cheapest": 12332,
+      "nonstop": {
+        "price": 13907,
+        "airline": "Thai AirAsia X",
+        "duration": "5 hr 35 min",
+        "route": "DMK–KIX",
+        "nonstop": true
+      },
+      "results": 11
+    },
+    {
+      "gateway": "OSA",
+      "month": "2026-12",
+      "depart": "2026-12-10",
+      "back": "2026-12-15",
+      "cheapest": 14003,
+      "nonstop": {
+        "price": 15783,
+        "airline": "Thai Vietjet Air",
+        "duration": "5 hr 30 min",
+        "route": "BKK–KIX",
+        "nonstop": true
+      },
+      "results": 12
+    },
+    {
+      "gateway": "OSA",
+      "month": "2027-01",
+      "depart": "2027-01-10",
+      "back": "2027-01-15",
+      "cheapest": 13529,
+      "nonstop": {
+        "price": 14566,
+        "airline": "Thai AirAsia X",
+        "duration": "5 hr 35 min",
+        "route": "DMK–KIX",
+        "nonstop": true
+      },
+      "results": 11
+    },
+    {
+      "gateway": "OSA",
+      "month": "2027-02",
+      "depart": "2027-02-10",
+      "back": "2027-02-15",
+      "cheapest": 14618,
+      "nonstop": {
+        "price": 18218,
+        "airline": "Thai AirAsia X",
+        "duration": "5 hr 35 min",
+        "route": "DMK–KIX",
+        "nonstop": true
+      },
+      "results": 11
+    },
+    {
+      "gateway": "OSA",
+      "month": "2027-03",
+      "depart": "2027-03-10",
+      "back": "2027-03-15",
+      "cheapest": 13145,
+      "nonstop": {
+        "price": 19497,
+        "airline": "Thai AirAsia X",
+        "duration": "5 hr 35 min",
+        "route": "DMK–KIX",
+        "nonstop": true
+      },
+      "results": 16
+    },
+    {
+      "gateway": "OSA",
+      "month": "2027-04",
+      "depart": "2027-04-10",
+      "back": "2027-04-15",
+      "cheapest": 15275,
+      "nonstop": {
+        "price": 18006,
+        "airline": "Thai AirAsia X",
+        "duration": "5 hr 55 min",
+        "route": "DMK–KIX",
+        "nonstop": true
+      },
+      "results": 17
+    },
+    {
+      "gateway": "NGO",
+      "month": "2026-11",
+      "depart": "2026-11-10",
+      "back": "2026-11-15",
+      "cheapest": 13446,
+      "nonstop": {
+        "price": 31455,
+        "airline": "THAIANA",
+        "duration": "5 hr 25 min",
+        "route": "BKK–NGO",
+        "nonstop": true
+      },
+      "results": 9
+    },
+    {
+      "gateway": "NGO",
+      "month": "2026-12",
+      "depart": "2026-12-10",
+      "back": "2026-12-15",
+      "cheapest": 13272,
+      "nonstop": {
+        "price": 29510,
+        "airline": "THAIANA",
+        "duration": "5 hr 25 min",
+        "route": "BKK–NGO",
+        "nonstop": true
+      },
+      "results": 10
+    },
+    {
+      "gateway": "NGO",
+      "month": "2027-01",
+      "depart": "2027-01-10",
+      "back": "2027-01-15",
+      "cheapest": 15111,
+      "nonstop": {
+        "price": 15636,
+        "airline": "Thai AirAsia X",
+        "duration": "5 hr 40 min",
+        "route": "DMK–NGO",
+        "nonstop": true
+      },
+      "results": 9
+    },
+    {
+      "gateway": "NGO",
+      "month": "2027-02",
+      "depart": "2027-02-10",
+      "back": "2027-02-15",
+      "cheapest": 15135,
+      "nonstop": {
+        "price": 19381,
+        "airline": "Thai AirAsia X",
+        "duration": "5 hr 40 min",
+        "route": "DMK–NGO",
+        "nonstop": true
+      },
+      "results": 9
+    },
+    {
+      "gateway": "NGO",
+      "month": "2027-03",
+      "depart": "2027-03-10",
+      "back": "2027-03-15",
+      "cheapest": 13270,
+      "nonstop": {
+        "price": 16107,
+        "airline": "Thai AirAsia X",
+        "duration": "5 hr 40 min",
+        "route": "DMK–NGO",
+        "nonstop": true
+      },
+      "results": 9
+    },
+    {
+      "gateway": "NGO",
+      "month": "2027-04",
+      "depart": "2027-04-10",
+      "back": "2027-04-15",
+      "cheapest": 13270,
+      "nonstop": {
+        "price": 31835,
+        "airline": "THAIANA",
+        "duration": "5 hr 55 min",
+        "route": "BKK–NGO",
+        "nonstop": true
+      },
+      "results": 12
+    },
+    {
+      "gateway": "FUK",
+      "month": "2026-11",
+      "depart": "2026-11-10",
+      "back": "2026-11-15",
+      "cheapest": 12039,
+      "nonstop": {
+        "price": 12712,
+        "airline": "Thai AirAsia",
+        "duration": "5 hr 5 min",
+        "route": "DMK–FUK",
+        "nonstop": true
+      },
+      "results": 8
+    },
+    {
+      "gateway": "FUK",
+      "month": "2026-12",
+      "depart": "2026-12-10",
+      "back": "2026-12-15",
+      "cheapest": 12206,
+      "nonstop": {
+        "price": 13476,
+        "airline": "Thai AirAsia",
+        "duration": "5 hr 5 min",
+        "route": "DMK–FUK",
+        "nonstop": true
+      },
+      "results": 11
+    },
+    {
+      "gateway": "FUK",
+      "month": "2027-01",
+      "depart": "2027-01-10",
+      "back": "2027-01-15",
+      "cheapest": 14143,
+      "nonstop": {
+        "price": 14696,
+        "airline": "Thai Vietjet Air",
+        "duration": "5 hr 5 min",
+        "route": "BKK–FUK",
+        "nonstop": true
+      },
+      "results": 9
+    },
+    {
+      "gateway": "FUK",
+      "month": "2027-02",
+      "depart": "2027-02-10",
+      "back": "2027-02-15",
+      "cheapest": 12883,
+      "nonstop": {
+        "price": 13928,
+        "airline": "Thai AirAsia",
+        "duration": "5 hr 5 min",
+        "route": "DMK–FUK",
+        "nonstop": true
+      },
+      "results": 10
+    },
+    {
+      "gateway": "FUK",
+      "month": "2027-03",
+      "depart": "2027-03-10",
+      "back": "2027-03-15",
+      "cheapest": 12708,
+      "nonstop": {
+        "price": 13399,
+        "airline": "Thai AirAsia",
+        "duration": "5 hr 5 min",
+        "route": "DMK–FUK",
+        "nonstop": true
+      },
+      "results": 9
+    },
+    {
+      "gateway": "FUK",
+      "month": "2027-04",
+      "depart": "2027-04-10",
+      "back": "2027-04-15",
+      "cheapest": 15305,
+      "nonstop": {
+        "price": 24171,
+        "airline": "Thai AirAsia",
+        "duration": "5 hr 10 min",
+        "route": "DMK–FUK",
+        "nonstop": true
+      },
+      "results": 10
+    },
+    {
+      "gateway": "CTS",
+      "month": "2026-11",
+      "depart": "2026-11-10",
+      "back": "2026-11-15",
+      "cheapest": 13607,
+      "nonstop": {
+        "price": 16282,
+        "airline": "Thai AirAsia X",
+        "duration": "6 hr 50 min",
+        "route": "DMK–CTS",
+        "nonstop": true
+      },
+      "results": 12
+    },
+    {
+      "gateway": "CTS",
+      "month": "2026-12",
+      "depart": "2026-12-10",
+      "back": "2026-12-15",
+      "cheapest": 17168,
+      "nonstop": {
+        "price": 25536,
+        "airline": "Thai AirAsia X",
+        "duration": "6 hr 50 min",
+        "route": "DMK–CTS",
+        "nonstop": true
+      },
+      "results": 10
+    },
+    {
+      "gateway": "CTS",
+      "month": "2027-01",
+      "depart": "2027-01-10",
+      "back": "2027-01-15",
+      "cheapest": 17596,
+      "nonstop": {
+        "price": 28285,
+        "airline": "Thai AirAsia X",
+        "duration": "6 hr 50 min",
+        "route": "DMK–CTS",
+        "nonstop": true
+      },
+      "results": 12
+    },
+    {
+      "gateway": "CTS",
+      "month": "2027-02",
+      "depart": "2027-02-10",
+      "back": "2027-02-15",
+      "cheapest": 17162,
+      "nonstop": {
+        "price": 22175,
+        "airline": "Thai AirAsia X",
+        "duration": "6 hr 50 min",
+        "route": "DMK–CTS",
+        "nonstop": true
+      },
+      "results": 10
+    },
+    {
+      "gateway": "CTS",
+      "month": "2027-03",
+      "depart": "2027-03-10",
+      "back": "2027-03-15",
+      "cheapest": 14522,
+      "nonstop": {
+        "price": 29183,
+        "airline": "Thai AirAsia X",
+        "duration": "6 hr 50 min",
+        "route": "DMK–CTS",
+        "nonstop": true
+      },
+      "results": 11
+    },
+    {
+      "gateway": "CTS",
+      "month": "2027-04",
+      "depart": "2027-04-10",
+      "back": "2027-04-15",
+      "cheapest": 19919,
+      "nonstop": {
+        "price": 28858,
+        "airline": "Thai AirAsia X",
+        "duration": "7 hr 10 min",
+        "route": "DMK–CTS",
+        "nonstop": true
+      },
+      "results": 8
+    },
+    {
+      "gateway": "OKA",
+      "month": "2026-11",
+      "depart": "2026-11-10",
+      "back": "2026-11-15",
+      "cheapest": 11426,
+      "nonstop": {
+        "price": 13544,
+        "airline": "Thai AirAsia",
+        "duration": "4 hr 25 min",
+        "route": "DMK–OKA",
+        "nonstop": true
+      },
+      "results": 8
+    },
+    {
+      "gateway": "OKA",
+      "month": "2026-12",
+      "depart": "2026-12-10",
+      "back": "2026-12-15",
+      "cheapest": 12044,
+      "nonstop": {
+        "price": 15553,
+        "airline": "Thai AirAsia",
+        "duration": "4 hr 25 min",
+        "route": "DMK–OKA",
+        "nonstop": true
+      },
+      "results": 9
+    },
+    {
+      "gateway": "OKA",
+      "month": "2027-01",
+      "depart": "2027-01-10",
+      "back": "2027-01-15",
+      "cheapest": 11070,
+      "nonstop": {
+        "price": 14978,
+        "airline": "Thai AirAsia",
+        "duration": "4 hr 25 min",
+        "route": "DMK–OKA",
+        "nonstop": true
+      },
+      "results": 8
+    },
+    {
+      "gateway": "OKA",
+      "month": "2027-02",
+      "depart": "2027-02-10",
+      "back": "2027-02-15",
+      "cheapest": 16934,
+      "nonstop": null,
+      "results": 10
+    },
+    {
+      "gateway": "OKA",
+      "month": "2027-03",
+      "depart": "2027-03-10",
+      "back": "2027-03-15",
+      "cheapest": 11642,
+      "nonstop": null,
+      "results": 9
+    },
+    {
+      "gateway": "OKA",
+      "month": "2027-04",
+      "depart": "2027-04-10",
+      "back": "2027-04-15",
+      "cheapest": 14187,
+      "nonstop": {
+        "price": 18601,
+        "airline": "Thai AirAsia",
+        "duration": "4 hr 40 min",
+        "route": "DMK–OKA",
+        "nonstop": true
+      },
+      "results": 8
+    }
+  ]
+}

@@ -34,7 +34,8 @@ const CASES = [
   { id: "vague", msg: "อยากไปญี่ปุ่น", action: "ask" },
   { id: "greeting", msg: "สวัสดีทาบิ", action: "chat" },
   { id: "booking-refused", msg: "ช่วยจองโรงแรมให้หน่อย", action: "chat" },
-  { id: "flight", msg: "ตั๋วไปโอซาก้าเดือนหน้าเท่าไร", action: "flights", check: (r) => !/\d[\d,]*\s*(บาท|฿)/.test(r.bubbles.join(" ")) },
+  // a price may appear only as one Tabi checked itself, with the check date (workers/flight-prices)
+  { id: "flight", msg: "ตั๋วไปโอซาก้าเดือนหน้าเท่าไร", action: "flights", check: (r) => { const t = r.bubbles.join(" "); return !/฿\s?\d|\d[\d,]*\s*บาท/.test(t) || /ทาบิเช็กไว้เมื่อ/.test(t); } },
   // multi-turn chain built on "discover-nature"
   { id: "refine-crowds", after: "discover-nature", msg: "มีแบบคนน้อยกว่านี้ไหม", ctx: (p) => ({ intent: p.intent, shownRoutes: ids(p) }), action: "suggest_routes", month: 5, days: 5,
     check: (r, p) => [...regionsOf(r)].some((g) => regionsOf(p).has(g)) },

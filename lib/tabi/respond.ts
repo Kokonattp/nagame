@@ -5,6 +5,7 @@ import { buildOutbound } from "@/lib/outbound";
 import { CITY_BY_NAME, GATEWAYS, nearestGateway, REGION_TH, type Region } from "./cities";
 import { closedIn, draftItinerary, findPlaceByText, fitRouteToDays, partlyOpenIn, PREF_TH, seasonOf, suggestRoutes, suggestStops } from "./planner";
 import { faqAnswer } from "./faq";
+import { FLIGHTS_CHECKED_AT, flightSnapFor } from "./flight-snapshot";
 import type { FlightLink, Place, Preference, TabiContext, TabiReply, TripIntent } from "./types";
 import { mergeIntent, understand } from "./understand";
 
@@ -32,6 +33,12 @@ function tripLabel(intent: TripIntent) {
 }
 
 const googleFlights = (q: string) => `https://www.google.com/travel/flights?hl=th&curr=THB&q=${encodeURIComponent(q)}`;
+
+/** "11 ต.ค." from an ISO timestamp (Bangkok date). */
+function thaiDay(iso: string) {
+  const d = new Date(new Date(iso).getTime() + 7 * 3_600_000);
+  return `${d.getUTCDate()} ${MONTH_TH[d.getUTCMonth() + 1]}`;
+}
 
 function addDays(iso: string, n: number) {
   const d = new Date(`${iso}T00:00:00Z`);
@@ -63,7 +70,7 @@ export function flightLink(intent: TripIntent, arriveCity = "Tokyo", departCity 
   return {
     label: `ดูตั๋ว กรุงเทพ → ${th(arrive.city)}`,
     url: buildOutbound(googleFlights(`Flights to ${arrive.searchName} from Bangkok${when}`), { kind: "flight", label: `BKK→${arrive.airport}` }),
-    note: "เปิดใน Google Flights ดูได้ว่าราคาตอนนี้สูงหรือต่ำกว่าปกติ พร้อมกราฟราคา · ทาบิยังไม่ได้เช็กราคาเอง",
+    note: "ราคาจริงของวันที่เลือกดูใน Google Flights ได้ว่าตอนนี้สูงหรือต่ำกว่าปกติ พร้อมกราฟราคา",
     legs: [
       { dir: "outbound", from: "กรุงเทพ", fromCode: "BKK", to: th(arrive.city), toCode: arrive.airport, date: outDate },
       { dir: "return", from: th(depart.city), fromCode: depart.airport, to: "กรุงเทพ", toCode: "BKK", date: retDate },
@@ -116,7 +123,16 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
       const arrive = ctx.selectedRoute?.gateway.city ?? focusGateway(intent);
       const last = ctx.selectedRoute?.stops[ctx.selectedRoute.stops.length - 1];
       const flight = flightLink(intent, arrive, last ? nearestGateway(last).g.city : arrive);
-      return { ...base, action: "flights", flight, bubbles: [pick(["ตั๋วราคาสดทาบิยังเช็กเองไม่ได้ แต่เปิดหน้าค้นหาที่ตรงกับทริปไว้ให้แล้ว กดดูได้เลย ✈️", "ราคาตั๋วเปลี่ยนทุกวัน ทาบิพาไปหน้าค้นหาที่ตั้งเส้นทางไว้ให้แล้วนะ"], message)] };
+      // a price Tabi checked itself (owner's collector), stated with its sample dates and check date
+      const gw = GATEWAYS.find((g) => g.city === arrive)?.airport;
+      const found = gw ? flightSnapFor(gw, intent.startDate ? Number(intent.startDate.slice(5, 7)) : intent.month) : null;
+      const bubbles = found
+        ? [
+            `ทาบิเช็กไว้เมื่อ ${thaiDay(FLIGHTS_CHECKED_AT)}: ไป-กลับ${CITY_BY_NAME.get(arrive)?.th ?? arrive} ${found.exact ? "" : `(ตัวอย่างช่วง ${MONTH_TH[Number(found.snap.month.slice(5, 7))]}) `}เริ่ม ~฿${found.snap.cheapest!.toLocaleString("en-US")}${found.snap.nonstop ? ` · บินตรง ~฿${found.snap.nonstop.price.toLocaleString("en-US")}` : ""} ✈️`,
+            "ราคาเปลี่ยนทุกวัน กดดูราคาจริงตามวันของพี่ใน Google Flights ได้เลย",
+          ]
+        : [pick(["ทาบิเปิดหน้าค้นหาที่ตรงกับทริปไว้ให้แล้ว กดดูราคาจริงได้เลย ✈️", "ราคาตั๋วเปลี่ยนทุกวัน ทาบิพาไปหน้าค้นหาที่ตั้งเส้นทางไว้ให้แล้วนะ"], message)];
+      return { ...base, action: "flights", flight, bubbles };
     }
 
     case "pick_option": {
