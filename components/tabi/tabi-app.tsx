@@ -14,6 +14,7 @@ import { encodeShare, shareRef, tripTitle } from "@/lib/tabi/share";
 import type { SharedTrip } from "@/lib/tabi/share-server";
 import { listTrips, newTrip, saveTrip, type SavedTrip } from "@/lib/tabi/store";
 import { track } from "@/lib/tabi/track";
+import { FARES_CHECKED, legFare, yenRange, type LegFare } from "@/lib/tabi/fares";
 import { durationTh, travelTime } from "@/lib/tabi/rail-times";
 import { STAY_AREA } from "@/lib/tabi/stay";
 import { AIRPORTS, jrPassWorthIt, legLinks, type LegLink } from "@/lib/tabi/transport";
@@ -1092,9 +1093,16 @@ function TransportCard({ route }: { route: RouteOption }) {
   const last = route.stops[route.stops.length - 1];
   const out = nearestGateway(last).g.airport;
   const airportNames = (code: string) => (AIRPORTS[code] ?? []).map((a) => a.th).join(" / ");
+  // train fares between cities: only legs with a checked fare count; the rest point to Google Maps
+  const legFares = route.stops.slice(1).map((s, i) => legFare(route.stops[i].city, s.city));
+  const known = legFares.filter((f): f is LegFare => !!f);
+  const unknown = legFares.length - known.length;
   const hops = [
     { label: hopLabel(`airport:${route.gateway.airport}`, first.city, "เข้าเมือง"), links: legLinks(`airport:${route.gateway.airport}`, first.city) },
-    ...route.stops.slice(1).map((s, i) => ({ label: hopLabel(route.stops[i].city, s.city, "ไปเมืองถัดไป"), links: legLinks(route.stops[i].city, s.city) })),
+    ...route.stops.slice(1).map((s, i) => {
+      const fare = legFares[i];
+      return { label: `${hopLabel(route.stops[i].city, s.city, "ไปเมืองถัดไป")}${fare ? ` · ${yenRange(fare)}` : ""}`, links: legLinks(route.stops[i].city, s.city) };
+    }),
     { label: hopLabel(last.city, `airport:${out}`, "ไปสนามบิน"), links: legLinks(last.city, `airport:${out}`) },
   ];
   const nodes = [
@@ -1120,6 +1128,18 @@ function TransportCard({ route }: { route: RouteOption }) {
           </li>
         ))}
       </ol>
+      {legFares.length > 0 && (
+        <div className="mt-3 rounded-2xl bg-[var(--t-blue-soft)] px-3 py-2 text-sm">
+          <p>
+            💴 ค่ารถไฟระหว่างเมือง{" "}
+            {known.length
+              ? <b>~{yenRange({ min: known.reduce((a, f) => a + f.min, 0), max: known.reduce((a, f) => a + f.max, 0) })}</b>
+              : "ดูราคาในปุ่มดูทาง (Google Maps บอกค่ารถ)"}
+            {known.length > 0 && unknown > 0 ? ` + อีก ${unknown} ช่วงดูราคาในปุ่มดูทาง` : ""}
+          </p>
+          {known.length > 0 && <p className="tabi-muted text-[11px]">ผู้ใหญ่ 1 คน ชั้นธรรมดา ราคาอ้างอิง ณ {thaiDate(isoDay(FARES_CHECKED))} {FARES_CHECKED.slice(0, 4)} อาจเปลี่ยนตามฤดู</p>}
+        </div>
+      )}
       <p className="mt-3 rounded-2xl bg-[var(--t-green)] px-3 py-2 text-sm text-[var(--t-green-ink)]">
         {jrPassWorthIt(route) ? (
           <>🎫 ทริปนี้นั่งรถไฟไกลหลายช่วง ลอง<a className="underline" href="https://japanrailpass.net/" target="_blank" rel="noopener noreferrer">เทียบราคา JR Pass</a>ก่อนซื้อตั๋ว</>

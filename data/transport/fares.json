@@ -1,0 +1,19 @@
+{
+  "_note": "One-way adult fares in yen between base cities (ordinary car). min = unreserved or cheapest regular option, max = reserved regular season. Only 2026 figures or operator pages; anything else is left out so Tabi says 'ดูใน Google Maps' instead of guessing. Add rows as fares are checked. Shinkansen rows follow the JR fare revision of 14 Mar 2026.",
+  "checked": "2026-10-11",
+  "fares": [
+    { "from": "Tokyo", "to": "Osaka", "min": 13870, "max": 14720, "how": "ชินคันเซ็นโทไกโด", "source": "https://japantravel.navitime.com/en/booking/jr/superexpress/fare/" },
+    { "from": "Tokyo", "to": "Kyoto", "min": 13320, "max": 14170, "how": "ชินคันเซ็นโทไกโด", "source": "https://japantravel.navitime.com/en/booking/jr/superexpress/fare/" },
+    { "from": "Tokyo", "to": "Nagoya", "min": 10560, "max": 11300, "how": "ชินคันเซ็นโทไกโด", "source": "https://japantravel.navitime.com/en/booking/jr/superexpress/fare/" },
+    { "from": "Tokyo", "to": "Sendai", "min": 10560, "max": 11090, "how": "ชินคันเซ็นโทโฮคุ", "source": "https://japantravel.navitime.com/en/booking/jr/superexpress/fare/" },
+    { "from": "Tokyo", "to": "Aomori", "min": 17670, "max": 17670, "how": "ชินคันเซ็นโทโฮคุ (ที่นั่งจองเท่านั้น)", "source": "https://japantravel.navitime.com/en/booking/jr/superexpress/fare/" },
+    { "from": "Tokyo", "to": "Kanazawa", "min": 14070, "max": 14600, "how": "ชินคันเซ็นโฮคุริคุ", "source": "https://japantravel.navitime.com/en/booking/jr/superexpress/fare/" },
+    { "from": "Fukuoka", "to": "Kagoshima", "min": 11420, "max": 11950, "how": "ชินคันเซ็นคิวชู", "source": "https://japantravel.navitime.com/en/booking/jr/superexpress/fare/" },
+    { "from": "Hiroshima", "to": "Fukuoka", "min": 8570, "max": 9630, "how": "ชินคันเซ็นซันโย", "source": "https://jr-shinkansen.net/articles/hiroshima-hakata/" },
+    { "from": "Toyama", "to": "Kanazawa", "min": 2860, "max": 3190, "how": "ชินคันเซ็นโฮคุริคุ", "source": "https://ekitan.com/en/article/kanazawa-to-toyama-shinkansen" },
+    { "from": "Nagoya", "to": "Takayama", "min": 6140, "max": 6540, "how": "รถด่วนฮิดะ", "source": "https://ekitan.com/en/planner/limited-express/section/exm-114563/exs-114563004/sf-4455/st-4325" },
+    { "from": "Tokyo", "to": "Hakone", "min": 2470, "max": 2470, "how": "โรมานซ์คาร์ (ชินจูกุ–ฮาโกเนะยุโมโตะ)", "source": "https://www.odakyu.jp/english/?p=3974" },
+    { "from": "Tokyo", "to": "Kawaguchiko", "min": 4200, "max": 4200, "how": "Fuji Excursion (ชินจูกุ–คาวากุจิโกะ)", "source": "https://e.fujikyu-railway.jp/fujikaiyuu/" },
+    { "from": "Hakodate", "to": "Sapporo", "min": 9770, "max": 9770, "how": "รถด่วนโฮคุโตะ", "source": "https://www.jrhokkaido.co.jp/global/english/ticket/regular/index.html" }
+  ]
+}

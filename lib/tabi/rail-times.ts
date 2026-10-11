@@ -52,14 +52,16 @@ for (const [a, b, min, mode = "train"] of EDGES) {
   }
 }
 
-export type TravelTime = { minutes: number; mode: HopMode };
+/** `path` = the cities passed through, e.g. Kawaguchiko → Tokyo → Nikko (used for fares). */
+export type TravelTime = { minutes: number; mode: HopMode; path: string[] };
 
 /** Shortest travel time (Dijkstra) with a transfer allowance per change; null when no known connection. */
 export function travelTime(from: string, to: string): TravelTime | null {
-  if (from === to) return { minutes: 0, mode: "train" };
+  if (from === to) return { minutes: 0, mode: "train", path: [from] };
   if (!graph.has(from) || !graph.has(to)) return null;
   const best = new Map<string, number>([[from, 0]]);
   const via = new Map<string, HopMode[]>([[from, []]]);
+  const prev = new Map<string, string>();
   const queue = [from];
   while (queue.length) {
     queue.sort((a, b) => best.get(a)! - best.get(b)!);
@@ -70,6 +72,7 @@ export function travelTime(from: string, to: string): TravelTime | null {
       if (cost < (best.get(e.to) ?? Infinity)) {
         best.set(e.to, cost);
         via.set(e.to, [...via.get(at)!, e.mode]);
+        prev.set(e.to, at);
         if (!queue.includes(e.to)) queue.push(e.to);
       }
     }
@@ -79,7 +82,9 @@ export function travelTime(from: string, to: string): TravelTime | null {
   const modes = via.get(to)!;
   // the leg's chip: a bus/ferry/flight hop matters more to the traveller than the train hops around it
   const mode = modes.find((m) => m !== "train") ?? "train";
-  return { minutes, mode };
+  const path = [to];
+  while (path[0] !== from) path.unshift(prev.get(path[0])!);
+  return { minutes, mode, path };
 }
 
 /** "45 นาที", "1 ชม.", "3 ชม. 30 นาที" — rounded to 15 min (it is an estimate). */
