@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     preferences: (q.get("prefs") ?? "").split(",").filter(Boolean),
     focus: [],
   });
-  const exclude = (q.get("exclude") ?? "").split(",").filter((id) => /^Q\d{1,12}$/.test(id)).slice(0, 60);
+  const exclude = (q.get("exclude") ?? "").split(",").filter((id) => /^(Q\d{1,12}|wv-[a-z0-9-]{1,60})$/.test(id)).slice(0, 60);
   const place = alternativePlace(city, intent, exclude) ?? null;
   return NextResponse.json({ place }, { headers: { "Cache-Control": "public, max-age=3600" } });
 }

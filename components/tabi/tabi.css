@@ -15,8 +15,11 @@
   --t-green-ink: #17734b;
   --t-orange: #ff9e45;
   --t-line: #dde7f5;
-  --t-shadow: 0 10px 30px rgba(12, 31, 74, 0.08);
-  --t-shadow-sm: 0 4px 14px rgba(12, 31, 74, 0.07);
+  /* layered, sky-tinted shadows: a crisp contact edge + a soft blue glow (mockup cards float) */
+  --t-shadow-sm: 0 1px 2px rgba(12, 31, 74, 0.05), 0 6px 18px -6px rgba(45, 127, 249, 0.18);
+  --t-shadow: 0 2px 4px rgba(12, 31, 74, 0.05), 0 16px 34px -12px rgba(45, 127, 249, 0.28);
+  --t-shadow-pink: 0 1px 2px rgba(194, 24, 91, 0.06), 0 8px 22px -8px rgba(255, 92, 157, 0.32);
+  --t-ring: rgba(45, 127, 249, 0.12);
   --t-radius: 24px;
   --t-radius-sm: 18px;
 
@@ -80,9 +83,10 @@
   transition: transform 160ms ease, filter 160ms ease;
 }
 .tabi-btn:active { transform: scale(0.97); }
-.tabi-btn--primary { background: var(--t-blue); color: #fff; }
-.tabi-btn--soft { background: var(--t-blue-soft); color: var(--t-blue); }
-.tabi-btn--pink { background: var(--t-sakura); color: #c2185b; }
+/* primary keeps #1a66d9 under the text (5.3:1); the lighter top is only a sheen */
+.tabi-btn--primary { background: linear-gradient(180deg, #2b74e6 0%, #1a66d9 55%, #155ac4 100%); color: #fff; box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 8px 18px -8px rgba(26, 102, 217, 0.7); }
+.tabi-btn--soft { background: var(--t-blue-soft); color: var(--t-blue); box-shadow: 0 0 0 1px var(--t-ring) inset; }
+.tabi-btn--pink { background: linear-gradient(180deg, #fff2f7, #ffe3ef); color: #c2185b; box-shadow: 0 0 0 1px #ffd0e2 inset, var(--t-shadow-pink); }
 .tabi-btn[disabled] { opacity: 0.5; }
 
 .tabi-input {
@@ -298,3 +302,26 @@
 .tabi-edit:hover:not([disabled]) { color: var(--t-blue); border-color: var(--t-blue); }
 .tabi-edit:focus-visible { outline: 3px solid rgba(45, 127, 249, 0.45); outline-offset: 2px; }
 .tabi-edit[disabled] { opacity: 0.6; }
+
+
+/* ── visual polish (concept: white cards floating on sky, sakura accents) ── */
+.tabi-card {
+  border-color: rgba(45, 127, 249, 0.1);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  box-shadow: var(--t-shadow-sm);
+}
+/* sakura cards (Tabi's notes, intro, insight): pink border + pink glow instead of blue */
+.tabi .tabi-card[class*="--t-sakura"] {
+  border-color: #ffd6e6;
+  background: linear-gradient(160deg, #fff6fa 0%, #ffe9f2 100%);
+  box-shadow: var(--t-shadow-pink);
+}
+.tabi-chip { border-color: rgba(45, 127, 249, 0.14); box-shadow: 0 1px 2px rgba(12, 31, 74, 0.04), 0 4px 10px -6px rgba(45, 127, 249, 0.25); }
+.tabi-input { border-color: rgba(45, 127, 249, 0.18); box-shadow: var(--t-shadow-sm); transition: box-shadow 200ms ease, border-color 200ms ease; }
+.tabi-input:focus { border-color: var(--t-blue); box-shadow: 0 0 0 4px var(--t-ring), var(--t-shadow-sm); outline: none; }
+/* photos inside cards: a hairline inner edge so pale skies don't melt into the white card */
+.tabi-img { box-shadow: inset 0 0 0 1px rgba(12, 31, 74, 0.06); }
+.tabi-nav { box-shadow: 0 -6px 24px -12px rgba(45, 127, 249, 0.25); }
+@media (min-width: 1024px) { .tabi-nav { box-shadow: 0 6px 24px -14px rgba(45, 127, 249, 0.3); } }
+/* section headings get a small sakura petal, as in the mockup's section titles */
+.tabi h2.tabi-petal::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 10px 0; background: linear-gradient(135deg, #ff8fbd, #ffc6db); transform: rotate(-12deg) translateY(-1px); }

@@ -91,7 +91,7 @@ function inFocus(city: BaseCity, focus: string[]) {
  * even for "fewer crowds".
  */
 function dayScore(p: Place, intent: TripIntent) {
-  return placeFit(p, intent) + (p.firstTimer ? 0.5 : 0) + (p.mustSee ? 1.2 : 0) - p.baseKm / 25;
+  return placeFit(p, intent) + (p.firstTimer ? 0.5 : 0) + (p.mustSee ? 1.2 : p.guide ? 0.8 : 0) - p.baseKm / 25;
 }
 
 function topPlacesFor(city: string, intent: TripIntent, exclude = new Set<string>(), n = 3, rank: "day" | "city" = "day"): Place[] {
@@ -163,9 +163,24 @@ function buildCandidates(intent: TripIntent): Candidate[] {
       rest.sort((a, b) => km(last, a) - km(last, b));
       ordered.push(rest.shift()!);
     }
-    const totalKm = ordered.slice(1).reduce((a, s, i) => a + km(ordered[i], s), 0);
-    const score = ordered.reduce((a, s) => a + cityScore(s.name, intent), 0) - totalKm / 250;
-    candidates.push({ stops: ordered, score, totalKm });
+    candidates.push(scoreRoute(ordered, intent));
+  }
+  // One named city ("เกียวโต 5 วัน") left a single option. Offer real choices: that city alone,
+  // or with one nearby city (≤150 km) — still anchored on what the traveller asked for.
+  const cityFocus = intent.focus.filter((f) => !f.startsWith("region:"));
+  if (cityFocus.length === 1 && scored.length === 1) {
+    const anchor = scored[0].c;
+    const nearby = BASE_CITIES
+      .filter((c) => c.name !== anchor.name && km(c, anchor) > 25 && km(c, anchor) <= 150)
+      .map((c) => ({ c, s: cityScore(c.name, intent) - km(c, anchor) / 80 }))
+      .filter((x) => x.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 3);
+    for (const n of nearby) {
+      const pair = [anchor, n.c].sort((a, b) => nearestGateway(a).d - nearestGateway(b).d);
+      // the asked-for city should not lose to the add-on in ranking
+      candidates.push({ ...scoreRoute(pair, intent), score: scoreRoute(pair, intent).score - 0.5 });
+    }
   }
   // de-duplicate by stop set
   const seen = new Set<string>();
@@ -177,6 +192,11 @@ function buildCandidates(intent: TripIntent): Candidate[] {
       return true;
     })
     .sort((a, b) => b.score - a.score);
+}
+
+function scoreRoute(stops: BaseCity[], intent: TripIntent): Candidate {
+  const totalKm = stops.slice(1).reduce((a, s, i) => a + km(stops[i], s), 0);
+  return { stops, score: stops.reduce((a, s) => a + cityScore(s.name, intent), 0) - totalKm / 250, totalKm };
 }
 
 function toOption(c: Candidate, intent: TripIntent): RouteOption {

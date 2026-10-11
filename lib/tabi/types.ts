@@ -18,6 +18,8 @@ export type Place = {
   nameTh?: string | null;
   /** on the curated first-visit list (data/places/must-see.json) */
   mustSee?: boolean;
+  /** listed in the city's Wikivoyage "See" section (a travel guide points visitors there) */
+  guide?: boolean;
   /** shrine_temple | castle | nature | onsen | museum | landmark | theme_park | food_area (evening meal only) */
   type: string;
   lat: number;

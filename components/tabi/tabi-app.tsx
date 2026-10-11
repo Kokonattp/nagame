@@ -414,11 +414,12 @@ function TopBar({ onBack, right }: { onBack?: () => void; right?: React.ReactNod
           <ChevronLeft size={22} />
         </button>
       )}
-      <div className="flex flex-1 items-center gap-2 lg:invisible">
+      {/* min-w-0: with a button on the right (route screen) the brand shrinks instead of pushing the page wider */}
+      <div className="flex min-w-0 flex-1 items-center gap-2 lg:invisible">
         <FujiMark />
-        <div>
+        <div className={right ? "hidden min-w-0 min-[400px]:block" : "min-w-0"}>
           <p className="tabi-title text-[22px] font-bold leading-none tracking-tight">Nagame</p>
-          <p className="tabi-muted text-xs">วางทริปญี่ปุ่นกับทาบิ</p>
+          <p className={`tabi-muted text-xs ${right ? "hidden sm:block" : ""}`}>วางทริปญี่ปุ่นกับทาบิ</p>
         </div>
       </div>
       {right}
@@ -488,7 +489,7 @@ function HomeScreen({ onAsk }: { onAsk: (m: string) => void }) {
         ))}
       </div>
       <section>
-        <h2 className="mb-3 text-lg font-bold">แรงบันดาลใจจากญี่ปุ่น</h2>
+        <h2 className="tabi-petal mb-3 text-lg font-bold">แรงบันดาลใจจากญี่ปุ่น</h2>
         <div className="tabi-scroll-x tabi-ideas -mx-4 px-4 lg:mx-0 lg:px-0">
           {IDEAS.map((idea) => (
             <button key={idea.title} type="button" onClick={() => onAsk(idea.prompt)} className="tabi-card w-[180px] shrink-0 overflow-hidden text-left lg:w-auto">
@@ -670,7 +671,7 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
       <TopBar
         onBack={onBack}
         right={
-          <button type="button" className="tabi-btn tabi-btn--soft px-3 text-sm" disabled={loading} onClick={() => onAsk("เสนอเส้นทางแบบอื่น")}>
+          <button type="button" className="tabi-btn tabi-btn--soft whitespace-nowrap px-3 text-sm" disabled={loading} onClick={() => onAsk("เสนอเส้นทางแบบอื่น")}>
             <Pencil size={16} />ปรับเส้นทาง
           </button>
         }
@@ -682,7 +683,7 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
         <p className="tabi-muted">{route.stops.map((s) => `${s.cityTh} ${s.nights} คืน`).join(" → ")}</p>
       </section>
       {/* city strip with a photo per stop (mockup 3) */}
-      <ol className="tabi-card tabi-scroll-x items-start p-3" aria-label="ลำดับเมือง">
+      {route.stops.length > 1 && <ol className="tabi-card tabi-scroll-x items-start p-3" aria-label="ลำดับเมือง">
         {route.stops.map((s, i) => {
           const photo = route.highlights.find((h) => h.city === s.city)?.wikiTitle ?? s.city;
           return (
@@ -700,7 +701,7 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
             </li>
           );
         })}
-      </ol>
+      </ol>}
       <div className="tabi-card p-2"><TabiMap points={points} height={desktop ? 420 : 240} /></div>
       <section className="tabi-card flex gap-3 bg-[var(--t-sakura)] p-4">
         <Avatar size={48} mood="happy" animated />
@@ -712,7 +713,7 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
       </div>
       <div className="space-y-4">
       <section className="space-y-3">
-        <h2 className="text-lg font-bold">{reply?.action === "suggest_stops" ? "จุดแวะที่ทาบิหาเพิ่มให้" : "จุดเด่นระหว่างทาง"}</h2>
+        <h2 className="tabi-petal text-lg font-bold">{reply?.action === "suggest_stops" ? "จุดแวะที่ทาบิหาเพิ่มให้" : "จุดเด่นระหว่างทาง"}</h2>
         <TourTip step={3} />
         {stops.map((h) => {
           const saved = savedIds.has(h.id);
@@ -724,14 +725,14 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
                 <p className="tabi-title font-bold leading-snug">{h.name}</p>
                 {(h.nameEn || h.nameJa) && <p className="tabi-muted text-xs">{[h.nameEn, h.nameJa].filter(Boolean).join(" · ")}</p>}
                 <p className="tabi-muted text-xs">{h.approxDetourMin ? `จาก ${h.city} ประมาณ ${h.approxDetourMin} นาที` : `อยู่ใน ${h.city}`}{h.reason ? ` · ${h.reason}` : ""}</p>
+                <button type="button" onClick={() => onAdd(h)} disabled={saved} className="tabi-btn tabi-btn--soft mt-2 min-h-[36px] px-3 text-sm" aria-label={saved ? `${h.name} อยู่ในทริปแล้ว` : `ใส่ ${h.name} ในทริป`}>
+                  {saved ? <span className="tabi-pop">✓ ในทริป</span> : <><Plus size={16} />ใส่ในทริป</>}
+                </button>
               </div>
-              <button type="button" onClick={() => onAdd(h)} disabled={saved} className={`tabi-btn self-center px-3 text-sm ${saved ? "tabi-btn--soft" : "tabi-btn--soft"}`} aria-label={saved ? `${h.name} อยู่ในทริปแล้ว` : `ใส่ ${h.name} ในทริป`}>
-                {saved ? <span className="tabi-pop">✓ ในทริป</span> : <><Plus size={16} />ใส่ในทริป</>}
-              </button>
             </article>
           );
         })}
-        <p className="tabi-muted text-[11px]">ภาพ: Wikipedia</p>
+        <p className="tabi-muted text-[11px]">ข้อมูล: Wikidata, Wikivoyage · ภาพ: Wikipedia</p>
       </section>
       <button type="button" className="tabi-btn tabi-btn--primary w-full" disabled={loading} onClick={() => onAsk("จัดเป็นแผนรายวันให้หน่อย")}><CalendarDays size={18} />จัดแผนรายวัน</button>
       <Chips items={["ขอแวะออนเซ็นระหว่างทาง", "ขอแวะที่คนน้อย", "ขอแวะที่วิวสวยถ่ายรูป"]} onPick={onAsk} />
@@ -972,7 +973,7 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
             );
           })}
         </ol>
-        <p className="tabi-muted px-1 text-[11px]">ภาพ: Wikipedia</p>
+        <p className="tabi-muted px-1 text-[11px]">ข้อมูล: Wikidata, Wikivoyage · ภาพ: Wikipedia</p>
       </section>
 
       </div>
@@ -983,7 +984,7 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
       </section>
       {trip.route && <TransportCard route={trip.route} />}
       <section className="tabi-card p-4">
-        <h2 className="mb-2 font-bold">เตรียมก่อนเดินทาง</h2>
+        <h2 className="tabi-petal mb-2 font-bold">เตรียมก่อนเดินทาง</h2>
         <ul className="space-y-1">
           {trip.checklist.map((c) => (
             <li key={c.id}>
@@ -1200,6 +1201,10 @@ function FlightsScreen({ reply, trip, onBack, onChat, onPickDate }: {
 }
 
 // ── Trips & placeholders ──
+function tripCountdown(start: string) {
+  const days = Math.round((isoDay(start).getTime() - isoDay(todayIso()).getTime()) / 86_400_000);
+  return days > 0 ? `อีก ${days} วัน` : days === 0 ? "ออกเดินทางวันนี้" : "เดินทางแล้ว";
+}
 function TripsScreen({ trips, onOpen, onNew }: { trips: SavedTrip[]; onOpen: (t: SavedTrip) => void; onNew: () => void }) {
   return (
     <div className="tabi-rise space-y-4">
@@ -1215,9 +1220,12 @@ function TripsScreen({ trips, onOpen, onNew }: { trips: SavedTrip[]; onOpen: (t:
         <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
           {trips.map((t) => (
             <li key={t.id}>
-              <button type="button" onClick={() => onOpen(t)} className="tabi-card flex w-full items-center gap-3 p-4 text-left">
-                <span className="flex-1">
-                  <span className="block font-bold">{t.title}</span>
+              <button type="button" onClick={() => onOpen(t)} className="tabi-card flex w-full items-center gap-3 overflow-hidden p-2 pr-4 text-left">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img(t.route?.highlights[0]?.wikiTitle ?? t.route?.stops[0]?.city ?? "Japan")} alt="" loading="lazy" onError={hideBroken} className="tabi-img h-[72px] w-[88px] shrink-0 rounded-[16px]" />
+                <span className="min-w-0 flex-1">
+                  <span className="tabi-title block font-bold">{t.title}</span>
+                  {t.intent.startDate && <span className="mt-0.5 inline-block rounded-full bg-[#ffd166] px-2 text-[11px] font-bold text-[var(--t-navy)]">{tripCountdown(t.intent.startDate)}</span>}
                   <span className="tabi-muted block text-xs">{t.itinerary ? `ร่างทริป ${t.itinerary.length} วัน` : "เลือกเส้นทางแล้ว"} · แก้ไขล่าสุด {new Date(t.updatedAt).toLocaleDateString("th-TH")}</span>
                 </span>
                 <ArrowRight size={18} className="text-[var(--t-blue)]" />
