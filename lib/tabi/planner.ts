@@ -348,7 +348,7 @@ export function draftItinerary(route: RouteOption, intent: TripIntent, extraStop
       const sightSlots: DaySlot[] = items.length ? ["afternoon"] : ["morning", "afternoon"];
       picks.forEach((p, k) => { used.add(p.id); items.push({ kind: "see", slot: sightSlots[k] ?? "afternoon", text: p.name, placeId: p.id, wikiTitle: p.wikiTitle }); });
       const dinner = dinnerArea(stop.city, n);
-      if (dinner) items.push({ kind: "eat", slot: "evening", text: `แถว ${displayName(dinner)}`, placeId: dinner.id, wikiTitle: dinner.wikiTitle });
+      if (dinner) items.push({ kind: "eat", slot: "evening", text: `แถว ${displayName(dinner)}`, placeId: dinner.id, wikiTitle: dinner.wikiTitle, mapQuery: `${dinner.nameEn}, ${stop.city}` });
       if (!picks.length && !items.some((it) => it.kind === "move")) items.unshift({ kind: "see", slot: "afternoon", text: `เดินเล่นใน${stop.cityTh}ตามสบาย` });
       items.push({ kind: "stay", slot: "evening", text: `พักที่ ${stop.cityTh}` });
       plan.push({ day, city: stop.city, title: n === 0 && i > 0 ? `${route.stops[i - 1].city} → ${stop.city}` : stop.city, items, photo: picks[0]?.wikiTitle });

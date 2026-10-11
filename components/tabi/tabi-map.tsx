@@ -5,7 +5,7 @@
 // into the Tabi pastel palette, labels switched to English, road names hidden.
 
 import { useEffect, useRef } from "react";
-import type { Map as MlMap, StyleSpecification } from "maplibre-gl";
+import type { GeoJSONSource, Map as MlMap, StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 export type MapPoint = { lat: number; lon: number; label: string; kind: "stop" | "place" };
@@ -47,6 +47,7 @@ export function TabiMap({ points, height = 220, interactive = true }: { points: 
 
   useEffect(() => {
     let cancelled = false;
+    let raf = 0;
     (async () => {
       const maplibregl = await import("maplibre-gl");
       maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs"); // see scripts/copy-maplibre-worker.mjs
@@ -71,10 +72,23 @@ export function TabiMap({ points, height = 220, interactive = true }: { points: 
 
       m.on("load", () => {
         if (stops.length > 1) {
+          const coords = stops.map((p) => [p.lon, p.lat]);
+          const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
           m.addSource("route", {
             type: "geojson",
-            data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: stops.map((p) => [p.lon, p.lat]) } },
+            data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: reduce ? coords : coords.slice(0, 1).concat([coords[0]]) } },
           });
+          // the route draws itself from the first stop, like a pen on the map (~1.4 s)
+          if (!reduce) {
+            const t0 = performance.now();
+            const step = (t: number) => {
+              if (cancelled) return;
+              const k = Math.min(1, (t - t0) / 1400);
+              (m.getSource("route") as GeoJSONSource | undefined)?.setData({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: partialLine(coords, k) } });
+              if (k < 1) raf = requestAnimationFrame(step);
+            };
+            raf = requestAnimationFrame(step);
+          }
           m.addLayer({ id: "route-glow", type: "line", source: "route", paint: { "line-color": "#2d7ff9", "line-width": 8, "line-opacity": 0.18 }, layout: { "line-cap": "round", "line-join": "round" } });
           m.addLayer({ id: "route", type: "line", source: "route", paint: { "line-color": "#2d7ff9", "line-width": 3.5, "line-dasharray": [2, 1.5] }, layout: { "line-cap": "round", "line-join": "round" } });
         }
@@ -85,7 +99,7 @@ export function TabiMap({ points, height = 220, interactive = true }: { points: 
         const node = document.createElement("div");
         if (p.kind === "stop") {
           n++;
-          node.innerHTML = `<div style="display:flex;align-items:center;gap:4px"><span style="display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#1a66d9;color:#fff;font-weight:700;border:3px solid #fff;box-shadow:0 2px 6px rgba(12,31,74,.3)">${n}</span><span style="background:#fff;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;color:#0c1f4a;box-shadow:0 2px 6px rgba(12,31,74,.15);white-space:nowrap">${escapeHtml(p.label)}</span></div>`;
+          node.innerHTML = `<div class="tabi-marker-pop" style="display:flex;align-items:center;gap:4px;animation-delay:${n * 350}ms"><span style="display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#1a66d9;color:#fff;font-weight:700;border:3px solid #fff;box-shadow:0 2px 6px rgba(12,31,74,.3)">${n}</span><span style="background:#fff;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;color:#0c1f4a;box-shadow:0 2px 6px rgba(12,31,74,.15);white-space:nowrap">${escapeHtml(p.label)}</span></div>`;
           new maplibregl.Marker({ element: node, anchor: "left", offset: [-14, 0] }).setLngLat([p.lon, p.lat]).addTo(m);
         } else {
           node.innerHTML = `<div title="${escapeHtml(p.label)}" style="width:18px;height:18px;border-radius:50%;background:#ff5c9d;border:3px solid #fff;box-shadow:0 2px 6px rgba(12,31,74,.3)"></div>`;
@@ -100,12 +114,28 @@ export function TabiMap({ points, height = 220, interactive = true }: { points: 
     })();
     return () => {
       cancelled = true;
+      cancelAnimationFrame(raf);
       map.current?.remove();
       map.current = null;
     };
   }, [points, interactive]);
 
   return <div ref={el} style={{ height }} className="tabi-map overflow-hidden rounded-[18px]" role="img" aria-label={`แผนที่: ${points.filter((p) => p.kind === "stop").map((p) => p.label).join(" → ")}`} />;
+}
+
+/** First `k` (0–1) of a polyline by length, ending at an interpolated point. */
+function partialLine(coords: number[][], k: number): number[][] {
+  if (k >= 1) return coords;
+  const seg = coords.slice(1).map((c, i) => Math.hypot(c[0] - coords[i][0], c[1] - coords[i][1]));
+  let left = seg.reduce((a, b) => a + b, 0) * k;
+  const out = [coords[0]];
+  for (let i = 0; i < seg.length; i++) {
+    if (left >= seg[i]) { out.push(coords[i + 1]); left -= seg[i]; continue; }
+    const f = seg[i] ? left / seg[i] : 0;
+    out.push([coords[i][0] + (coords[i + 1][0] - coords[i][0]) * f, coords[i][1] + (coords[i + 1][1] - coords[i][1]) * f]);
+    break;
+  }
+  return out.length > 1 ? out : [coords[0], coords[0]];
 }
 
 function escapeHtml(s: string) {

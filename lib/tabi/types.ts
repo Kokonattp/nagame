@@ -92,6 +92,8 @@ export type ItineraryItem = {
   placeId?: string;
   wikiTitle?: string;
   approx?: boolean;
+  /** dinner area: "<English name>, <city>" for the restaurant search link */
+  mapQuery?: string;
   /** move ends for the "ดูทาง" link: a base-city name, or `airport:<gateway code>` */
   from?: string;
   to?: string;

@@ -15,6 +15,7 @@ import type { SharedTrip } from "@/lib/tabi/share-server";
 import { listTrips, newTrip, saveTrip, type SavedTrip } from "@/lib/tabi/store";
 import { track } from "@/lib/tabi/track";
 import { durationTh, travelTime } from "@/lib/tabi/rail-times";
+import { STAY_AREA } from "@/lib/tabi/stay";
 import { AIRPORTS, jrPassWorthIt, legLinks, type LegLink } from "@/lib/tabi/transport";
 import type { DaySlot, Highlight, ItineraryDay, ItineraryItem, RouteOption, TabiReply } from "@/lib/tabi/types";
 import type { MapPoint } from "./tabi-map";
@@ -90,10 +91,23 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
   const [selected, setSelected] = useState<RouteOption | null>(shared?.route ?? null);
   const [trip, setTrip] = useState<SavedTrip | null>(() => (shared ? fromShared(shared) : null));
   const [sharedState, setSharedState] = useState<"none" | "unsaved" | "saved">(shared ? "unsaved" : "none");
+  const [cheerMsg, setCheerMsg] = useState<{ text: string; key: number } | null>(null);
+  const cheer = useCallback((text: string) => setCheerMsg({ text, key: Date.now() }), []);
   const [lastReply, setLastReply] = useState<TabiReply | null>(null);
   const [trips, setTrips] = useState<SavedTrip[]>([]);
 
   useEffect(() => { listTrips().then(setTrips); }, []);
+
+  // offline: saved trips keep working in Japan with a bad signal (public/sw.js); production only
+  const [online, setOnline] = useState(true);
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+    const update = () => setOnline(navigator.onLine);
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); };
+  }, []);
 
   // guide progress lives in this browser only; storage can throw (private mode) → just show the guide
   const [tourSeen, setTourSeen] = useState<number[] | null>(null);
@@ -170,6 +184,7 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
         const base = tripForRoute ?? newTrip(reply.intent);
         await persist({ ...base, intent: reply.intent, route: fitted, itinerary: reply.itinerary, status: "draft", title: tripTitle(fitted, reply.itinerary.length) });
         track("itinerary_drafted", { days: reply.itinerary.length, stops: fitted?.stops.length ?? 0 });
+        cheer("จัดแผนรายวันเสร็จแล้ว!");
         go("itinerary");
       } else if (reply.action === "flights") {
         track("flights_opened");
@@ -179,7 +194,7 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
       }
     } catch (e) {
       const timedOut = e instanceof DOMException && e.name === "TimeoutError";
-      setError(e instanceof ApiError ? e.message : timedOut ? "ทาบิตอบช้ากว่าปกติ ลองส่งใหม่อีกครั้งนะ" : "เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองส่งใหม่อีกครั้งนะ");
+      setError(e instanceof ApiError ? e.message : timedOut ? "ทาบิตอบช้ากว่าปกติ ลองส่งใหม่อีกครั้งนะ" : !navigator.onLine ? "ตอนนี้ออฟไลน์อยู่ ทริปที่เก็บไว้ยังเปิดดูได้ แต่คุยกับทาบิต้องต่อเน็ตก่อนนะ" : "เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองส่งใหม่อีกครั้งนะ");
     } finally {
       setLoading(false);
     }
@@ -212,6 +227,7 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
     const base = trip && trip.route?.id === selected.id ? trip : newTrip(lastReply?.intent ?? trip?.intent ?? { preferences: [], focus: [] });
     if (base.savedStops.some((s) => s.id === h.id)) return;
     track("stop_added");
+    cheer("ใส่ในทริปแล้ว");
     void persist({ ...base, route: selected, title: tripTitle(selected), savedStops: [...base.savedStops, h] });
   }
 
@@ -229,6 +245,7 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
     <TourContext.Provider value={tour}>
     <div className="tabi">
       <div className="tabi-shell">
+        {!online && <p role="status" className="mb-3 rounded-2xl bg-[#fff4d6] px-4 py-2 text-sm text-[#7a5a00]">📴 ออฟไลน์อยู่ ทริปที่เก็บไว้ยังเปิดดูได้</p>}
         {screen === "home" && <HomeScreen onAsk={send} />}
         {screen === "chat" && (
           <ChatScreen turns={turns} loading={loading} error={error} routes={routes} onAsk={send} onPick={openRoute} onBack={nav("home")} />
@@ -252,8 +269,12 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
             onMap={nav("route")}
             onToggle={(id) => persist({ ...trip, checklist: trip.checklist.map((c) => (c.id === id ? { ...c, done: !c.done } : c)) })}
             sharedState={sharedState}
-            onKeep={() => { track("shared_trip_saved", { ref: shared?.ref ?? "" }); void persist(trip); }}
-            onShare={() => shareTrip(trip)}
+            onKeep={() => { track("shared_trip_saved", { ref: shared?.ref ?? "" }); void persist(trip); cheer("เก็บไว้ในทริปของฉันแล้ว"); }}
+            onShare={async () => {
+              const r = await shareTrip(trip);
+              if (r !== "failed") cheer(r === "shared" ? "ส่งให้เพื่อนแล้ว!" : "คัดลอกลิงก์แล้ว!");
+              return r;
+            }}
             onEdit={(itinerary, method) => { track("plan_edited", { method }); void persist({ ...trip, itinerary }); }}
             onSetDate={(iso) => {
               track("date_set", { month: Number(iso.slice(5, 7)) });
@@ -269,6 +290,7 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
         {screen === "soon" && <SoonScreen />}
       </div>
 
+      {cheerMsg && <TabiCheer key={cheerMsg.key} text={cheerMsg.text} onDone={() => setCheerMsg(null)} />}
       <nav className="tabi-nav" aria-label="เมนูหลัก">
         <div className="tabi-nav-inner">
           <button type="button" className="tabi-nav-brand" onClick={nav("home")} aria-label="Nagame หน้าแรก">
@@ -330,6 +352,36 @@ async function shareTrip(trip: SavedTrip): Promise<ShareResult> {
 }
 
 // ── shared bits ──
+/** Happy Tabi waving from the bottom for ~2 s after something worked (plan drafted, shared, saved). */
+function TabiCheer({ text, onDone }: { text: string; onDone: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 2200);
+    return () => clearTimeout(t);
+  }, [onDone]);
+  return (
+    <div className="tabi-cheer" role="status" aria-live="polite">
+      <Avatar mood="happy" size={40} />
+      <span className="font-semibold">{text}</span>
+    </div>
+  );
+}
+
+/** Seasonal particles over the home hero (sakura Mar–Apr, leaves Oct–Nov, snow Dec–Feb). Decorative. */
+function SeasonFx() {
+  const [month, setMonth] = useState<number | null>(null);
+  useEffect(() => setMonth(new Date().getMonth() + 1), []);
+  const kind = month === null ? null : month >= 3 && month <= 4 ? "petal" : month >= 10 && month <= 11 ? "leaf" : month === 12 || month <= 2 ? "snow" : null;
+  if (!kind) return null;
+  return (
+    <div className="tabi-season" aria-hidden>
+      {Array.from({ length: 12 }, (_, i) => (
+        <span key={i} className={`tabi-fall tabi-fall--${kind}`} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.9) % 7}s`, animationDuration: `${7 + (i % 5)}s` }}>
+          {kind === "leaf" ? "🍁" : null}
+        </span>
+      ))}
+    </div>
+  );
+}
 /** Plays the 12-frame three.js loop (breathe, sway, tail wag, blink) unless `animated={false}`. */
 function Avatar({ mood = "idle", size = 44, wag = false, animated = true }: { mood?: TabiMood; size?: number; wag?: boolean; animated?: boolean }) {
   const art = TABI_ART[mood];
@@ -466,6 +518,7 @@ function HomeScreen({ onAsk }: { onAsk: (m: string) => void }) {
       <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start lg:gap-10 lg:space-y-0">
       {/* Hero (mockup 1): Fuji + Chūreitō pagoda; a light wash keeps the heading readable */}
       <section className="relative -mx-4 overflow-hidden sm:mx-0 sm:rounded-[28px] lg:sticky lg:top-[92px]">
+        <SeasonFx />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={img("Arakurayama Sengen Park")} alt="" onError={hideBroken} className="tabi-img h-[300px] w-full object-[50%_70%] lg:h-[560px]" />
         <div className="absolute inset-0 bg-gradient-to-b from-[rgba(247,251,255,.97)] via-[rgba(247,251,255,.7)] to-transparent" />
@@ -726,7 +779,7 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
                 {(h.nameEn || h.nameJa) && <p className="tabi-muted text-xs">{[h.nameEn, h.nameJa].filter(Boolean).join(" · ")}</p>}
                 <p className="tabi-muted text-xs">{h.approxDetourMin ? `จาก ${h.city} ประมาณ ${h.approxDetourMin} นาที` : `อยู่ใน ${h.city}`}{h.reason ? ` · ${h.reason}` : ""}</p>
                 <button type="button" onClick={() => onAdd(h)} disabled={saved} className="tabi-btn tabi-btn--soft mt-2 min-h-[36px] px-3 text-sm" aria-label={saved ? `${h.name} อยู่ในทริปแล้ว` : `ใส่ ${h.name} ในทริป`}>
-                  {saved ? <span className="tabi-pop">✓ ในทริป</span> : <><Plus size={16} />ใส่ในทริป</>}
+                  {saved ? <span className="tabi-stamp">✓ ในทริป</span> : <><Plus size={16} />ใส่ในทริป</>}
                 </button>
               </div>
             </article>
@@ -875,7 +928,7 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
           <p className="min-w-0 flex-1 text-sm"><b className="text-[var(--t-pink-ink)]">เพื่อนแชร์ทริปนี้มา</b> ปรับต่อได้ตามใจ ทริปของเพื่อนไม่เปลี่ยน</p>
           {sharedState === "unsaved"
             ? <button type="button" className="tabi-btn tabi-btn--primary px-4 text-sm" onClick={onKeep}><Heart size={16} />เก็บไว้ในทริปของฉัน</button>
-            : <span className="tabi-pop rounded-full bg-white px-3 py-1 text-sm font-semibold text-[var(--t-green-ink)]">✓ เก็บแล้ว</span>}
+            : <span className="tabi-stamp text-sm">✓ เก็บแล้ว</span>}
         </section>
       )}
       <TourTip step={4} pointer="up" />
@@ -946,6 +999,9 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
                           <span className={it.kind === "see" ? "font-semibold" : "text-sm"}>{it.text}</span>
                           {it.approx && <span className="ml-1 rounded bg-[var(--t-blue-soft)] px-1 text-[10px] text-[var(--t-blue)]">ประมาณ</span>}
                           <LegLinks links={legLinks(it.from, it.to)} />
+                          {it.kind === "eat" && it.mapQuery && (
+                            <span className="mt-1 flex"><a className="tabi-leg-link" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`restaurants near ${it.mapQuery}`)}`} target="_blank" rel="noopener noreferrer">🔎 หาร้านแถวนี้ ↗</a></span>
+                          )}
                           {it.kind === "see" && (
                             <span className="mt-1 flex gap-1">
                               {it.placeId && (
@@ -1043,7 +1099,7 @@ function TransportCard({ route }: { route: RouteOption }) {
   ];
   const nodes = [
     { key: "in", icon: "🛬", title: `สนามบิน${airportNames(route.gateway.airport)}` },
-    ...route.stops.map((s) => ({ key: s.city, icon: "", title: `${s.cityTh} · ${s.nights} คืน` })),
+    ...route.stops.map((s) => ({ key: s.city, icon: "", title: `${s.cityTh} · ${s.nights} คืน`, stay: STAY_AREA[s.city] })),
     { key: "out", icon: "🛫", title: `บินกลับจาก${airportNames(out)}` },
   ];
   return (
@@ -1054,6 +1110,7 @@ function TransportCard({ route }: { route: RouteOption }) {
           <li key={n.key}>
             <span className="tabi-track-node" style={n.icon ? undefined : { background: DAY_COLORS[(i - 1) % DAY_COLORS.length] }} aria-hidden>{n.icon}</span>
             <span className="tabi-title text-sm font-bold">{n.title}</span>
+            {"stay" in n && n.stay && <span className="tabi-muted text-xs">🛏️ พักที่ไหนดี: {n.stay}</span>}
             {i < hops.length && (
               <span className="tabi-track-hop">
                 <span className="tabi-muted text-xs">{hops[i].label}</span>
@@ -1117,6 +1174,18 @@ function ShareButton({ onShare }: { onShare: () => Promise<ShareResult> }) {
 }
 
 // ── 5. Flights ──
+/** Back of a boarding pass: airport → first city (outbound) or last city → airport (return). */
+function groundLeg(trip: SavedTrip | null, dir: "outbound" | "return") {
+  const route = trip?.route;
+  if (!route) return undefined;
+  const first = route.stops[0];
+  const last = route.stops[route.stops.length - 1];
+  const [from, to, title] = dir === "outbound"
+    ? [`airport:${route.gateway.airport}`, first.city, `จากสนามบินเข้า${first.cityTh}`]
+    : [last.city, `airport:${nearestGateway(last).g.airport}`, `จาก${last.cityTh}ไปสนามบิน`];
+  const t = travelTime(from, to);
+  return { title, time: t ? durationTh(t.minutes) : undefined, links: legLinks(from, to) };
+}
 function FlightCard({ link }: { link: NonNullable<TabiReply["flight"]> }) {
   return (
     <a href={link.url} target="_blank" rel="noopener noreferrer" className="tabi-card tabi-rise flex items-center gap-3 p-4">
@@ -1131,33 +1200,61 @@ function FlightCard({ link }: { link: NonNullable<TabiReply["flight"]> }) {
 }
 
 /** Boarding-pass style leg (video reference): coloured header, big airport codes, search button. */
-function BoardingPass({ leg, href, index }: { leg: NonNullable<NonNullable<TabiReply["flight"]>["legs"]>[number]; href: string; index: number }) {
+/** Boarding-pass style leg (video reference). Flips (↻) to show the airport ↔ city leg in Japan. */
+function BoardingPass({ leg, href, index, ground }: {
+  leg: NonNullable<NonNullable<TabiReply["flight"]>["legs"]>[number]; href: string; index: number;
+  ground?: { title: string; time?: string; links: LegLink[] };
+}) {
   const out = leg.dir === "outbound";
   const date = leg.date ? isoDay(leg.date) : null;
+  const [flipped, setFlipped] = useState(false);
+  const color = out ? "#1a66d9" : "#17734b";
+  const header = (back: boolean) => (
+    <header className="flex items-center justify-between px-4 py-2 text-sm font-semibold" style={{ background: out ? "#e8f1ff" : "#dff5e8", color }}>
+      <span>{back ? ground?.title : `${out ? "ขาไป" : "ขากลับ"}${date ? ` · ${thaiDate(date)} (${WEEKDAY_SHORT[date.getUTCDay()]})` : ""}`}</span>
+      {ground ? (
+        <button type="button" className="tabi-flip-btn" onClick={() => setFlipped((f) => !f)} aria-label={back ? "พลิกกลับไปดูตั๋ว" : ground.title}>
+          ↻ {back ? "ตั๋ว" : out ? "เข้าเมือง" : "ไปสนามบิน"}
+        </button>
+      ) : <Plane size={16} className={out ? "" : "rotate-180"} aria-hidden />}
+    </header>
+  );
   return (
-    <article className="tabi-card tabi-pass tabi-rise overflow-hidden" style={{ animationDelay: `${index * 90}ms` }}>
-      <header className="flex items-center justify-between px-4 py-2 text-sm font-semibold" style={{ background: out ? "#e8f1ff" : "#dff5e8", color: out ? "#1a66d9" : "#17734b" }}>
-        <span>{out ? "ขาไป" : "ขากลับ"}{date ? ` · ${thaiDate(date)} (${WEEKDAY_SHORT[date.getUTCDay()]})` : ""}</span>
-        <Plane size={16} className={out ? "" : "rotate-180"} aria-hidden />
-      </header>
-      <div className="flex items-center gap-3 px-4 py-4">
-        <div className="text-left">
-          <p className="tabi-title text-3xl font-bold leading-none">{leg.fromCode}</p>
-          <p className="tabi-muted mt-1 text-xs">{leg.from}</p>
-        </div>
-        <div className="tabi-pass-path" aria-hidden>
-          <span className="tabi-pass-plane" style={{ color: out ? "#1a66d9" : "#17734b" }}><Plane size={20} className={out ? "" : "-scale-x-100"} /></span>
-        </div>
-        <div className="text-right">
-          <p className="tabi-title text-3xl font-bold leading-none">{leg.toCode}</p>
-          <p className="tabi-muted mt-1 text-xs">{leg.to}</p>
-        </div>
+    <div className="tabi-flip tabi-rise" style={{ animationDelay: `${index * 90}ms` }}>
+      <div className={`tabi-flip-inner ${flipped ? "is-flipped" : ""}`}>
+        <article className="tabi-card tabi-pass tabi-flip-face overflow-hidden" inert={flipped}>
+          {header(false)}
+          <div className="flex items-center gap-3 px-4 py-4">
+            <div className="text-left">
+              <p className="tabi-title text-3xl font-bold leading-none">{leg.fromCode}</p>
+              <p className="tabi-muted mt-1 text-xs">{leg.from}</p>
+            </div>
+            <div className="tabi-pass-path" aria-hidden>
+              <span className="tabi-pass-plane" style={{ color }}><Plane size={20} className={out ? "" : "-scale-x-100"} /></span>
+            </div>
+            <div className="text-right">
+              <p className="tabi-title text-3xl font-bold leading-none">{leg.toCode}</p>
+              <p className="tabi-muted mt-1 text-xs">{leg.to}</p>
+            </div>
+          </div>
+          <div className="tabi-pass-tear" aria-hidden />
+          <a href={href} target="_blank" rel="noopener noreferrer" className="tabi-btn tabi-btn--soft mx-4 mb-4 flex" onClick={() => track("flight_clicked", { method: leg.dir })}>
+            ดูเที่ยวบินใน Google Flights <ArrowRight size={18} />
+          </a>
+        </article>
+        {ground && (
+          <article className="tabi-card tabi-flip-face tabi-flip-back overflow-hidden" inert={!flipped}>
+            {header(true)}
+            <div className="space-y-2 px-4 py-4">
+              <p className="text-3xl" aria-hidden>{out ? "🚆" : "🧳"}</p>
+              {ground.time && <p className="tabi-title text-lg font-bold">ประมาณ {ground.time}</p>}
+              <p className="tabi-muted text-sm">เวลาจริงและค่ารถดูได้ใน Google Maps</p>
+              <LegLinks links={ground.links} />
+            </div>
+          </article>
+        )}
       </div>
-      <div className="tabi-pass-tear" aria-hidden />
-      <a href={href} target="_blank" rel="noopener noreferrer" className="tabi-btn tabi-btn--soft mx-4 mb-4 flex" onClick={() => track("flight_clicked", { method: leg.dir })}>
-        ดูเที่ยวบินใน Google Flights <ArrowRight size={18} />
-      </a>
-    </article>
+    </div>
   );
 }
 
@@ -1182,7 +1279,7 @@ function FlightsScreen({ reply, trip, onBack, onChat, onPickDate }: {
         <>
           <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
             {link.legs.map((leg, i) => (
-              <BoardingPass key={leg.dir} leg={leg} index={i} href={leg.dir === "return" && link.returnUrl ? link.returnUrl : link.url} />
+              <BoardingPass key={leg.dir} leg={leg} index={i} href={leg.dir === "return" && link.returnUrl ? link.returnUrl : link.url} ground={groundLeg(trip, leg.dir)} />
             ))}
           </div>
           <p className="tabi-muted text-xs">{link.note}</p>

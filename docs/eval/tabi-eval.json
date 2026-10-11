@@ -1,7 +1,7 @@
 {
   "metrics": {
-    "base": "http://localhost:3105",
-    "runAt": "2026-10-11T08:47:18.606Z",
+    "base": "http://localhost:3106",
+    "runAt": "2026-10-11T09:04:41.302Z",
     "cases": 23,
     "overall": {
       "pass": 23,
@@ -37,16 +37,16 @@
       "total": 23
     },
     "latencyMs": {
-      "p50": 356,
-      "p95": 821,
-      "max": 947
+      "p50": 361,
+      "p95": 722,
+      "max": 763
     }
   },
   "rows": [
     {
       "id": "discover-nature",
       "msg": "อยากไปญี่ปุ่น 5 วันกลาง พ.ค. เน้นธรรมชาติ",
-      "ms": 947,
+      "ms": 722,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -61,7 +61,7 @@
     {
       "id": "exact-date",
       "msg": "ไป 10 ธ.ค. 5 วัน อยากเห็นหิมะ",
-      "ms": 700,
+      "ms": 670,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -77,7 +77,7 @@
     {
       "id": "kyoto-autumn",
       "msg": "อยากไปเกียวโต ดูใบไม้เปลี่ยนสี พ.ย. 5 วัน",
-      "ms": 821,
+      "ms": 655,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -92,7 +92,7 @@
     {
       "id": "hokkaido-only",
       "msg": "ฮอกไกโด ธันวาคม 7 วัน หิมะ ออนเซ็น",
-      "ms": 638,
+      "ms": 647,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -108,7 +108,7 @@
     {
       "id": "family-first",
       "msg": "พาลูกไปญี่ปุ่นครั้งแรก เมษา 6 วัน",
-      "ms": 754,
+      "ms": 678,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -123,7 +123,7 @@
     {
       "id": "tateyama",
       "msg": "อยากไปทาเตยามะ ดูกำแพงหิมะ พ.ค.",
-      "ms": 644,
+      "ms": 669,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -138,7 +138,7 @@
     {
       "id": "two-weeks",
       "msg": "เที่ยว 2 สัปดาห์ ช่วง พ.ย.",
-      "ms": 722,
+      "ms": 763,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -153,7 +153,7 @@
     {
       "id": "no-false-month",
       "msg": "พาเด็กคนเล็กไปด้วย 5 วัน",
-      "ms": 672,
+      "ms": 682,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -167,7 +167,7 @@
     {
       "id": "fukuoka-food",
       "msg": "ไปฟุกุโอกะ 4 วัน กินราเมน",
-      "ms": 683,
+      "ms": 604,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -182,7 +182,7 @@
     {
       "id": "okinawa",
       "msg": "โอกินาว่า มิถุนา 5 วัน",
-      "ms": 631,
+      "ms": 697,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -197,7 +197,7 @@
     {
       "id": "vague",
       "msg": "อยากไปญี่ปุ่น",
-      "ms": 321,
+      "ms": 332,
       "source": "jev",
       "action": "ask",
       "checks": {
@@ -210,7 +210,7 @@
     {
       "id": "greeting",
       "msg": "สวัสดีทาบิ",
-      "ms": 337,
+      "ms": 344,
       "source": "jev",
       "action": "chat",
       "checks": {
@@ -223,7 +223,7 @@
     {
       "id": "booking-refused",
       "msg": "ช่วยจองโรงแรมให้หน่อย",
-      "ms": 333,
+      "ms": 335,
       "source": "jev",
       "action": "chat",
       "checks": {
@@ -236,7 +236,7 @@
     {
       "id": "flight",
       "msg": "ตั๋วไปโอซาก้าเดือนหน้าเท่าไร",
-      "ms": 330,
+      "ms": 297,
       "source": "jev",
       "action": "flights",
       "checks": {
@@ -250,7 +250,7 @@
     {
       "id": "refine-crowds",
       "msg": "มีแบบคนน้อยกว่านี้ไหม",
-      "ms": 724,
+      "ms": 664,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -266,7 +266,7 @@
     {
       "id": "pick-first",
       "msg": "อันแรกเลย",
-      "ms": 353,
+      "ms": 361,
       "source": "jev",
       "action": "open_route",
       "checks": {
@@ -280,7 +280,7 @@
     {
       "id": "draft",
       "msg": "จัดเป็นแผนรายวันให้หน่อย",
-      "ms": 351,
+      "ms": 352,
       "source": "jev",
       "action": "draft_itinerary",
       "checks": {
@@ -294,7 +294,7 @@
     {
       "id": "detail",
       "msg": "Mount Fuji คนเยอะไหม",
-      "ms": 356,
+      "ms": 343,
       "source": "jev",
       "action": "answer",
       "checks": {
@@ -308,7 +308,7 @@
     {
       "id": "faq-visa",
       "msg": "คนไทยไปญี่ปุ่นต้องขอวีซ่าไหม",
-      "ms": 337,
+      "ms": 342,
       "source": "jev",
       "action": "answer",
       "checks": {
@@ -322,7 +322,7 @@
     {
       "id": "faq-sim",
       "msg": "ซื้อซิมหรือ esim ที่ไหนดี",
-      "ms": 338,
+      "ms": 329,
       "source": "jev",
       "action": "answer",
       "checks": {
@@ -336,7 +336,7 @@
     {
       "id": "faq-plug",
       "msg": "ปลั๊กไฟญี่ปุ่นใช้แบบไหน ต้องพกหัวแปลงไหม",
-      "ms": 342,
+      "ms": 326,
       "source": "jev",
       "action": "answer",
       "checks": {
@@ -350,7 +350,7 @@
     {
       "id": "faq-emergency",
       "msg": "ถ้าป่วยหรือเกิดเหตุฉุกเฉินต้องโทรเบอร์อะไร",
-      "ms": 336,
+      "ms": 343,
       "source": "jev",
       "action": "answer",
       "checks": {
@@ -364,7 +364,7 @@
     {
       "id": "detail-thai-name",
       "msg": "ฟุชิมิ อินะริ คนเยอะไหม",
-      "ms": 348,
+      "ms": 327,
       "source": "jev",
       "action": "answer",
       "checks": {

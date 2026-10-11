@@ -325,3 +325,36 @@
 @media (min-width: 1024px) { .tabi-nav { box-shadow: 0 6px 24px -14px rgba(45, 127, 249, 0.3); } }
 /* section headings get a small sakura petal, as in the mockup's section titles */
 .tabi h2.tabi-petal::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 10px 0; background: linear-gradient(135deg, #ff8fbd, #ffc6db); transform: rotate(-12deg) translateY(-1px); }
+
+/* ── more motion (owner-approved set) — all off with prefers-reduced-motion via the global rule ── */
+/* 1. Tabi cheers when something worked */
+@keyframes tabi-cheer { 0% { opacity: 0; transform: translate(-50%, 24px) scale(0.8); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.05); } 18% { transform: translate(-50%, 0) scale(1); } 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, 12px); } }
+.tabi-cheer { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 50; display: flex; align-items: center; gap: 10px; padding: 6px 18px 6px 6px; border-radius: 999px; background: #fff; color: var(--t-navy); border: 1px solid #ffd6e6; box-shadow: var(--t-shadow-pink); animation: tabi-cheer 2.2s ease both; white-space: nowrap; }
+@media (min-width: 1024px) { .tabi-cheer { bottom: 32px; } }
+
+/* 2. seasonal particles over the home hero */
+@keyframes tabi-fall { 0% { transform: translate(0, -24px) rotate(0); opacity: 0; } 10% { opacity: 0.9; } 50% { transform: translate(24px, 160px) rotate(160deg); } 100% { transform: translate(-12px, 330px) rotate(320deg); opacity: 0; } }
+.tabi-season { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
+.tabi-fall { position: absolute; top: 0; display: block; animation: tabi-fall 8s linear infinite both; font-size: 14px; line-height: 1; }
+.tabi-fall--petal { width: 11px; height: 11px; border-radius: 11px 0; background: linear-gradient(135deg, #ffb3cf, #ffe0ec); box-shadow: 0 1px 2px rgba(194, 24, 91, 0.15); }
+.tabi-fall--snow { width: 7px; height: 7px; border-radius: 50%; background: #fff; box-shadow: 0 0 4px rgba(255, 255, 255, 0.9); }
+@media (min-width: 1024px) { .tabi-fall { animation-name: tabi-fall-tall; } }
+@keyframes tabi-fall-tall { 0% { transform: translate(0, -24px) rotate(0); opacity: 0; } 10% { opacity: 0.9; } 100% { transform: translate(-16px, 580px) rotate(360deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .tabi .tabi-season { display: none; } }
+
+/* 3. map markers pop in after the route line (delay set per stop) */
+@keyframes tabi-marker-pop { 0% { opacity: 0; transform: scale(0.3) translateY(8px); } 70% { opacity: 1; transform: scale(1.12); } 100% { transform: scale(1); } }
+.tabi-marker-pop { animation: tabi-marker-pop 420ms cubic-bezier(0.34, 1.5, 0.64, 1) both; }
+
+/* 4. "kept" badges land like a hanko stamp */
+@keyframes tabi-stamp { 0% { opacity: 0; transform: scale(2.2) rotate(-20deg); } 60% { opacity: 1; transform: scale(0.9) rotate(-7deg); } 100% { transform: scale(1) rotate(-6deg); } }
+.tabi-stamp { display: inline-block; padding: 1px 8px; border: 2px solid currentColor; border-radius: 8px; color: var(--t-pink-ink); font-weight: 700; background: #fff; transform: rotate(-6deg); animation: tabi-stamp 380ms cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+
+/* 5. boarding pass flips (CSS 3D); the hidden face is inert for keyboards and screen readers */
+.tabi-flip { perspective: 1200px; }
+.tabi-flip-inner { display: grid; transform-style: preserve-3d; transition: transform 650ms cubic-bezier(0.3, 0.7, 0.3, 1); }
+.tabi-flip-inner.is-flipped { transform: rotateY(180deg); }
+.tabi-flip-face { grid-area: 1 / 1; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.tabi-flip-back { transform: rotateY(180deg); }
+.tabi-flip-btn { min-height: 32px; padding: 0 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.75); font-size: 12px; font-weight: 700; }
+.tabi-flip-btn:focus-visible { outline: 3px solid rgba(45, 127, 249, 0.45); outline-offset: 2px; }
