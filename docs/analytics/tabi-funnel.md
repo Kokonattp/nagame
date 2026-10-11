@@ -36,6 +36,8 @@
 | `shared_trip_opened` | เพื่อนเปิดลิงก์แชร์ | `ref` (ตรงกับของคนแชร์) |
 | `shared_trip_saved` | เพื่อนกดเก็บทริป | `ref` |
 | `tour_done` / `tour_skipped` | ดูวิธีใช้จบ / กดข้าม | `step` |
+| `plan_edited` | เปลี่ยน / ลบ / เพิ่มที่เที่ยวในแผนรายวัน | `method` = swap / remove / add |
+| `question_answered` | ทาบิตอบคำถามทั่วไป (วีซ่า ซิม เงิน …) | `method` = with_link / text |
 
 `session_id` = เบราว์เซอร์หนึ่งเครื่อง (อยู่ได้หลายวัน จึงใช้ดู retention ได้)
 

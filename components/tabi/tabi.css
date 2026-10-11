@@ -292,3 +292,9 @@
   /* .tabi-scroll-x sets display:flex outside Tailwind's layers, so the grid lives here */
   .tabi-ideas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
 }
+
+/* day-plan edit buttons: small, quiet, but a real 32px tap target */
+.tabi-edit { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--t-line); background: #fff; color: var(--t-muted); font-size: 12px; font-weight: 600; }
+.tabi-edit:hover:not([disabled]) { color: var(--t-blue); border-color: var(--t-blue); }
+.tabi-edit:focus-visible { outline: 3px solid rgba(45, 127, 249, 0.45); outline-offset: 2px; }
+.tabi-edit[disabled] { opacity: 0.6; }

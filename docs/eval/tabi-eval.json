@@ -1,15 +1,15 @@
 {
   "metrics": {
-    "base": "https://nagame.vercel.app",
-    "runAt": "2026-10-10T13:10:39.442Z",
-    "cases": 18,
+    "base": "http://localhost:3104",
+    "runAt": "2026-10-11T08:12:37.613Z",
+    "cases": 23,
     "overall": {
-      "pass": 18,
-      "total": 18
+      "pass": 23,
+      "total": 23
     },
     "action": {
-      "pass": 17,
-      "total": 17
+      "pass": 22,
+      "total": 22
     },
     "month": {
       "pass": 10,
@@ -24,29 +24,29 @@
       "total": 1
     },
     "constraint": {
-      "pass": 10,
-      "total": 10
+      "pass": 15,
+      "total": 15
     },
     "grounded": {
-      "pass": 18,
-      "total": 18
+      "pass": 23,
+      "total": 23
     },
     "placesChecked": 73,
     "jevShare": {
-      "jev": 18,
-      "total": 18
+      "jev": 23,
+      "total": 23
     },
     "latencyMs": {
-      "p50": 566,
-      "p95": 772,
-      "max": 772
+      "p50": 365,
+      "p95": 750,
+      "max": 805
     }
   },
   "rows": [
     {
       "id": "discover-nature",
       "msg": "อยากไปญี่ปุ่น 5 วันกลาง พ.ค. เน้นธรรมชาติ",
-      "ms": 772,
+      "ms": 750,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -61,7 +61,7 @@
     {
       "id": "exact-date",
       "msg": "ไป 10 ธ.ค. 5 วัน อยากเห็นหิมะ",
-      "ms": 710,
+      "ms": 744,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -77,7 +77,7 @@
     {
       "id": "kyoto-autumn",
       "msg": "อยากไปเกียวโต ดูใบไม้เปลี่ยนสี พ.ย. 5 วัน",
-      "ms": 504,
+      "ms": 349,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -92,7 +92,7 @@
     {
       "id": "hokkaido-only",
       "msg": "ฮอกไกโด ธันวาคม 7 วัน หิมะ ออนเซ็น",
-      "ms": 566,
+      "ms": 328,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -108,7 +108,7 @@
     {
       "id": "family-first",
       "msg": "พาลูกไปญี่ปุ่นครั้งแรก เมษา 6 วัน",
-      "ms": 681,
+      "ms": 805,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -123,7 +123,7 @@
     {
       "id": "tateyama",
       "msg": "อยากไปทาเตยามะ ดูกำแพงหิมะ พ.ค.",
-      "ms": 525,
+      "ms": 340,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -138,7 +138,7 @@
     {
       "id": "two-weeks",
       "msg": "เที่ยว 2 สัปดาห์ ช่วง พ.ย.",
-      "ms": 686,
+      "ms": 729,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -153,7 +153,7 @@
     {
       "id": "no-false-month",
       "msg": "พาเด็กคนเล็กไปด้วย 5 วัน",
-      "ms": 674,
+      "ms": 622,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -167,7 +167,7 @@
     {
       "id": "fukuoka-food",
       "msg": "ไปฟุกุโอกะ 4 วัน กินราเมน",
-      "ms": 528,
+      "ms": 324,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -182,7 +182,7 @@
     {
       "id": "okinawa",
       "msg": "โอกินาว่า มิถุนา 5 วัน",
-      "ms": 630,
+      "ms": 700,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -197,7 +197,7 @@
     {
       "id": "vague",
       "msg": "อยากไปญี่ปุ่น",
-      "ms": 569,
+      "ms": 335,
       "source": "jev",
       "action": "ask",
       "checks": {
@@ -210,7 +210,7 @@
     {
       "id": "greeting",
       "msg": "สวัสดีทาบิ",
-      "ms": 503,
+      "ms": 345,
       "source": "jev",
       "action": "chat",
       "checks": {
@@ -223,7 +223,7 @@
     {
       "id": "booking-refused",
       "msg": "ช่วยจองโรงแรมให้หน่อย",
-      "ms": 507,
+      "ms": 375,
       "source": "jev",
       "action": "chat",
       "checks": {
@@ -236,7 +236,7 @@
     {
       "id": "flight",
       "msg": "ตั๋วไปโอซาก้าเดือนหน้าเท่าไร",
-      "ms": 561,
+      "ms": 403,
       "source": "jev",
       "action": "flights",
       "checks": {
@@ -250,7 +250,7 @@
     {
       "id": "refine-crowds",
       "msg": "มีแบบคนน้อยกว่านี้ไหม",
-      "ms": 645,
+      "ms": 632,
       "source": "jev",
       "action": "suggest_routes",
       "checks": {
@@ -266,7 +266,7 @@
     {
       "id": "pick-first",
       "msg": "อันแรกเลย",
-      "ms": 495,
+      "ms": 365,
       "source": "jev",
       "action": "open_route",
       "checks": {
@@ -280,7 +280,7 @@
     {
       "id": "draft",
       "msg": "จัดเป็นแผนรายวันให้หน่อย",
-      "ms": 524,
+      "ms": 414,
       "source": "jev",
       "action": "draft_itinerary",
       "checks": {
@@ -294,7 +294,77 @@
     {
       "id": "detail",
       "msg": "Mount Fuji คนเยอะไหม",
-      "ms": 532,
+      "ms": 362,
+      "source": "jev",
+      "action": "answer",
+      "checks": {
+        "action": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 0
+    },
+    {
+      "id": "faq-visa",
+      "msg": "คนไทยไปญี่ปุ่นต้องขอวีซ่าไหม",
+      "ms": 343,
+      "source": "jev",
+      "action": "answer",
+      "checks": {
+        "action": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 0
+    },
+    {
+      "id": "faq-sim",
+      "msg": "ซื้อซิมหรือ esim ที่ไหนดี",
+      "ms": 377,
+      "source": "jev",
+      "action": "answer",
+      "checks": {
+        "action": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 0
+    },
+    {
+      "id": "faq-plug",
+      "msg": "ปลั๊กไฟญี่ปุ่นใช้แบบไหน ต้องพกหัวแปลงไหม",
+      "ms": 331,
+      "source": "jev",
+      "action": "answer",
+      "checks": {
+        "action": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 0
+    },
+    {
+      "id": "faq-emergency",
+      "msg": "ถ้าป่วยหรือเกิดเหตุฉุกเฉินต้องโทรเบอร์อะไร",
+      "ms": 343,
+      "source": "jev",
+      "action": "answer",
+      "checks": {
+        "action": true,
+        "constraint": true,
+        "grounded": true
+      },
+      "pass": true,
+      "placesChecked": 0
+    },
+    {
+      "id": "detail-thai-name",
+      "msg": "ฟุชิมิ อินะริ คนเยอะไหม",
+      "ms": 347,
       "source": "jev",
       "action": "answer",
       "checks": {

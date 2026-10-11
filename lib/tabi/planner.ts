@@ -61,6 +61,9 @@ function placeFit(p: Place, intent: TripIntent): number {
   // mountain (Mount Tsurugi) was suggested for a December snow trip.
   if (season === "winter" && p.season === "summer" && p.type === "nature") s -= 2.5;
   if (season === "summer" && p.season === "winter") s -= 1.5;
+  // Climbing peaks are trekking goals, not sightseeing stops (Nikko got Mount Tsukuba, Kawaguchiko
+  // got Mount Kita). Famous, easy ones (Fuji, Aso, Misen) stay.
+  if (p.type === "nature" && /^Mount |-dake$| Peak$/.test(p.nameEn) && p.sitelinks < 40) s -= prefs.includes("nature") ? 1 : 2.5;
   if (prefs.includes("fewer_crowds")) s -= (p.crowd - 2) * 0.6;
   if (prefs.includes("family")) s += p.family ? 0.5 : -0.8;
   if (prefs.includes("easy_travel")) s += p.firstTimer ? 0.4 : -0.2;
@@ -69,32 +72,50 @@ function placeFit(p: Place, intent: TripIntent): number {
 
 function usablePlaces(intent: TripIntent) {
   return PLACES.filter(
-    (p) => p.baseKm <= 70 && !closedIn(p, intent.month) && !/national park|quasi-national/i.test(p.nameEn),
+    (p) => p.baseKm <= 70 && p.type !== "food_area" && !closedIn(p, intent.month) && !/national park|quasi-national/i.test(p.nameEn),
   );
 }
+
+/** What travellers read: the Thai name when Wikidata has one. */
+const displayName = (p: Place) => p.nameTh ?? p.nameEn;
 
 function inFocus(city: BaseCity, focus: string[]) {
   if (!focus.length) return true;
   return focus.some((f) => (f.startsWith("region:") ? city.region === (f.slice(7) as Region) : f === city.name));
 }
 
-function topPlacesFor(city: string, intent: TripIntent, exclude = new Set<string>(), n = 3): Place[] {
+/**
+ * How good `p` is as a stop in a day plan: fit + what first-time visitors come for (the curated
+ * must-see list) − distance from the hotel (10 km beats 60 km at similar appeal).
+ * Kept out of city choice on purpose: Tokyo's many must-sees made every route start in Tokyo,
+ * even for "fewer crowds".
+ */
+function dayScore(p: Place, intent: TripIntent) {
+  return placeFit(p, intent) + (p.firstTimer ? 0.5 : 0) + (p.mustSee ? 1.2 : 0) - p.baseKm / 25;
+}
+
+function topPlacesFor(city: string, intent: TripIntent, exclude = new Set<string>(), n = 3, rank: "day" | "city" = "day"): Place[] {
   return usablePlaces(intent)
     .filter((p) => p.baseCity === city && !exclude.has(p.id))
-    .map((p) => ({ p, s: placeFit(p, intent) }))
+    .map((p) => ({ p, s: rank === "day" ? dayScore(p, intent) : placeFit(p, intent) }))
     .sort((a, b) => b.s - a.s)
     .slice(0, n)
     .map((x) => x.p);
 }
 
+/** Big cities: great gateways, poor bases for a nature or quiet trip (their parks and gardens score as "nature"). */
+const METRO = new Set(["Tokyo", "Osaka", "Yokohama", "Nagoya", "Fukuoka", "Kobe"]);
+
 function cityScore(city: string, intent: TripIntent) {
-  return topPlacesFor(city, intent, new Set(), 4).reduce((a, p) => a + placeFit(p, intent), 0);
+  const s = topPlacesFor(city, intent, new Set(), 4, "city").reduce((a, p) => a + placeFit(p, intent), 0);
+  const wantsQuiet = intent.preferences.includes("nature") || intent.preferences.includes("fewer_crowds");
+  return wantsQuiet && METRO.has(city) && s > 0 ? s * 0.6 : s;
 }
 
 function toHighlight(p: Place, intent: TripIntent): Highlight {
   const matched = intent.preferences.filter((x) => p.tags.includes(x)).map((x) => PREF_TH[x]);
   return {
-    id: p.id, name: p.nameEn, nameJa: p.nameJa, city: p.baseCity, lat: p.lat, lon: p.lon, type: p.type,
+    id: p.id, name: displayName(p), nameEn: p.nameTh ? p.nameEn : undefined, nameJa: p.nameJa, city: p.baseCity, lat: p.lat, lon: p.lon, type: p.type,
     crowd: p.crowd, wikiTitle: p.wikiTitle,
     approxDetourMin: Math.round((p.baseKm / 40) * 60 / 5) * 5 || undefined,
     reason: matched.length ? `เข้ากับ${matched.slice(0, 2).join(" + ")}` : p.crowd <= 2.5 ? "คนไม่เยอะ" : undefined,
@@ -212,7 +233,7 @@ async function rerank(message: string, options: RouteOption[]): Promise<RouteOpt
   if (!systemOneConfigured() || options.length <= 1) return options;
   try {
     const a = await askSystemOne(
-      { request: message, options: options.map((o) => ({ title: o.title, highlights: o.highlights.map((h) => h.name), tags: o.tags })) },
+      { request: message, options: options.map((o) => ({ title: o.title, highlights: o.highlights.map((h) => h.nameEn ?? h.name), tags: o.tags })) },
       Object.fromEntries(options.map((o, i) => [`fit_${i}`, {
         type: "score" as const,
         instructions: `How well does option \`options[${i}]\` fit \`request\`?`,
@@ -256,6 +277,8 @@ export function suggestStops(route: RouteOption, intent: TripIntent, required: P
 }
 
 const MAX_DAYS = 21;
+/** placeFit minus distance below this = not worth a day slot (filler peaks, minor shrines far out). */
+const MIN_DAY_FIT = 0.9;
 
 /**
  * Make the route's nights add up to the requested trip length (days − 1).
@@ -286,7 +309,8 @@ export function draftItinerary(route: RouteOption, intent: TripIntent, extraStop
       // Parts of the day, not clock times: we have no live timetables (spec §2.2).
       if (day === 1) {
         const arrive = travelTime(`airport:${route.gateway.airport}`, stop.city);
-        items.push({ kind: "move", slot: "morning", mode: "flight", text: `บินถึง${CITY_BY_NAME.get(route.gateway.city)?.th ?? route.gateway.city} แล้วเข้า${stop.cityTh}${arrive ? ` ประมาณ ${durationTh(arrive.minutes)}` : ""}`, approx: true, from: `airport:${route.gateway.airport}`, to: stop.city });
+        const into = route.gateway.city === stop.city ? "แล้วเข้าเมือง" : `แล้วเข้า${stop.cityTh}`;
+        items.push({ kind: "move", slot: "morning", mode: "flight", text: `บินถึง${CITY_BY_NAME.get(route.gateway.city)?.th ?? route.gateway.city} ${into}${arrive ? ` ประมาณ ${durationTh(arrive.minutes)}` : ""}`, approx: true, from: `airport:${route.gateway.airport}`, to: stop.city });
       } else if (n === 0) {
         const prev = route.stops[i - 1];
         // rail-times.ts: real connections (e.g. Kawaguchiko → Nikko goes via Tokyo, ~4 h); straight line only as a last resort
@@ -296,10 +320,16 @@ export function draftItinerary(route: RouteOption, intent: TripIntent, extraStop
       const extras = extraStops.filter((h) => h.city === stop.city && !used.has(h.id));
       const picks = [
         ...extras.map((h) => ({ id: h.id, name: h.name, wikiTitle: h.wikiTitle })),
-        ...topPlacesFor(stop.city, intent, used, 3).map((p) => ({ id: p.id, name: p.nameEn, wikiTitle: p.wikiTitle })),
+        // only places worth the day: a small town with two real sights beats filler peaks
+        ...topPlacesFor(stop.city, intent, used, 3)
+          .filter((p) => dayScore(p, intent) >= MIN_DAY_FIT)
+          .map((p) => ({ id: p.id, name: displayName(p), wikiTitle: p.wikiTitle })),
       ].slice(0, day === 1 || n === 0 ? 1 : 2);
       const sightSlots: DaySlot[] = items.length ? ["afternoon"] : ["morning", "afternoon"];
       picks.forEach((p, k) => { used.add(p.id); items.push({ kind: "see", slot: sightSlots[k] ?? "afternoon", text: p.name, placeId: p.id, wikiTitle: p.wikiTitle }); });
+      const dinner = dinnerArea(stop.city, n);
+      if (dinner) items.push({ kind: "eat", slot: "evening", text: `แถว ${displayName(dinner)}`, placeId: dinner.id, wikiTitle: dinner.wikiTitle });
+      if (!picks.length && !items.some((it) => it.kind === "move")) items.unshift({ kind: "see", slot: "afternoon", text: `เดินเล่นใน${stop.cityTh}ตามสบาย` });
       items.push({ kind: "stay", slot: "evening", text: `พักที่ ${stop.cityTh}` });
       plan.push({ day, city: stop.city, title: n === 0 && i > 0 ? `${route.stops[i - 1].city} → ${stop.city}` : stop.city, items, photo: picks[0]?.wikiTitle });
     }
@@ -360,8 +390,42 @@ export function restoreStops(raw: unknown, intent?: TripIntent): Highlight[] {
 
 export function findPlaceByText(text: string): Place | undefined {
   const t = text.toLowerCase();
-  return PLACES.filter((p) => p.nameEn.length >= 4 && t.includes(p.nameEn.toLowerCase().replace(/ (temple|shrine)$/, "")))
+  // Thai names too: travellers type "ฟุชิมิ อินะริ", not "Fushimi Inari-taisha"
+  const thai = (p: Place) => !!p.nameTh && p.nameTh.length >= 4 && t.includes(p.nameTh.replace(/^(ศาลเจ้า|วัด|ปราสาท|ทะเลสาบ|ภูเขา)/, "").toLowerCase());
+  return PLACES.filter((p) => (p.nameEn.length >= 4 && t.includes(p.nameEn.toLowerCase().replace(/ (temple|shrine)$/, ""))) || thai(p))
     .sort((a, b) => b.sitelinks - a.sitelinks)[0];
+}
+
+/** Evening meal area in `city` (data/places/must-see.json food_area), rotating when several exist. */
+function dinnerArea(city: string, night: number): Place | undefined {
+  const areas = PLACES.filter((p) => p.type === "food_area" && p.baseCity === city && p.baseKm <= 15).sort((a, b) => b.sitelinks - a.sitelinks);
+  return areas.length ? areas[night % areas.length] : undefined;
+}
+
+// ── traveller edits on the day plan (swap / add a sight) ──
+/** Next best sight in `city` that is not already in the plan. */
+export function alternativePlace(city: string, intent: TripIntent, exclude: string[]): Highlight | undefined {
+  const p = topPlacesFor(city, intent, new Set(exclude), 1)[0];
+  return p ? toHighlight(p, intent) : undefined;
+}
+
+/**
+ * Re-apply a traveller's sight edits (from a share link) onto a freshly drafted plan:
+ * `sights[i]` = place ids for day i. Unknown ids are dropped; moves, meals and stays stay as drafted.
+ */
+export function applySightEdits(plan: ItineraryDay[], sights: unknown): ItineraryDay[] {
+  if (!Array.isArray(sights) || sights.length !== plan.length) return plan;
+  return plan.map((day, i) => {
+    const ids = Array.isArray(sights[i]) ? (sights[i] as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 4) : null;
+    if (!ids) return day;
+    const places = ids.map(placeById).filter((p): p is Place => !!p && p.type !== "food_area");
+    const hasMove = day.items.some((it) => it.kind === "move" && it.slot === "morning");
+    const slots: DaySlot[] = hasMove ? ["afternoon", "afternoon", "afternoon", "afternoon"] : ["morning", "afternoon", "afternoon", "afternoon"];
+    const sightsItems: ItineraryItem[] = places.map((p, k) => ({ kind: "see", slot: slots[k], text: displayName(p), placeId: p.id, wikiTitle: p.wikiTitle }));
+    const before = day.items.filter((it) => it.kind === "move" && it.slot === "morning");
+    const after = day.items.filter((it) => it.kind !== "see" && !(it.kind === "move" && it.slot === "morning"));
+    return { ...day, items: [...before, ...sightsItems, ...after], photo: places[0]?.wikiTitle ?? day.photo };
+  });
 }
 
 export function placeById(id: string) {

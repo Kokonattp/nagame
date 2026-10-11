@@ -1,6 +1,6 @@
 // Rebuild a shared trip from its link code using server data only (see share.ts).
 
-import { draftItinerary, fitRouteToDays, restoreRoute, restoreStops } from "./planner";
+import { applySightEdits, draftItinerary, fitRouteToDays, restoreRoute, restoreStops } from "./planner";
 import { sanitizeIntent } from "./sanitize";
 import { decodeShare, shareRef, tripTitle } from "./share";
 import type { Highlight, ItineraryDay, RouteOption, TripIntent } from "./types";
@@ -17,6 +17,6 @@ export function buildSharedTrip(code: string): SharedTrip | null {
   const routeDays = restored.stops.reduce((a, s) => a + s.nights, 0) + 1;
   const { route } = fitRouteToDays(restored, intent.durationDays ?? routeDays);
   const savedStops = restoreStops(raw.x, intent);
-  const itinerary = draftItinerary(route, intent, savedStops);
+  const itinerary = applySightEdits(draftItinerary(route, intent, savedStops), raw.e);
   return { ref: shareRef(code), title: tripTitle(route, itinerary.length), intent: { ...intent, durationDays: itinerary.length }, route, itinerary, savedStops };
 }

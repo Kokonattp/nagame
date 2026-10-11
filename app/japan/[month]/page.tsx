@@ -77,7 +77,7 @@ export default async function MonthPage({ params }: Props) {
                   <img src={img(p.wikiTitle)} alt="" loading="lazy" className="tabi-img h-[110px] w-full lg:h-[150px]" />
                   <span className="block p-3">
                     <span className="tabi-title block font-bold leading-snug">{p.name}</span>
-                    <span className="tabi-muted block text-xs">{p.nameJa ? `${p.nameJa} · ` : ""}ใกล้ {p.city}</span>
+                    <span className="tabi-muted block text-xs">{[p.nameEn, p.nameJa].filter(Boolean).join(" · ")}{p.nameEn || p.nameJa ? " · " : ""}ใกล้ {p.city}</span>
                   </span>
                 </a>
               </li>

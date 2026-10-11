@@ -4,6 +4,7 @@
 import { buildOutbound } from "@/lib/outbound";
 import { CITY_BY_NAME, GATEWAYS, nearestGateway, REGION_TH, type Region } from "./cities";
 import { closedIn, draftItinerary, findPlaceByText, fitRouteToDays, partlyOpenIn, PREF_TH, seasonOf, suggestRoutes, suggestStops } from "./planner";
+import { faqAnswer } from "./faq";
 import type { FlightLink, Place, Preference, TabiContext, TabiReply, TripIntent } from "./types";
 import { mergeIntent, understand } from "./understand";
 
@@ -76,7 +77,7 @@ export function flightLink(intent: TripIntent, arriveCity = "Tokyo", departCity 
 function describePlace(p: Place, month?: number): string[] {
   const closed = closedIn(p, month);
   const crowd = p.crowd >= 4.2 ? "คนเยอะมาก ควรไปเช้า" : p.crowd >= 3.2 ? "คนพอสมควร" : "คนไม่ค่อยเยอะ";
-  const lines = [`${p.nameEn}${p.nameJa ? ` (${p.nameJa})` : ""} อยู่แถว ${CITY_BY_NAME.get(p.baseCity)?.th ?? p.baseCity} — ${crowd} ${p.season === "all_year" ? "ไปได้ทั้งปี" : `ช่วงที่ดีคือ${SEASON_TH[p.season]}`}`];
+  const lines = [`${p.nameTh ? `${p.nameTh} (${p.nameEn})` : `${p.nameEn}${p.nameJa ? ` (${p.nameJa})` : ""}`} อยู่แถว ${CITY_BY_NAME.get(p.baseCity)?.th ?? p.baseCity} — ${crowd} ${p.season === "all_year" ? "ไปได้ทั้งปี" : `ช่วงที่ดีคือ${SEASON_TH[p.season]}`}`];
   const partly = closed ? null : partlyOpenIn(p, month);
   if (closed) lines.push(`⚠️ ${closed.note} ช่วงที่ถามอาจเข้าไม่ได้ เช็กเว็บทางการก่อนนะ`);
   else if (partly) lines.push(`⚠️ ${partly.note} เดือนที่ถามเปิดแค่บางช่วง ดูวันให้ตรงก่อนจองนะ`);
@@ -89,6 +90,15 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
   const intent = mergeIntent(ctx.intent, u);
   const source = u.source;
   const base = { intent, source } as const;
+
+  // A practical question ("ต้องขอวีซ่าไหม") gets a checked answer, whatever stage the trip is at.
+  if (u.faqTopic && (u.intent === "practical_question" || u.intent === "ask_detail" || u.intent === "other" || u.confidence < 0.5)) {
+    const a = faqAnswer(u.faqTopic, { route: ctx.selectedRoute, intent });
+    return { ...base, action: "answer", bubbles: a.bubbles, links: a.links, chips: ctx.selectedRoute ? ["จัดแผนรายวัน", "ดูตั๋วเครื่องบิน"] : START_CHIPS };
+  }
+  if (u.intent === "practical_question") {
+    return { ...base, action: "answer", bubbles: ["เรื่องนี้ทาบิยังไม่มีคำตอบที่แน่ใจ ตอนนี้ตอบได้เรื่องวีซ่า ซิม เงิน บัตร IC กระเป๋า มารยาท เหตุฉุกเฉิน อากาศ ปลั๊กไฟ และการเดินทางจากสนามบิน"], chips: ["ต้องขอวีซ่าไหม", "ซื้อซิมยังไงดี", "ต้องพกเงินสดไหม"] };
+  }
 
   // Low confidence on anything that changes the plan → ask, don't guess (spec §2.7).
   if (u.source === "jev" && u.confidence < 0.5 && !["smalltalk", "other"].includes(u.intent)) {

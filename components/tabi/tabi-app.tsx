@@ -16,7 +16,7 @@ import { listTrips, newTrip, saveTrip, type SavedTrip } from "@/lib/tabi/store";
 import { track } from "@/lib/tabi/track";
 import { durationTh, travelTime } from "@/lib/tabi/rail-times";
 import { AIRPORTS, jrPassWorthIt, legLinks, type LegLink } from "@/lib/tabi/transport";
-import type { Highlight, RouteOption, TabiReply } from "@/lib/tabi/types";
+import type { DaySlot, Highlight, ItineraryDay, ItineraryItem, RouteOption, TabiReply } from "@/lib/tabi/types";
 import type { MapPoint } from "./tabi-map";
 import { renderShareImage } from "./share-image";
 import "./tabi.css";
@@ -152,6 +152,7 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
       const reply = data.reply;
       setLastReply(reply);
       setTurns((t) => [...t, { role: "tabi", text: reply.bubbles.join("\n"), reply }]);
+      if (reply.action === "answer") track("question_answered", { method: reply.links?.length ? "with_link" : "text" });
 
       if (reply.action === "suggest_routes" && reply.routes) {
         track("routes_shown", { refine: routes.length > 0, month: reply.intent.month ?? 0, days: reply.intent.durationDays ?? 0 });
@@ -253,6 +254,7 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
             sharedState={sharedState}
             onKeep={() => { track("shared_trip_saved", { ref: shared?.ref ?? "" }); void persist(trip); }}
             onShare={() => shareTrip(trip)}
+            onEdit={(itinerary, method) => { track("plan_edited", { method }); void persist({ ...trip, itinerary }); }}
             onSetDate={(iso) => {
               track("date_set", { month: Number(iso.slice(5, 7)) });
               // the date fixes month and length too, so the next turn (e.g. "หาตั๋ว") searches these exact days
@@ -561,6 +563,13 @@ function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack }: {
                 {t.text.split("\n").map((b, j) => (
                   <p key={j} className="tabi-card rounded-tl-md px-4 py-2.5">{b}</p>
                 ))}
+                {t.reply?.links?.length ? (
+                  <span className="flex flex-wrap gap-1 pt-1">
+                    {t.reply.links.map((l) => (
+                      <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="tabi-leg-link">{l.label} ↗</a>
+                    ))}
+                  </span>
+                ) : null}
               </div>
             </li>
           ),
@@ -713,7 +722,7 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
               <img src={img(h.wikiTitle)} alt="" loading="lazy" onError={hideBroken} className="tabi-img h-[88px] w-[96px] shrink-0 rounded-[14px]" />
               <div className="min-w-0 flex-1 py-1">
                 <p className="tabi-title font-bold leading-snug">{h.name}</p>
-                {h.nameJa && <p className="tabi-muted text-xs">{h.nameJa}</p>}
+                {(h.nameEn || h.nameJa) && <p className="tabi-muted text-xs">{[h.nameEn, h.nameJa].filter(Boolean).join(" · ")}</p>}
                 <p className="tabi-muted text-xs">{h.approxDetourMin ? `จาก ${h.city} ประมาณ ${h.approxDetourMin} นาที` : `อยู่ใน ${h.city}`}{h.reason ? ` · ${h.reason}` : ""}</p>
               </div>
               <button type="button" onClick={() => onAdd(h)} disabled={saved} className={`tabi-btn self-center px-3 text-sm ${saved ? "tabi-btn--soft" : "tabi-btn--soft"}`} aria-label={saved ? `${h.name} อยู่ในทริปแล้ว` : `ใส่ ${h.name} ในทริป`}>
@@ -744,6 +753,7 @@ const CHIP = {
   ferry: { label: "⛴️ เรือ", bg: "#e3f6fb", fg: "#0d6a80" },
   airport: { label: "🧳 ไปสนามบิน", bg: "#fff1e6", fg: "#a5521a" },
   see: { label: "📍 เที่ยว", bg: "#ffe9f2", fg: "#c2185b" },
+  eat: { label: "🍜 มื้อเย็น", bg: "#fff4d6", fg: "#7a5a00" },
   stay: { label: "🛏️ ที่พัก", bg: "#eef1f7", fg: "#4b5878" },
 } as const;
 
@@ -755,13 +765,54 @@ const isoDay = (iso: string, plus = 0) => {
 const thaiDate = (d: Date) => `${d.getUTCDate()} ${MONTH_SHORT[d.getUTCMonth() + 1]}`;
 const todayIso = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 
-function ItineraryScreen({ trip, sharedState, onKeep, onShare, onBack, onAsk, onMap, onToggle, onSetDate }: {
+function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, onAsk, onMap, onToggle, onSetDate }: {
   sharedState: "none" | "unsaved" | "saved"; onKeep: () => void; onShare: () => Promise<ShareResult>;
+  onEdit: (days: ItineraryDay[], method: "swap" | "remove" | "add") => void;
   trip: SavedTrip; onBack: () => void; onAsk: (m: string) => void; onMap: () => void; onToggle: (id: string) => void;
   onSetDate: (iso: string) => void;
 }) {
   const days = trip.itinerary ?? [];
   const [active, setActive] = useState(0);
+  // traveller edits: swap / remove / add a sight (the next best place comes from the place store)
+  const [busy, setBusy] = useState<string | null>(null);
+  const [editNote, setEditNote] = useState<string | null>(null);
+  const nextPlace = async (city: string): Promise<Highlight | null> => {
+    const used = days.flatMap((d) => d.items.map((it) => it.placeId)).filter((x): x is string => !!x);
+    const q = new URLSearchParams({ city, month: String(trip.intent.month ?? ""), prefs: trip.intent.preferences.join(","), exclude: used.join(",") });
+    try {
+      const res = await fetch(`/api/tabi/alternative?${q}`);
+      return res.ok ? ((await res.json()) as { place: Highlight | null }).place : null;
+    } catch {
+      return null;
+    }
+  };
+  const editDay = (i: number, items: ItineraryItem[], method: "swap" | "remove" | "add") => {
+    // re-slot sights after an edit: morning first unless the day starts with a move
+    const morningMove = items.some((it) => it.kind === "move" && it.slot === "morning");
+    let n = 0;
+    const slotted = items.map((it) => (it.kind === "see" ? { ...it, slot: (n++ === 0 && !morningMove ? "morning" : "afternoon") as DaySlot } : it));
+    onEdit(days.map((d, k) => (k === i ? { ...d, items: slotted, photo: slotted.find((it) => it.kind === "see" && it.wikiTitle)?.wikiTitle ?? d.photo } : d)), method);
+  };
+  async function swapSight(i: number, j: number) {
+    setBusy(`${i}-${j}`);
+    setEditNote(null);
+    const alt = await nextPlace(days[i].city);
+    if (alt) editDay(i, days[i].items.map((it, k) => (k === j ? { ...it, text: alt.name, placeId: alt.id, wikiTitle: alt.wikiTitle } : it)), "swap");
+    else setEditNote(`แถว${days[i].city}ทาบิไม่มีที่อื่นให้เปลี่ยนแล้ว`);
+    setBusy(null);
+  }
+  async function addSight(i: number) {
+    setBusy(`${i}-add`);
+    setEditNote(null);
+    const alt = await nextPlace(days[i].city);
+    if (alt) {
+      const items = [...days[i].items];
+      const at = items.findIndex((it) => it.kind === "eat" || it.kind === "stay");
+      items.splice(at < 0 ? items.length : at, 0, { kind: "see", slot: "afternoon", text: alt.name, placeId: alt.id, wikiTitle: alt.wikiTitle });
+      editDay(i, items, "add");
+    } else setEditNote(`แถว${days[i].city}ทาบิไม่มีที่อื่นให้เพิ่มแล้ว`);
+    setBusy(null);
+  }
   const month = trip.intent.month;
   const start = trip.intent.startDate;
   const countdown = start ? Math.round((isoDay(start).getTime() - isoDay(todayIso()).getTime()) / 86_400_000) : null;
@@ -894,9 +945,27 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onBack, onAsk, on
                           <span className={it.kind === "see" ? "font-semibold" : "text-sm"}>{it.text}</span>
                           {it.approx && <span className="ml-1 rounded bg-[var(--t-blue-soft)] px-1 text-[10px] text-[var(--t-blue)]">ประมาณ</span>}
                           <LegLinks links={legLinks(it.from, it.to)} />
+                          {it.kind === "see" && (
+                            <span className="mt-1 flex gap-1">
+                              {it.placeId && (
+                                <button type="button" className="tabi-edit" disabled={busy !== null} onClick={() => swapSight(i, j)} aria-label={`เปลี่ยน ${it.text} เป็นที่อื่น`}>
+                                  {busy === `${i}-${j}` ? "กำลังหา…" : "🔄 เปลี่ยน"}
+                                </button>
+                              )}
+                              <button type="button" className="tabi-edit" disabled={busy !== null} onClick={() => editDay(i, d.items.filter((_, k) => k !== j), "remove")} aria-label={`ลบ ${it.text} ออกจากวันนี้`}>✕ ลบ</button>
+                            </span>
+                          )}
                         </li>
                       );
                     })}
+                    {d.items.some((it) => it.kind === "stay") && d.items.filter((it) => it.kind === "see").length < 4 && (
+                      <li>
+                        <button type="button" className="tabi-edit" disabled={busy !== null} onClick={() => addSight(i)}>
+                          {busy === `${i}-add` ? "กำลังหา…" : "＋ เพิ่มที่เที่ยววันนี้"}
+                        </button>
+                      </li>
+                    )}
+                    {editNote && <li className="tabi-muted text-xs" role="status">{editNote}</li>}
                   </ol>
                 )}
               </li>

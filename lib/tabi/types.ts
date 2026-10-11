@@ -14,6 +14,11 @@ export type Place = {
   id: string;
   nameEn: string;
   nameJa: string | null;
+  /** Thai name from Wikidata / Thai Wikipedia when one exists */
+  nameTh?: string | null;
+  /** on the curated first-visit list (data/places/must-see.json) */
+  mustSee?: boolean;
+  /** shrine_temple | castle | nature | onsen | museum | landmark | theme_park | food_area (evening meal only) */
   type: string;
   lat: number;
   lon: number;
@@ -44,7 +49,10 @@ export type RouteStop = { city: string; cityTh: string; lat: number; lon: number
 
 export type Highlight = {
   id: string;
+  /** display name: Thai when known, else English */
   name: string;
+  /** English name, set only when `name` is Thai (shown small underneath) */
+  nameEn?: string;
   nameJa: string | null;
   city: string;
   lat: number;
@@ -74,7 +82,7 @@ export type DaySlot = "morning" | "afternoon" | "evening";
 /** How a move happens — drives the coloured chip on the timeline (video reference). */
 export type TravelMode = "flight" | "train" | "bus" | "ferry" | "airport";
 export type ItineraryItem = {
-  kind: "move" | "see" | "stay";
+  kind: "move" | "see" | "eat" | "stay";
   text: string;
   /** part of the day instead of a clock time: we have no live timetables */
   slot?: DaySlot;
@@ -121,6 +129,8 @@ export type TabiReply = {
   itinerary?: ItineraryDay[];
   flight?: FlightLink;
   chips?: string[];
+  /** official pages behind an answer (practical questions) */
+  links?: { label: string; url: string }[];
   /** the selected route after the server re-fitted it (e.g. nights changed to match days) */
   selectedRoute?: RouteOption;
   source: "jev" | "fallback";

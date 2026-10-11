@@ -41,6 +41,12 @@ const CASES = [
   { id: "pick-first", after: "refine-crowds", msg: "อันแรกเลย", ctx: (p) => ({ intent: p.intent, shownRoutes: ids(p) }), action: "open_route", check: (r, p) => r.openRouteId === p.routes[0].id },
   { id: "draft", after: "refine-crowds", msg: "จัดเป็นแผนรายวันให้หน่อย", ctx: (p) => ({ intent: p.intent, selectedRoute: p.routes[0] }), action: "draft_itinerary", check: (r) => r.itinerary?.length === 5 },
   { id: "detail", msg: "Mount Fuji คนเยอะไหม", action: "answer", check: (r) => r.bubbles.join(" ").includes("Mount Fuji") },
+  // practical questions: checked answers, never invented (lib/tabi/faq.ts)
+  { id: "faq-visa", msg: "คนไทยไปญี่ปุ่นต้องขอวีซ่าไหม", action: "answer", check: (r) => r.bubbles.join(" ").includes("15 วัน") && r.links?.some((l) => l.url.includes("mofa.go.jp")) },
+  { id: "faq-sim", msg: "ซื้อซิมหรือ esim ที่ไหนดี", action: "answer", check: (r) => r.bubbles.join(" ").includes("eSIM") },
+  { id: "faq-plug", msg: "ปลั๊กไฟญี่ปุ่นใช้แบบไหน ต้องพกหัวแปลงไหม", action: "answer", check: (r) => r.bubbles.join(" ").includes("Type A") },
+  { id: "faq-emergency", msg: "ถ้าป่วยหรือเกิดเหตุฉุกเฉินต้องโทรเบอร์อะไร", action: "answer", check: (r) => r.bubbles.join(" ").includes("119") },
+  { id: "detail-thai-name", msg: "ฟุชิมิ อินะริ คนเยอะไหม", action: "answer", check: (r) => r.bubbles.join(" ").includes("Fushimi") },
 ];
 
 async function ask(message, context) {

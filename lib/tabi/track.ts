@@ -5,7 +5,7 @@
 export const TABI_EVENTS = [
   "home_view", "ask", "routes_shown", "route_opened", "stop_added", "itinerary_drafted", "date_set",
   "flights_opened", "flight_clicked", "leg_map_clicked", "trip_shared", "shared_trip_opened",
-  "shared_trip_saved", "tour_done", "tour_skipped",
+  "shared_trip_saved", "tour_done", "tour_skipped", "plan_edited", "question_answered",
 ] as const;
 export type TabiEvent = (typeof TABI_EVENTS)[number];
 export type EventProps = Partial<Record<"month" | "days" | "stops" | "route" | "source" | "method" | "step" | "first" | "refine" | "ref", string | number | boolean>>;

@@ -1,6 +1,7 @@
 // Builds the Tabi place store: data/places/places.json
 //   1. Wikidata (CC0): Japanese attractions per class, closed/demolished items excluded
 //   2. Wikipedia intro text (CC BY-SA) — used only as Jev input, never shipped to the app
+//   2b. Thai names (Wikidata Thai label or Thai Wikipedia title) for display
 //   3. Jev scores each place once (crowd, season, audience, tags, "closed?")
 //   4. Code adds nearest base city + region
 // Every stage caches under data/places/_cache, so re-runs skip finished work.
@@ -79,6 +80,54 @@ for (const [qid, type] of Object.entries(CLASSES)) {
   console.log(`wikidata ${qid} (${type}): ${rows.length} rows, ${byId.size} unique so far`);
   await sleep(2000);
 }
+// ── 1b. Must-see places the class queries miss (data/places/must-see.json): title → Wikidata item ──
+const mustSee = JSON.parse(readFileSync(new URL("must-see.json", ROOT), "utf8")).places;
+const extras = readJson("must-see.json", {});
+const needIds = mustSee.filter(([title]) => !(title in extras));
+for (let i = 0; i < needIds.length; i += 50) {
+  const batch = needIds.slice(i, i + 50).map(([t]) => t);
+  const url = "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&prop=pageprops&ppprop=wikibase_item" +
+    "&redirects=1&titles=" + encodeURIComponent(batch.join("|"));
+  const q = (await (await fetch(url, { headers: { "User-Agent": UA } })).json()).query;
+  const rename = new Map([...(q.normalized ?? []), ...(q.redirects ?? [])].map((x) => [x.from, x.to]));
+  const pages = new Map(q.pages.map((pg) => [pg.title, pg]));
+  for (const t of batch) {
+    let title = t;
+    while (rename.has(title)) title = rename.get(title);
+    const pg = pages.get(title);
+    extras[t] = pg?.pageprops?.wikibase_item ? { id: pg.pageprops.wikibase_item, wikiTitle: pg.title } : null;
+  }
+  await sleep(500);
+}
+const extraIds = Object.values(extras).filter((x) => x && !x.entity).map((x) => x.id);
+for (let i = 0; i < extraIds.length; i += 50) {
+  const ids = extraIds.slice(i, i + 50);
+  const url = "https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=labels|claims|sitelinks&languages=en|ja&ids=" + ids.join("|");
+  const entities = (await (await fetch(url, { headers: { "User-Agent": UA } })).json()).entities ?? {};
+  for (const x of Object.values(extras)) {
+    const e = x && entities[x.id];
+    if (!e) continue;
+    const coord = e.claims?.P625?.[0]?.mainsnak?.datavalue?.value;
+    x.entity = { en: e.labels?.en?.value ?? x.wikiTitle, ja: e.labels?.ja?.value ?? null, lat: coord?.latitude ?? null, lon: coord?.longitude ?? null, sitelinks: Object.keys(e.sitelinks ?? {}).length };
+  }
+  await sleep(500);
+}
+writeJson(new URL("must-see.json", CACHE), extras);
+let mustSeeAdded = 0;
+const mustSeeIds = new Set();
+const thaiOverride = new Map(); // [title, type, "ชื่อไทยที่คนไทยใช้"] when Wikidata's Thai label is not the common name
+for (const [title, type, th] of mustSee) {
+  const x = extras[title];
+  if (!x?.entity || x.entity.lat == null) { console.warn(`  must-see skipped (no item/coords): ${title}`); continue; }
+  mustSeeIds.add(x.id);
+  if (th) thaiOverride.set(x.id, th);
+  const known = byId.get(x.id);
+  if (known) { if (type === "food_area") known.type = type; continue; }
+  byId.set(x.id, { id: x.id, type, lat: x.entity.lat, lon: x.entity.lon, nameEn: x.entity.en, nameJa: x.entity.ja, sitelinks: x.entity.sitelinks, wikiTitle: x.wikiTitle });
+  mustSeeAdded++;
+}
+console.log(`must-see: ${mustSeeAdded} added, ${mustSee.length - mustSeeAdded} already known or skipped`);
+
 const places = [...byId.values()].sort((a, b) => b.sitelinks - a.sitelinks).slice(0, LIMIT);
 console.log(`candidates: ${places.length}`);
 
@@ -103,6 +152,25 @@ for (let i = 0; i < missing.length; i += 20) {
   if (i % 200 === 0) console.log(`summaries ${Math.min(i + 20, missing.length)}/${missing.length}`);
   await sleep(1000);
 }
+
+// ── 2b. Thai names: Wikidata Thai label, else the Thai Wikipedia title (both free, CC0 / title only) ──
+const thai = readJson("labels-th.json", {});
+const needTh = places.filter((p) => !(p.id in thai));
+for (let i = 0; i < needTh.length; i += 50) {
+  const batch = needTh.slice(i, i + 50);
+  const url = "https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=labels|sitelinks" +
+    "&languages=th&sitefilter=thwiki&ids=" + batch.map((p) => p.id).join("|");
+  const res = await fetch(url, { headers: { "User-Agent": UA } });
+  if (!res.ok) { console.warn(`wikidata labels HTTP ${res.status}; stopping Thai names early`); break; }
+  const entities = (await res.json()).entities ?? {};
+  for (const p of batch) {
+    const e = entities[p.id];
+    thai[p.id] = e?.labels?.th?.value ?? e?.sitelinks?.thwiki?.title ?? null;
+  }
+  writeJson(new URL("labels-th.json", CACHE), thai);
+  await sleep(500);
+}
+console.log(`thai names: ${places.filter((p) => thai[p.id]).length}/${places.length}`);
 
 // ── 3. Jev scores, once per place (all questions in one request) ──
 const TAGS = {
@@ -205,7 +273,7 @@ for (const p of places) {
   if (s.closed >= 0.5) { closedCount++; continue; }
   const near = CITIES.map((c) => ({ c, d: km(p, c) })).sort((x, y) => x.d - y.d)[0];
   out.push({
-    id: p.id, nameEn: p.nameEn, nameJa: p.nameJa, type: p.type,
+    id: p.id, nameEn: p.nameEn, nameJa: p.nameJa, nameTh: thaiOverride.get(p.id) ?? thai[p.id] ?? null, type: p.type, mustSee: mustSeeIds.has(p.id) || undefined,
     lat: Number(p.lat.toFixed(5)), lon: Number(p.lon.toFixed(5)), sitelinks: p.sitelinks,
     baseCity: near.c.name, baseKm: Math.round(near.d), region: REGION[near.c.prefecture] ?? "other",
     crowd: Number(s.crowd.toFixed(1)), season: s.season,

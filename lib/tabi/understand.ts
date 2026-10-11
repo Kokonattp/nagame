@@ -4,18 +4,21 @@
 // message alone, never with route context (context made Jev over-tag).
 
 import { findFocus } from "./cities";
+import { FAQ_KEYWORDS, FAQ_TOPICS, type FaqTopic } from "./faq";
 import { askSystemOne, systemOneConfigured } from "./system-one";
 import { PREFERENCES, type Preference, type TabiContext, type TripIntent } from "./types";
 
 export type Intent =
   | "start_trip" | "refine" | "pick_option" | "ask_detail" | "add_stop"
-  | "draft_itinerary" | "ask_flight" | "smalltalk" | "other";
+  | "draft_itinerary" | "ask_flight" | "practical_question" | "smalltalk" | "other";
 
 export type Understanding = {
   intent: Intent;
   confidence: number;
   needsFresh: boolean;
   pickPosition: number | null;
+  /** practical question topic (visa, SIM, money…) when one fits */
+  faqTopic: FaqTopic | null;
   preferences: Preference[];
   month?: number;
   durationDays?: number;
@@ -85,6 +88,7 @@ const INTENTS: Record<Intent, string> = {
   add_stop: "Wants to add a stop or activity to the current route",
   draft_itinerary: "Wants the route turned into a day-by-day plan",
   ask_flight: "Asks about flights, tickets, airfare, or airlines",
+  practical_question: "Asks a practical how-to question about travelling in Japan (visa, money, SIM or internet, IC cards, luggage, manners, emergencies, weather or clothes, plugs, airport transfer, rail pass) rather than planning the route",
   smalltalk: "Greeting, thanks, or chit-chat with no planning request",
   other: "Anything else, including requests the travel planner cannot do such as booking or payment",
 };
@@ -135,6 +139,11 @@ export async function understand(message: string, ctx: TabiContext): Promise<Und
           instructions: "If `message` selects one of `context.shown_options`, which position? Otherwise none.",
           criteria: { "1": "First option", "2": "Second option", "3": "Third option", none: "No option is being selected" },
         },
+        faq_topic: {
+          type: "choice",
+          instructions: "If `message` asks a practical travel question, which topic is it about? Otherwise none.",
+          criteria: { ...FAQ_TOPICS, none: "Not a practical travel question" },
+        },
       }),
       askSystemOne({ message }, Object.fromEntries(
         PREFERENCES.map((p) => [p, { type: "noul" as const, instructions: `Does \`message\` itself express this travel preference: ${PREF_TEXT[p]}?` }]),
@@ -142,12 +151,14 @@ export async function understand(message: string, ctx: TabiContext): Promise<Und
     ]);
 
     const pick = meaning.pick_position.choice;
+    const topic = meaning.faq_topic.choice;
     return {
       ...base,
       intent: meaning.intent.choice as Intent,
       confidence: meaning.intent.confidence,
       needsFresh: meaning.needs_fresh_data.noul >= NOUL_THRESHOLD,
       pickPosition: pick === "none" ? null : Number(pick),
+      faqTopic: topic !== "none" && meaning.faq_topic.confidence >= 0.6 ? (topic as FaqTopic) : null,
       preferences: PREFERENCES.filter((p) => prefs[p].noul >= NOUL_THRESHOLD),
       source: "jev",
     };
@@ -174,8 +185,11 @@ function keywordFallback(message: string, ctx: TabiContext) {
   const pickPosition = pickMatch ? (pickMatch[1] ? 1 : pickMatch[2] ? 2 : 3) : null;
   const hasOptions = Boolean(ctx.shownRoutes?.length || ctx.selectedRoute);
 
+  const faqTopic = FAQ_KEYWORDS.find(([, re]) => re.test(message))?.[0] ?? null;
+
   let intent: Intent = "start_trip";
-  if (has(/ตั๋ว|ไฟลท์|เครื่องบิน|flight/)) intent = "ask_flight";
+  if (faqTopic) intent = "practical_question";
+  else if (has(/ตั๋ว|ไฟลท์|เครื่องบิน|flight/)) intent = "ask_flight";
   else if (has(/สวัสดี|ขอบคุณ|\bhello\b|\bhi\b/)) intent = "smalltalk";
   else if (has(/จอง|จ่ายเงิน/)) intent = "other";
   else if (pickPosition && hasOptions) intent = "pick_option";
@@ -185,7 +199,7 @@ function keywordFallback(message: string, ctx: TabiContext) {
   // A trip is in progress: an unmatched follow-up ("ขอ 7 วัน") adjusts it instead of wiping it.
   else if ((hasOptions || ctx.intent) && !has(/ทริปใหม่|เริ่มใหม่/)) intent = "refine";
 
-  return { intent, confidence: 0.5, needsFresh: intent === "ask_flight", pickPosition, preferences };
+  return { intent, confidence: 0.5, needsFresh: intent === "ask_flight", pickPosition, faqTopic, preferences };
 }
 
 export function mergeIntent(prev: TripIntent | undefined, u: Understanding): TripIntent {

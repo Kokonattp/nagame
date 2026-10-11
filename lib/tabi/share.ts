@@ -2,18 +2,20 @@
 // JSON of cities + nights, intent and kept stops. The server rebuilds the plan from its own
 // data (share-server.ts), so a crafted code can only select real places, never inject text.
 
-import type { Highlight, RouteOption, TripIntent } from "./types";
+import type { Highlight, ItineraryDay, RouteOption, TripIntent } from "./types";
 
 export type SharePayload = {
   v: 1;
   s: [city: string, nights: number][];
   i: { m?: number; n?: number; d?: string; p?: string[] };
   x?: string[];
+  /** sights per day after the traveller's swaps/removals (place ids) */
+  e?: string[][];
 };
 
 const MAX_CODE = 1200;
 
-export function encodeShare(trip: { intent: TripIntent; route?: RouteOption; savedStops: Highlight[]; itinerary?: unknown[] }): string | null {
+export function encodeShare(trip: { intent: TripIntent; route?: RouteOption; savedStops: Highlight[]; itinerary?: ItineraryDay[] }): string | null {
   if (!trip.route) return null;
   const payload: SharePayload = {
     v: 1,
@@ -25,6 +27,7 @@ export function encodeShare(trip: { intent: TripIntent; route?: RouteOption; sav
       p: trip.intent.preferences.length ? trip.intent.preferences : undefined,
     },
     x: trip.savedStops.length ? trip.savedStops.map((h) => h.id) : undefined,
+    e: trip.itinerary?.map((d) => d.items.filter((it) => it.kind === "see" && it.placeId).map((it) => it.placeId as string)),
   };
   const bytes = new TextEncoder().encode(JSON.stringify(payload));
   const b64 = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -53,5 +56,7 @@ export function shareRef(code: string) {
 export function tripTitle(route: Pick<RouteOption, "stops"> | undefined, days?: number) {
   if (!route) return "ทริปญี่ปุ่น";
   const nights = route.stops.reduce((a, s) => a + s.nights, 0);
-  return `${route.stops[0].city} → ${route.stops[route.stops.length - 1].city} · ${days ?? nights + 1} วัน`;
+  const first = route.stops[0].city;
+  const last = route.stops[route.stops.length - 1].city;
+  return `${first === last ? first : `${first} → ${last}`} · ${days ?? nights + 1} วัน`;
 }
