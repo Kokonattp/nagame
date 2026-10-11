@@ -34,9 +34,35 @@ function config() {
   };
 }
 
+// ── daily token budget (abuse guard) ──
+// Someone hammering the chat must not drain the TypeSafe allowance. On the web server
+// (NEXT_RUNTIME is set) calls stop for the rest of the UTC day once the cap is reached and
+// Tabi answers with its keyword fallback. Build scripts (no NEXT_RUNTIME) are not capped.
+// Per server instance; JEV_DAILY_TOKEN_CAP overrides the default 3M tokens/day.
+const usageToday = { day: "", tokens: 0 };
+function dailyCap() {
+  const fallback = process.env.NEXT_RUNTIME ? 3_000_000 : Infinity;
+  const raw = process.env.JEV_DAILY_TOKEN_CAP?.trim();
+  if (!raw) return fallback;
+  const n = Number(raw.replace(/_/g, ""));
+  // 0 means "stop Jev now"; anything unreadable keeps the safe default instead of removing the cap
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+export function jevBudgetLeft(): number {
+  if (usageToday.day !== today()) { usageToday.day = today(); usageToday.tokens = 0; }
+  return dailyCap() - usageToday.tokens;
+}
+function spend(tokens: number) {
+  jevBudgetLeft(); // rolls the day over
+  usageToday.tokens += tokens;
+}
+
 export function systemOneConfigured(): boolean {
   const { remote, key } = config();
-  return !remote || Boolean(key);
+  return (!remote || Boolean(key)) && jevBudgetLeft() > 0;
 }
 
 export async function askSystemOne<Qs extends Record<string, Question>>(
@@ -46,6 +72,7 @@ export async function askSystemOne<Qs extends Record<string, Question>>(
 ): Promise<Answers<Qs>> {
   const { url, model, key, remote } = config();
   if (remote && !key) throw new SystemOneUnavailable("TYPESAFE_API_KEY is not set");
+  if (jevBudgetLeft() <= 0) throw new SystemOneUnavailable("daily Jev token budget reached");
 
   const body = JSON.stringify({ model, state, questions });
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -69,6 +96,8 @@ export async function askSystemOne<Qs extends Record<string, Question>>(
     if (!res.ok) throw new SystemOneUnavailable(`System One HTTP ${res.status}`);
 
     const json = (await res.json()) as { answers: Answers<Qs>; usage?: { input_tokens?: number; output_tokens?: number } };
+    // no usage reported → count a typical request (~1,500 tokens) so the cap still holds
+    spend((json.usage?.input_tokens ?? 1_500) + (json.usage?.output_tokens ?? 0));
     opts.onUsage?.({
       latencyMs: Math.round(performance.now() - started),
       inputTokens: json.usage?.input_tokens ?? null,

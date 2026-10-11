@@ -27,7 +27,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `ข้อความยาวเกินไป (ไม่เกิน ${MAX_MESSAGE_CHARS} ตัวอักษร)` }, { status: 400 });
   }
 
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  // Vercel sets x-real-ip / x-forwarded-for itself (client-sent values are overwritten)
+  const ip = request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   if (!takeBudget(ip)) {
     return NextResponse.json({ error: "คุยถี่ไปนิด รอสักครู่แล้วลองใหม่นะ" }, { status: 429 });
   }
