@@ -10,7 +10,10 @@ if ($LASTEXITCODE -ne 0) {
   Write-Host "Collection stopped (blocked or no results). The previous prices stay online."
   exit $LASTEXITCODE
 }
-git add data/flights/snapshot.json
+# cheapest-dates calendar (price graph); a failure here keeps yesterday's calendar
+node workers/flight-prices/calendar.mjs
+if ($LASTEXITCODE -ne 0) { Write-Host "Calendar stopped; keeping the previous calendar." }
+git add data/flights/snapshot.json data/flights/calendar.json
 git diff --cached --quiet
 if ($LASTEXITCODE -eq 0) { Write-Host "No price changes."; exit 0 }
 git commit -m "data(flights): price snapshot $(Get-Date -Format yyyy-MM-dd)"

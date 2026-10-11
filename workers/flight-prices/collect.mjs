@@ -27,7 +27,7 @@ const ONLY = process.argv.find((a) => a.startsWith("--gateways="))?.split("=")[1
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // gateway codes as the planner uses them (lib/tabi/cities.ts GATEWAYS)
-const GATEWAYS = [
+export const GATEWAYS = [
   { code: "TYO", search: "Tokyo" }, { code: "OSA", search: "Osaka" }, { code: "NGO", search: "Nagoya" },
   { code: "FUK", search: "Fukuoka" }, { code: "CTS", search: "Sapporo" }, { code: "OKA", search: "Okinawa" },
 ];
@@ -45,7 +45,7 @@ function sampleTrips(now = new Date()) {
   return trips;
 }
 
-const BLOCKED = /unusual traffic|captcha|are you a robot|not a robot|something went wrong|อ๊ะ มีบางอย่างผิดพลาด/i;
+export const BLOCKED = /unusual traffic|captcha|are you a robot|not a robot|something went wrong|อ๊ะ มีบางอย่างผิดพลาด/i;
 
 /** Flights listed on the results page: price, airline, nonstop?, duration, airports. */
 export function parseResults(raw) {
@@ -73,7 +73,7 @@ export function parseResults(raw) {
   return { cheapest: cheapest ?? (flights.length ? Math.min(...flights.map((f) => f.price)) : null), flights };
 }
 
-async function openChrome() {
+export async function openChrome() {
   mkdirSync(PROFILE, { recursive: true });
   const proc = spawn(CHROME, [`--remote-debugging-port=${PORT}`, `--user-data-dir=${PROFILE}`, "--no-first-run", "about:blank"], { stdio: "ignore", detached: false });
   for (let i = 0; i < 40; i++) {

@@ -18,6 +18,8 @@ export type SavedTrip = {
   itinerary?: ItineraryDay[];
   checklist: { id: string; text: string; done: boolean }[];
   recentTurns: { role: "user" | "tabi"; text: string }[];
+  /** account the trip belongs to (opaque hash from /api/tabi/me); absent = made while signed out */
+  owner?: string;
 };
 
 const DB = "nagame-tabi";
@@ -43,14 +45,20 @@ export async function listTrips(): Promise<SavedTrip[]> {
   });
 }
 
-export async function saveTrip(trip: SavedTrip): Promise<boolean> {
+/**
+ * Saves a trip and returns the stored copy (with its new `updatedAt`), or null when storage is
+ * unavailable. `keepTimestamp` is for copies downloaded from the account: their time must stay
+ * the server's, or sync would treat an untouched download as a newer local edit.
+ */
+export async function saveTrip(trip: SavedTrip, opts: { keepTimestamp?: boolean } = {}): Promise<SavedTrip | null> {
   const db = await open();
-  if (!db) return false;
+  if (!db) return null;
+  const stored = { ...trip, recentTurns: trip.recentTurns.slice(-6), updatedAt: opts.keepTimestamp ? trip.updatedAt : new Date().toISOString() };
   return new Promise((resolve) => {
     const tx = db.transaction(STORE, "readwrite");
-    tx.objectStore(STORE).put({ ...trip, recentTurns: trip.recentTurns.slice(-6), updatedAt: new Date().toISOString() });
-    tx.oncomplete = () => resolve(true);
-    tx.onerror = () => resolve(false);
+    tx.objectStore(STORE).put(stored);
+    tx.oncomplete = () => resolve(stored);
+    tx.onerror = () => resolve(null);
   });
 }
 

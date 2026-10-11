@@ -78,3 +78,28 @@ create table if not exists tabi_events (
 
 create index if not exists tabi_events_event_ts_idx on tabi_events (event, ts);
 create index if not exists tabi_events_session_idx on tabi_events (session_id, ts);
+
+-- ── Tabi trips of signed-in users (GET/PUT/DELETE /api/tabi/trips) ──
+-- user_id = "line:<id>" / "google:<id>" from the session (no email). Access only through the server
+-- (service key); the browser never talks to this table. Delete = profile → "ลบข้อมูลทั้งหมด".
+create table if not exists tabi_trips (
+  user_id    text not null,
+  trip_id    text not null,
+  data       jsonb not null,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, trip_id)
+);
+
+create index if not exists tabi_trips_user_idx on tabi_trips (user_id, updated_at desc);
+
+-- When a user pressed "ลบข้อมูลทั้งหมด": other devices drop copies older than this instead of re-uploading
+create table if not exists tabi_account_resets (
+  user_id  text primary key,
+  reset_at timestamptz not null
+);
+
+-- Row Level Security ON with no policies: only the server (service key) can read or write.
+-- Supabase exposes public tables to the anon key, which is public by design — this closes that.
+alter table tabi_trips enable row level security;
+alter table tabi_account_resets enable row level security;
+alter table tabi_events enable row level security;

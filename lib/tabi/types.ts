@@ -135,6 +135,9 @@ export type TabiReply = {
   chips?: string[];
   /** official pages behind an answer (practical questions) */
   links?: { label: string; url: string }[];
+  /** cheapest departure dates in the asked month (flight calendar); `dateOptionsDays` = trip length used */
+  dateOptions?: { depart: string; back: string; price: number }[];
+  dateOptionsDays?: number;
   /** the selected route after the server re-fitted it (e.g. nights changed to match days) */
   selectedRoute?: RouteOption;
   source: "jev" | "fallback";

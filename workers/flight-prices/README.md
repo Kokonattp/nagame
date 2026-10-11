@@ -14,6 +14,12 @@ answer. Vercel cannot run Chrome, so the prices are collected here and published
   booking, payment or personal data. Skyscanner is not used (it shows a CAPTCHA).
 - The site hides snapshots older than 14 days, so stale prices never show.
 
+## Cheapest dates in a month (`calendar.mjs`)
+Opens Google Flights' **Price graph** once per city and reads the round-trip price of every departure
+date (hover each bar; a price is kept only when the tooltip names that bar's date), scrolling about
+6 months ahead, for 5- and 7-day trips. Tabi uses it for "ไป ม.ค. 5 วัน ช่วงไหนถูก" and offers the 3
+cheapest ranges; picking one sets the trip dates. Output: `data/flights/calendar.json` (server only).
+
 ## Run (PowerShell)
 ```powershell
 cd D:\TT\nagame

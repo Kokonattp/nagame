@@ -13,13 +13,15 @@ import { TABI_ART, type TabiMood } from "@/lib/tabi/mascot";
 import { encodeShare, shareRef, tripTitle } from "@/lib/tabi/share";
 import type { SharedTrip } from "@/lib/tabi/share-server";
 import { listTrips, newTrip, saveTrip, type SavedTrip } from "@/lib/tabi/store";
+import { deleteEverything, fetchMe, forgetAccountTrips, pullAndMerge, pushTrip, visibleTo, type Me } from "@/lib/tabi/sync";
 import { track } from "@/lib/tabi/track";
+import { signIn, signOut } from "next-auth/react";
 import { FARES_CHECKED, legFare, yenRange, type LegFare } from "@/lib/tabi/fares";
 import { FLIGHTS_CHECKED_AT, flightSnapFor, type FlightSnap } from "@/lib/tabi/flight-snapshot";
 import { durationTh, travelTime } from "@/lib/tabi/rail-times";
 import { STAY_AREA } from "@/lib/tabi/stay";
 import { AIRPORTS, jrPassWorthIt, legLinks, type LegLink } from "@/lib/tabi/transport";
-import type { DaySlot, Highlight, ItineraryDay, ItineraryItem, RouteOption, TabiReply } from "@/lib/tabi/types";
+import type { DaySlot, Highlight, ItineraryDay, ItineraryItem, RouteOption, TabiReply, TripIntent } from "@/lib/tabi/types";
 import type { MapPoint } from "./tabi-map";
 import { renderShareImage } from "./share-image";
 import "./tabi.css";
@@ -98,7 +100,22 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
   const [lastReply, setLastReply] = useState<TabiReply | null>(null);
   const [trips, setTrips] = useState<SavedTrip[]>([]);
 
-  useEffect(() => { listTrips().then(setTrips); }, []);
+  // until we know who is signed in, show only trips made while signed out on this browser
+  useEffect(() => { listTrips().then((all) => setTrips(all.filter(visibleTo(null)))); }, []);
+
+  // optional sign-in: when the account sync is on, merge this browser's trips with the account's
+  const [me, setMe] = useState<Me | null>(null);
+  const syncOn = useRef(false);
+  const account = useRef<string | null>(null);
+  useEffect(() => {
+    fetchMe().then(async (m) => {
+      setMe(m);
+      syncOn.current = m.sync;
+      account.current = m.account;
+      if (m.sync && m.account) setTrips(await pullAndMerge(m.account));
+      else setTrips((await listTrips()).filter(visibleTo(m.account)));
+    });
+  }, []);
 
   // offline: saved trips keep working in Japan with a bad signal (public/sw.js); production only
   const [online, setOnline] = useState(true);
@@ -131,14 +148,18 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
     };
   }, [tourSeen, go]);
 
-  const persist = useCallback(async (next: SavedTrip) => {
+  const persist = useCallback(async (draft: SavedTrip) => {
+    // tag with the signed-in account so a shared browser never mixes people's trips
+    const next = account.current && !draft.owner ? { ...draft, owner: account.current } : draft;
     setTrip(next);
     setSharedState((s) => (s === "unsaved" ? "saved" : s));
-    await saveTrip(next);
-    setTrips(await listTrips());
+    const stored = await saveTrip(next);
+    // push the stored copy: it carries the new updatedAt that sync compares
+    if (syncOn.current && stored) void pushTrip(stored);
+    setTrips((await listTrips()).filter(visibleTo(account.current)));
   }, []);
 
-  const send = useCallback(async (message: string) => {
+  const send = useCallback(async (message: string, intentOverride?: TripIntent) => {
     const text = message.trim();
     if (!text || loading) return;
     track("ask", { first: turns.length === 0 });
@@ -156,7 +177,7 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
         body: JSON.stringify({
           message: text,
           context: {
-            intent: lastReply?.intent ?? trip?.intent,
+            intent: intentOverride ?? lastReply?.intent ?? trip?.intent,
             shownRoutes: routes.map(({ id, title }) => ({ id, title })),
             selectedRoute: route,
             savedStopIds: tripForRoute?.savedStops.map((s) => s.id) ?? [],
@@ -233,6 +254,18 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
     void persist({ ...base, route: selected, title: tripTitle(selected), savedStops: [...base.savedStops, h] });
   }
 
+  /** A cheap date range picked on the flights screen becomes the trip's dates, then dated tickets. */
+  function pickDates(depart: string, days: number) {
+    // the newest conversation wins; the open trip is only updated when it is the trip being discussed
+    const base = lastReply?.intent ?? trip?.intent ?? { preferences: [], focus: [] };
+    const sameTrip = trip && (!lastReply || !lastReply.intent.month || lastReply.intent.month === trip.intent.month || !trip.intent.month);
+    // keep the length the traveller asked for; the calendar length is only the nearest sample
+    const intent: TripIntent = { ...base, startDate: depart, month: Number(depart.slice(5, 7)), durationDays: (sameTrip ? trip?.itinerary?.length : undefined) ?? base.durationDays ?? days };
+    if (trip && sameTrip) void persist({ ...trip, intent, status: trip.itinerary ? "planned" : trip.status });
+    track("date_set", { month: intent.month ?? 0, source: "cheap_dates" });
+    void send("ดูตั๋วเครื่องบินให้หน่อย", intent);
+  }
+
   function openTrip(t: SavedTrip) {
     setTrip(t);
     setSelected(t.route ?? null);
@@ -287,9 +320,21 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
             }}
           />
         )}
-        {screen === "flights" && <FlightsScreen reply={lastReply} trip={trip} onBack={nav(trip?.itinerary ? "itinerary" : "chat")} onChat={nav("chat")} onPickDate={nav("itinerary")} />}
+        {screen === "flights" && <FlightsScreen reply={lastReply} trip={trip} onPickDates={pickDates} onBack={nav(trip?.itinerary ? "itinerary" : "chat")} onChat={nav("chat")} onPickDate={nav("itinerary")} />}
         {screen === "trips" && <TripsScreen trips={trips} onOpen={openTrip} onNew={nav("home")} />}
-        {screen === "soon" && <SoonScreen />}
+        {screen === "soon" && (
+          <ProfileScreen
+            me={me}
+            tripCount={trips.length}
+            onSignOut={async () => { if (account.current) await forgetAccountTrips(account.current); await signOut().catch(() => {}); }}
+            onDeleteAll={async () => {
+              const r = await deleteEverything(account.current, Boolean(me?.sync));
+              setTrips((await listTrips()).filter(visibleTo(account.current)));
+              setTrip(null);
+              return r;
+            }}
+          />
+        )}
       </div>
 
       {cheerMsg && <TabiCheer key={cheerMsg.key} text={cheerMsg.text} onDone={() => setCheerMsg(null)} />}
@@ -1292,8 +1337,9 @@ function BoardingPass({ leg, href, index, ground, fare }: {
   );
 }
 
-function FlightsScreen({ reply, trip, onBack, onChat, onPickDate }: {
-  reply: TabiReply | null; trip: SavedTrip | null; onBack: () => void; onChat: () => void; onPickDate: () => void;
+function FlightsScreen({ reply, trip, onPickDates, onBack, onChat, onPickDate }: {
+  reply: TabiReply | null; trip: SavedTrip | null; onPickDates: (depart: string, days: number) => void;
+  onBack: () => void; onChat: () => void; onPickDate: () => void;
 }) {
   const link = reply?.flight;
   return (
@@ -1309,6 +1355,25 @@ function FlightsScreen({ reply, trip, onBack, onChat, onPickDate }: {
         <Avatar size={44} animated />
         <p className="tabi-card flex-1 px-4 py-3">{reply?.bubbles.join(" ") ?? "เปิดหน้าค้นหาตั๋วที่ตรงกับทริปให้แล้วนะ"}</p>
       </section>
+      {reply?.dateOptions?.length ? (
+        <section className="tabi-card space-y-2 p-4" aria-label="ช่วงวันที่ตั๋วถูก">
+          <h2 className="tabi-petal font-bold">ช่วงที่ตั๋วถูกในเดือนนี้ <span className="tabi-muted text-sm font-normal">· ไป {reply.dateOptionsDays} วัน</span></h2>
+          <ul className="space-y-2">
+            {reply.dateOptions.map((o, i) => (
+              <li key={o.depart} className="flex items-center gap-3 rounded-2xl bg-[var(--t-blue-soft)] px-3 py-2">
+                {i === 0 && <span className="tabi-stamp text-[11px]">ถูกสุด</span>}
+                <span className="min-w-0 flex-1 text-sm">
+                  <b>{thaiDate(isoDay(o.depart))} – {thaiDate(isoDay(o.back))}</b>
+                  <span className="tabi-muted"> ({WEEKDAY_SHORT[isoDay(o.depart).getUTCDay()]}–{WEEKDAY_SHORT[isoDay(o.back).getUTCDay()]})</span>
+                  <span className="block font-semibold text-[var(--t-navy)]">ไป-กลับ ~฿{o.price.toLocaleString("en-US")}</span>
+                </span>
+                <button type="button" className="tabi-btn tabi-btn--primary min-h-[40px] px-3 text-sm" onClick={() => onPickDates(o.depart, reply.dateOptionsDays ?? 5)}>เลือกช่วงนี้</button>
+              </li>
+            ))}
+          </ul>
+          <p className="tabi-muted text-[11px]">ราคาจาก Google Flights ที่ทาบิเช็กไว้ อาจเปลี่ยนตอนจองจริง</p>
+        </section>
+      ) : null}
       {link?.legs?.length ? (
         <>
           <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
@@ -1370,16 +1435,79 @@ function TripsScreen({ trips, onOpen, onNew }: { trips: SavedTrip[]; onOpen: (t:
   );
 }
 
-function SoonScreen() {
+/** Profile: optional sign-in (LINE / Google) so trips follow the traveller across devices. */
+function ProfileScreen({ me, tripCount, onSignOut, onDeleteAll }: {
+  me: Me | null; tripCount: number; onSignOut: () => Promise<void>; onDeleteAll: () => Promise<{ ok: boolean; server: boolean }>;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [done, setDone] = useState<string | null>(null);
+  const privacy = <p className="tabi-muted text-xs">Nagame นับสถิติการใช้งานแบบไม่ระบุตัวตน เช่น จำนวนคนที่จัดแผนสำเร็จ เพื่อปรับปรุงทาบิ ไม่เก็บชื่อ อีเมล หรือข้อความที่พิมพ์</p>;
   return (
     <div className="tabi-rise space-y-4">
       <TopBar />
-      <section className="tabi-card space-y-2 p-5 text-center">
-        <Avatar size={64} />
-        <p className="font-bold">โปรไฟล์ยังไม่เปิดใช้</p>
-        <p className="tabi-muted text-sm">ตอนนี้ยังไม่ต้องสมัครสมาชิก ทริปทั้งหมดเก็บไว้ในเครื่องนี้</p>
-        <p className="tabi-muted text-xs">Nagame นับสถิติการใช้งานแบบไม่ระบุตัวตน เช่น จำนวนคนที่จัดแผนสำเร็จ เพื่อปรับปรุงทาบิ ไม่เก็บชื่อ อีเมล หรือข้อความที่พิมพ์</p>
-      </section>
+      <h1 className="text-2xl font-bold">โปรไฟล์</h1>
+      {!me ? (
+        <section className="tabi-card h-40 animate-pulse" />
+      ) : !me.enabled ? (
+        <section className="tabi-card space-y-2 p-5 text-center">
+          <Avatar size={64} />
+          <p className="font-bold">ยังไม่ต้องสมัครสมาชิก</p>
+          <p className="tabi-muted text-sm">ทริปทั้งหมดเก็บไว้ในเครื่องนี้ เร็ว ๆ นี้จะเข้าสู่ระบบด้วย LINE เพื่อเก็บทริปไว้ใช้ได้ทุกเครื่อง</p>
+          {privacy}
+        </section>
+      ) : !me.user ? (
+        <section className="tabi-card space-y-3 p-5">
+          <div className="flex items-center gap-3">
+            <Avatar size={56} mood="happy" />
+            <p className="text-sm"><b className="text-[var(--t-pink-ink)]">เก็บทริปไว้ใช้ได้ทุกเครื่อง</b><br />เข้าสู่ระบบครั้งเดียว ทริปจากมือถือกับคอมจะตรงกัน ไม่ต้องเข้าสู่ระบบก็ใช้ทาบิได้ครบเหมือนเดิม</p>
+          </div>
+          {me.providers.includes("line") && (
+            <button type="button" className="tabi-btn w-full text-white" style={{ background: "#06C755" }} onClick={() => { track("login_started", { method: "line" }); void signIn("line"); }}>
+              เข้าสู่ระบบด้วย LINE
+            </button>
+          )}
+          {me.providers.includes("google") && (
+            <button type="button" className="tabi-btn w-full border border-[var(--t-line)] bg-white text-[var(--t-navy)]" onClick={() => { track("login_started", { method: "google" }); void signIn("google"); }}>
+              เข้าสู่ระบบด้วย Google
+            </button>
+          )}
+          <p className="tabi-muted text-xs">เราเก็บแค่ชื่อที่แสดงกับรูปโปรไฟล์ และทริปที่พี่บันทึก ไม่เก็บอีเมลหรือเบอร์โทร ลบทั้งหมดได้ทุกเมื่อจากหน้านี้</p>
+          {privacy}
+        </section>
+      ) : (
+        <section className="tabi-card space-y-3 p-5">
+          <div className="flex items-center gap-3">
+            {me.user.image ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={me.user.image} alt="" className="h-14 w-14 rounded-full border-2 border-white shadow-[var(--t-shadow-sm)]" />
+            ) : <Avatar size={56} mood="happy" />}
+            <div>
+              <p className="tabi-title text-lg font-bold">{me.user.name ?? "นักเดินทาง"}</p>
+              <p className="tabi-muted text-xs">เข้าสู่ระบบด้วย {me.user.via === "line" ? "LINE" : "Google"}</p>
+            </div>
+          </div>
+          <p className="rounded-2xl bg-[var(--t-green)] px-3 py-2 text-sm text-[var(--t-green-ink)]">
+            {me.sync ? `☁️ ทริปซิงก์อัตโนมัติแล้ว (${tripCount} ทริป)` : "ระบบเก็บทริปออนไลน์ยังไม่เปิด ตอนนี้ทริปยังอยู่ในเครื่องนี้"}
+          </p>
+          <button type="button" className="tabi-btn tabi-btn--soft w-full" onClick={() => void onSignOut()}>ออกจากระบบ</button>
+          <p className="tabi-muted text-[11px]">ออกจากระบบแล้ว ทริปของบัญชีนี้จะถูกเอาออกจากเครื่องนี้ (ยังอยู่ในบัญชี)</p>
+          {done ? <p role="status" className="text-sm text-[var(--t-green-ink)]">{done}</p> : (
+            <button
+              type="button"
+              className={`tabi-btn w-full ${confirming ? "bg-[#b3261e] text-white" : "border border-[#f3c4c0] bg-white text-[#b3261e]"}`}
+              onClick={async () => {
+                if (!confirming) { setConfirming(true); return; }
+                const r = await onDeleteAll();
+                setDone(!r.ok ? "ลบไม่สำเร็จ ลองใหม่อีกครั้งนะ" : r.server ? "ลบทริปทั้งหมดแล้ว ทั้งในเครื่องนี้และออนไลน์" : "ลบทริปในเครื่องนี้แล้ว (ยังไม่ได้เปิดระบบเก็บทริปออนไลน์)");
+                if (r.ok) void signOut().catch(() => {});
+              }}
+            >
+              {confirming ? "กดอีกครั้งเพื่อยืนยัน: ลบทริปทั้งหมดทั้งในเครื่องและออนไลน์" : "ลบข้อมูลทั้งหมด"}
+            </button>
+          )}
+          {privacy}
+        </section>
+      )}
     </div>
   );
 }

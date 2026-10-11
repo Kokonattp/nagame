@@ -5,6 +5,7 @@ import { buildOutbound } from "@/lib/outbound";
 import { CITY_BY_NAME, GATEWAYS, nearestGateway, REGION_TH, type Region } from "./cities";
 import { closedIn, draftItinerary, findPlaceByText, fitRouteToDays, partlyOpenIn, PREF_TH, seasonOf, suggestRoutes, suggestStops } from "./planner";
 import { faqAnswer } from "./faq";
+import { cheapestDates } from "./flight-calendar";
 import { FLIGHTS_CHECKED_AT, flightSnapFor } from "./flight-snapshot";
 import type { FlightLink, Place, Preference, TabiContext, TabiReply, TripIntent } from "./types";
 import { mergeIntent, understand } from "./understand";
@@ -126,6 +127,19 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
       // a price Tabi checked itself (owner's collector), stated with its sample dates and check date
       const gw = GATEWAYS.find((g) => g.city === arrive)?.airport;
       const found = gw ? flightSnapFor(gw, intent.startDate ? Number(intent.startDate.slice(5, 7)) : intent.month) : null;
+      // "ไป ม.ค. 5 วัน" without a date: offer the cheapest departures of that month first
+      const askedMonth = intent.month;
+      const cal = gw && askedMonth && !intent.startDate ? cheapestDates(gw, askedMonth, intent.durationDays ?? 5) : null;
+      if (cal && askedMonth) {
+        const best = cal.options[0];
+        return {
+          ...base, action: "flights", flight, dateOptions: cal.options, dateOptionsDays: cal.days,
+          bubbles: [
+            `ช่วง ${MONTH_TH[askedMonth]} ไป ${cal.days} วัน ตั๋วถูกสุดที่ทาบิเช็กไว้ (${thaiDay(cal.checkedAt)}): ไป ${thaiDay(best.depart)} กลับ ${thaiDay(best.back)} ไป-กลับ ~฿${best.price.toLocaleString("en-US")} ✈️`,
+            "เลือกช่วงวันที่ชอบด้านล่าง แล้วทาบิตั้งวันเดินทางให้เลย",
+          ],
+        };
+      }
       const bubbles = found
         ? [
             `ทาบิเช็กไว้เมื่อ ${thaiDay(FLIGHTS_CHECKED_AT)}: ไป-กลับ${CITY_BY_NAME.get(arrive)?.th ?? arrive} ${found.exact ? "" : `(ตัวอย่างช่วง ${MONTH_TH[Number(found.snap.month.slice(5, 7))]}) `}เริ่ม ~฿${found.snap.cheapest!.toLocaleString("en-US")}${found.snap.nonstop ? ` · บินตรง ~฿${found.snap.nonstop.price.toLocaleString("en-US")}` : ""} ✈️`,
