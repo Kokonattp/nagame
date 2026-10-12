@@ -44,7 +44,7 @@ export const FAQ_KEYWORDS: [FaqTopic, RegExp][] = [
 
 export type FaqAnswer = { bubbles: string[]; links: { label: string; url: string }[] };
 
-const SEASON_WEAR: Record<number, string> = {
+export const SEASON_WEAR: Record<number, string> = {
   1: "หนาวจัด เตรียมเสื้อโค้ทกันหนาว ถุงมือ และรองเท้ากันลื่นถ้าไปที่มีหิมะ",
   2: "หนาวจัด เตรียมเสื้อโค้ทกันหนาว ถุงมือ และรองเท้ากันลื่นถ้าไปที่มีหิมะ",
   3: "ยังเย็น ใส่เสื้อแขนยาวกับแจ็กเก็ตที่ถอดง่าย",

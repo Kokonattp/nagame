@@ -10,7 +10,8 @@ import { PREFERENCES, type Preference, type TabiContext, type TripIntent } from 
 
 export type Intent =
   | "start_trip" | "refine" | "pick_option" | "ask_detail" | "add_stop"
-  | "draft_itinerary" | "ask_flight" | "practical_question" | "smalltalk" | "other";
+  | "draft_itinerary" | "ask_flight" | "practical_question" | "ask_weather" | "find_food_shop"
+  | "booking" | "smalltalk" | "other";
 
 export type Understanding = {
   intent: Intent;
@@ -88,9 +89,12 @@ const INTENTS: Record<Intent, string> = {
   add_stop: "Wants to add a stop or activity to the current route",
   draft_itinerary: "Wants the route turned into a day-by-day plan",
   ask_flight: "Asks about flights, tickets, airfare, or airlines",
-  practical_question: "Asks a practical how-to question about travelling in Japan (visa, money, SIM or internet, IC cards, luggage, manners, emergencies, weather or clothes, plugs, airport transfer, rail pass) rather than planning the route",
+  practical_question: "Asks a practical how-to question about travelling in Japan (visa, money, SIM or internet, IC cards, luggage, manners, emergencies, clothes to pack, plugs, airport transfer, rail pass) rather than planning the route",
+  ask_weather: "Asks about the weather: will it snow or rain, how cold or hot it is, temperature, or the weather forecast for the trip or a place",
+  find_food_shop: "Asks for restaurants, food to eat, cafes, bars, shopping, markets or souvenirs in a place",
+  booking: "Asks Tabi to book, reserve or pay for something (hotel, ticket, tour)",
   smalltalk: "Greeting, thanks, or chit-chat with no planning request",
-  other: "Anything else, including requests the travel planner cannot do such as booking or payment",
+  other: "Anything else that is not about planning or travelling in Japan",
 };
 
 const PREF_TEXT: Record<Preference, string> = {
@@ -188,10 +192,12 @@ function keywordFallback(message: string, ctx: TabiContext) {
   const faqTopic = FAQ_KEYWORDS.find(([, re]) => re.test(message))?.[0] ?? null;
 
   let intent: Intent = "start_trip";
-  if (faqTopic) intent = "practical_question";
+  if (has(/หิมะจะตก|ฝนจะตก|อากาศ.*(ไหม|ยังไง|เป็นไง)|หนาวไหม|ร้อนไหม|กี่องศา|พยากรณ์|weather|forecast/)) intent = "ask_weather";
+  else if (has(/ร้าน|กินอะไร|ของกิน|ราเม|ซูชิ|คาเฟ่|ช้อปปิ้ง|ของฝาก|ซื้อของ|ตลาด|ห้าง|restaurant|souvenir/)) intent = "find_food_shop";
+  else if (faqTopic) intent = "practical_question";
   else if (has(/ตั๋ว|ไฟลท์|เครื่องบิน|flight/)) intent = "ask_flight";
   else if (has(/สวัสดี|ขอบคุณ|\bhello\b|\bhi\b/)) intent = "smalltalk";
-  else if (has(/จอง|จ่ายเงิน/)) intent = "other";
+  else if (has(/จอง|จ่ายเงิน/)) intent = "booking";
   else if (pickPosition && hasOptions) intent = "pick_option";
   else if (has(/รายวัน|แผน.*วัน|ตาราง/)) intent = "draft_itinerary";
   else if (has(/แวะ|เพิ่ม/) && hasOptions) intent = "add_stop";

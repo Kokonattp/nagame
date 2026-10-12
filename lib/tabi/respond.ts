@@ -5,6 +5,8 @@ import { buildOutbound } from "@/lib/outbound";
 import { CITY_BY_NAME, GATEWAYS, nearestGateway, REGION_TH, type Region } from "./cities";
 import { closedIn, draftItinerary, findPlaceByText, fitRouteToDays, partlyOpenIn, PREF_TH, seasonOf, suggestRoutes, suggestStops } from "./planner";
 import { faqAnswer } from "./faq";
+import { findEatBuy } from "./eat-buy";
+import { weatherAnswer, weatherCities } from "./weather";
 import { cheapestDates } from "./flight-calendar";
 import { FLIGHTS_CHECKED_AT, flightSnapFor } from "./flight-snapshot";
 import type { FlightLink, Place, Preference, TabiContext, TabiReply, TripIntent } from "./types";
@@ -99,6 +101,23 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
   const source = u.source;
   const base = { intent, source } as const;
 
+  // the trip being talked about: the chosen route, else the first route shown (ids are city names joined by "-")
+  const tripStops = ctx.selectedRoute?.stops.map((s) => s.city)
+    ?? (ctx.shownRoutes?.[0]?.id.split("-").map((part) => [...CITY_BY_NAME.values()].find((c) => c.name.toLowerCase() === part)?.name).filter((c): c is string => Boolean(c)) ?? []);
+  const chipsAfter = ctx.selectedRoute ? ["จัดแผนรายวัน", "ดูตั๋วเครื่องบิน"] : START_CHIPS;
+
+  // "หิมะจะตกไหม" / "หนาวไหม": monthly normals (+ live forecast when the trip is close)
+  if (u.intent === "ask_weather" || (u.faqTopic === "weather" && /หิมะ|ฝน|องศา|หนาว|ร้อน|อากาศ/.test(message) && (u.focus.length || tripStops.length))) {
+    const w = await weatherAnswer({ cities: weatherCities(u.focus.length ? u.focus : intent.focus, tripStops), month: intent.month, startDate: intent.startDate, days: intent.durationDays });
+    return { ...base, action: w.needMonth ? "ask" : "answer", bubbles: w.bubbles, links: w.links, ...(w.needMonth ? { ask: { question: "ไปเดือนไหน", chips: ["ธ.ค.", "ม.ค.", "ก.พ.", "เม.ย."] } } : { chips: chipsAfter }) };
+  }
+
+  // "ร้านราเมนแถวชินจูกุ" / "ของฝากที่โอซาก้า": guide listings + Google Maps / Tabelog search links
+  if (u.intent === "find_food_shop") {
+    const found = findEatBuy(message, u.focus.length ? u.focus : intent.focus.length ? intent.focus : tripStops);
+    return { ...base, action: "answer", bubbles: found.bubbles, links: found.links, chips: chipsAfter };
+  }
+
   // A practical question ("ต้องขอวีซ่าไหม") gets a checked answer, whatever stage the trip is at.
   if (u.faqTopic && (u.intent === "practical_question" || u.intent === "ask_detail" || u.intent === "other" || u.confidence < 0.5)) {
     const a = faqAnswer(u.faqTopic, { route: ctx.selectedRoute, intent });
@@ -109,16 +128,23 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
   }
 
   // Low confidence on anything that changes the plan → ask, don't guess (spec §2.7).
-  if (u.source === "jev" && u.confidence < 0.5 && !["smalltalk", "other"].includes(u.intent)) {
+  if (u.source === "jev" && u.confidence < 0.5 && !["smalltalk", "other", "booking"].includes(u.intent)) {
     return { ...base, action: "ask", bubbles: ["ทาบิไม่แน่ใจว่าหมายถึงอะไร ช่วยเลือกให้หน่อยนะ"], ask: { question: "อยากให้ทาบิทำอะไรต่อ", chips: ["เสนอเส้นทางใหม่", "จัดแผนรายวัน", "ดูตั๋วเครื่องบิน"] } };
   }
 
   switch (u.intent) {
     case "smalltalk":
-      return { ...base, action: "chat", bubbles: [pick(["สวัสดี! ทาบิเองนะ 🐾 อยากไปญี่ปุ่นแบบไหน เล่ามาได้เลย", "ยินดีเลย! มีอะไรให้ทาบิช่วยวางทริปบอกได้นะ"], message)], chips: START_CHIPS };
+      return { ...base, action: "chat", bubbles: [smalltalkReply(message)], chips: START_CHIPS };
+
+    case "booking":
+      return { ...base, action: "chat", bubbles: ["เรื่องจองหรือจ่ายเงิน ทาบิยังทำให้ไม่ได้นะ แต่ช่วยวางเส้นทางกับร่างทริปได้ แล้วค่อยกดไปจองที่เว็บต้นทาง"], chips: chipsAfter };
 
     case "other":
-      return { ...base, action: "chat", bubbles: ["เรื่องจองหรือจ่ายเงิน ทาบิยังทำให้ไม่ได้นะ แต่ช่วยวางเส้นทางกับร่างทริปได้ แล้วค่อยกดไปจองที่เว็บต้นทาง"], chips: ctx.selectedRoute ? ["จัดแผนรายวัน", "ดูตั๋วเครื่องบิน"] : START_CHIPS };
+      return {
+        ...base, action: "chat",
+        bubbles: [pick(["เรื่องนี้ทาบิยังตอบไม่ได้นะ 🐾", "อันนี้ทาบิยังไม่รู้จริง ๆ ขอไม่เดานะ"], message), "ถามทาบิได้เรื่องวางทริปญี่ปุ่น อากาศ หิมะ ร้านอาหาร ของฝาก ตั๋วเครื่องบิน และเรื่องเตรียมตัวอย่างวีซ่าหรือซิม"],
+        chips: ctx.selectedRoute ? ["ทริปนี้หิมะตกไหม", "จัดแผนรายวัน", "ดูตั๋วเครื่องบิน"] : START_CHIPS,
+      };
 
     case "ask_flight": {
       const arrive = ctx.selectedRoute?.gateway.city ?? focusGateway(intent);
@@ -203,6 +229,14 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
     : `${tripLabel(intent) || "ทริปนี้"} ทาบิเห็น ${routes.length} แนวที่เข้าท่า${season && season !== "all_year" ? ` (ช่วง${SEASON_TH[season]})` : ""}`;
   const fallbackNote = source === "fallback" ? ["ตอนนี้ทาบิตอบแบบจำกัด อาจเข้าใจไม่ครบทุกคำนะ"] : [];
   return { ...base, action: "suggest_routes", routes, bubbles: [lead, ...fallbackNote], chips: REFINE_CHIPS };
+}
+
+/** A greeting gets a greeting, thanks gets thanks, a tired sigh gets sympathy — never a canned hello. */
+function smalltalkReply(message: string) {
+  if (/ขอบคุณ|ขอบใจ|thank|thx/i.test(message)) return pick(["ยินดีเลย! 🐾 อยากปรับทริปตรงไหนอีกบอกได้นะ", "ด้วยความยินดี มีอะไรให้ทาบิช่วยอีกบอกได้เลย"], message);
+  if (/เหนื่อย|เครียด|เบื่อ|ท้อ|เศร้า|ง่วง/.test(message)) return pick(["พักก่อนนะ 🐾 ถ้าอยากหาทริปพักใจ เช่น ออนเซ็นเงียบ ๆ หรือเมืองคนน้อย บอกทาบิได้เลย", "เหนื่อยก็พักบ้างนะ ทาบิช่วยวางทริปญี่ปุ่นสบาย ๆ ไว้รอได้ เล่ามาได้เลยว่าอยากไปแบบไหน"], message);
+  if (/สวัสดี|หวัดดี|ดีจ้า|hello|\bhi\b/i.test(message)) return pick(["สวัสดี! ทาบิเองนะ 🐾 อยากไปญี่ปุ่นแบบไหน เล่ามาได้เลย", "หวัดดี! วันนี้อยากวางทริปไปไหนดี"], message);
+  return pick(["ทาบิฟังอยู่นะ 🐾 ถ้าอยากวางทริปญี่ปุ่น เล่ามาได้เลยว่าอยากไปช่วงไหน แนวไหน", "คุยกันได้เลย แต่ทาบิเก่งเรื่องทริปญี่ปุ่นที่สุดนะ อยากไปแบบไหนบอกมาได้"], message);
 }
 
 /** Regions of the routes the traveller is reacting to (route ids are city names joined by "-"). */

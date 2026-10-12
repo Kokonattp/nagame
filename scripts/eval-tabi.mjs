@@ -36,7 +36,11 @@ const CASES = [
   { id: "okinawa", msg: "โอกินาว่า มิถุนา 5 วัน", action: "suggest_routes", month: 6, check: (r) => [...regionsOf(r)].every((g) => g === "okinawa") },
   { id: "vague", msg: "อยากไปญี่ปุ่น", action: "ask" },
   { id: "greeting", msg: "สวัสดีทาบิ", action: "chat" },
-  { id: "booking-refused", msg: "ช่วยจองโรงแรมให้หน่อย", action: "chat" },
+  { id: "booking-refused", msg: "ช่วยจองโรงแรมให้หน่อย", action: "chat", check: (r) => r.bubbles.join(" ").includes("จอง") },
+  // weather and food answers come from data (normals / guide listings), never a canned reply
+  { id: "weather-snow", msg: "ซัปโปโร ธ.ค. หิมะตกไหม", action: "answer", month: 12, check: (r) => /ซัปโปโร ธ\.ค\.: กลางวัน/.test(r.bubbles.join(" ")) && r.bubbles.join(" ").includes("หิมะ") },
+  { id: "food-district", msg: "ร้านราเมนแถวชินจูกุแนะนำหน่อย", action: "answer", check: (r) => r.links?.some((l) => l.url.includes("google.com/maps")) && !r.bubbles.join(" ").includes("จอง") },
+  { id: "off-topic-honest", msg: "ใครชนะฟุตบอลเมื่อคืน", action: "chat", check: (r) => r.bubbles.join(" ").includes("ตอบไม่ได้") && !r.bubbles.join(" ").includes("จอง") },
   // a price may appear only as one Tabi checked itself, with the check date (workers/flight-prices)
   { id: "flight", msg: "ตั๋วไปโอซาก้าเดือนหน้าเท่าไร", action: "flights", check: (r) => { const t = r.bubbles.join(" "); return !/฿\s?\d|\d[\d,]*\s*บาท/.test(t) || /ทาบิเช็กไว้เมื่อ/.test(t); } },
   // multi-turn chain built on "discover-nature"
