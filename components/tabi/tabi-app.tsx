@@ -20,9 +20,9 @@ import { FARES_CHECKED, legFare, yenRange, type LegFare } from "@/lib/tabi/fares
 import { FLIGHTS_CHECKED_AT, flightSnapFor, type FlightSnap } from "@/lib/tabi/flight-snapshot";
 import { durationTh, travelTime } from "@/lib/tabi/rail-times";
 import { STAY_AREA } from "@/lib/tabi/stay";
-import { AIRPORTS, jrPassWorthIt, legLinks, type LegLink } from "@/lib/tabi/transport";
+import { AIRPORTS, jrPassWorthIt, legLinks, stayNear, type LegLink } from "@/lib/tabi/transport";
 import type { DaySlot, Highlight, ItineraryDay, ItineraryItem, RouteOption, TabiReply, TripIntent } from "@/lib/tabi/types";
-import type { MapPoint } from "./tabi-map";
+import type { MapPin, MapPoint } from "./tabi-map";
 import { renderShareImage } from "./share-image";
 import "./tabi.css";
 
@@ -770,6 +770,7 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
     [route, stops],
   );
   const desktop = useMinWidth(1024);
+  const [pins, setPins] = useState<MapPin[]>([]);
   return (
     <div className="tabi-rise space-y-4">
       <TopBar
@@ -806,7 +807,10 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
           );
         })}
       </ol>}
-      <div className="tabi-card p-2"><TabiMap points={points} height={desktop ? 420 : 240} /></div>
+      <div className="tabi-card p-2">
+        <MapPinToggles cities={route.stops.map((s) => s.city)} onPins={setPins} />
+        <TabiMap points={points} pins={pins} height={desktop ? 420 : 240} />
+      </div>
       <section className="tabi-card flex gap-3 bg-[var(--t-sakura)] p-4">
         <Avatar size={48} mood="happy" animated />
         <div>
@@ -1089,7 +1093,7 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
         <Avatar size={44} mood="happy" />
         <p className="text-sm"><b className="text-[var(--t-pink-ink)]">นี่คือร่างทริปคร่าว ๆ</b> เวลาเดินทางเป็นค่าประมาณ บอกทาบิให้ปรับได้ตลอดนะ</p>
       </section>
-      {trip.route && <TransportCard route={trip.route} />}
+      {trip.route && <TransportCard route={trip.route} onAsk={onAsk} />}
       <section className="tabi-card p-4">
         <h2 className="tabi-petal mb-2 font-bold">เตรียมก่อนเดินทาง</h2>
         <ul className="space-y-1">
@@ -1139,7 +1143,7 @@ function hopLabel(from: string, to: string, what: string) {
 }
 
 /** Subway-map style overview: airport → cities → airport, each hop opens live trains, plus one JR Pass verdict. */
-function TransportCard({ route }: { route: RouteOption }) {
+function TransportCard({ route, onAsk }: { route: RouteOption; onAsk?: (m: string) => void }) {
   const first = route.stops[0];
   const last = route.stops[route.stops.length - 1];
   const out = nearestGateway(last).g.airport;
@@ -1158,7 +1162,7 @@ function TransportCard({ route }: { route: RouteOption }) {
   ];
   const nodes = [
     { key: "in", icon: "🛬", title: `สนามบิน${airportNames(route.gateway.airport)}` },
-    ...route.stops.map((s) => ({ key: s.city, icon: "", title: `${s.cityTh} · ${s.nights} คืน`, stay: STAY_AREA[s.city] })),
+    ...route.stops.map((s) => ({ key: s.city, icon: "", title: `${s.cityTh} · ${s.nights} คืน`, stay: STAY_AREA[s.city] ?? stayNear(s.city), cityTh: s.cityTh })),
     { key: "out", icon: "🛫", title: `บินกลับจาก${airportNames(out)}` },
   ];
   return (
@@ -1170,6 +1174,12 @@ function TransportCard({ route }: { route: RouteOption }) {
             <span className="tabi-track-node" style={n.icon ? undefined : { background: DAY_COLORS[(i - 1) % DAY_COLORS.length] }} aria-hidden>{n.icon}</span>
             <span className="tabi-title text-sm font-bold">{n.title}</span>
             {"stay" in n && n.stay && <span className="tabi-muted text-xs">🛏️ พักที่ไหนดี: {n.stay}</span>}
+            {"cityTh" in n && onAsk && (
+              <span className="flex flex-wrap gap-1.5">
+                <button type="button" className="tabi-leg-link" onClick={() => onAsk(`ที่พักแถว${n.cityTh}`)}>🛏️ ที่พักแถวนี้</button>
+                <button type="button" className="tabi-leg-link" onClick={() => onAsk(`ร้านอาหารแถว${n.cityTh}`)}>🍜 ร้านแถวนี้</button>
+              </span>
+            )}
             {i < hops.length && (
               <span className="tabi-track-hop">
                 <span className="tabi-muted text-xs">{hops[i].label}</span>
@@ -1276,6 +1286,45 @@ ${url}`)}`
         ส่งทริปเข้า LINE
       </a>
       <p className="tabi-muted mt-1 text-center text-xs">ส่งให้ตัวเองหรือเพื่อน แล้วเปิดลิงก์ในเครื่องอื่นเพื่อเก็บทริปไว้</p>
+    </div>
+  );
+}
+
+/** Map switches for stays / restaurants (off by default: the map stays about the route). */
+function MapPinToggles({ cities, onPins }: { cities: string[]; onPins: (p: MapPin[]) => void }) {
+  const [on, setOn] = useState<{ stay: boolean; eat: boolean }>({ stay: false, eat: false });
+  const [all, setAll] = useState<MapPin[] | null>(null);
+  const key = cities.join(",");
+  useEffect(() => { setAll(null); setOn({ stay: false, eat: false }); }, [key]);
+  useEffect(() => {
+    if (!on.stay && !on.eat) return onPins([]);
+    if (!all) {
+      fetch(`/api/tabi/nearby?cities=${encodeURIComponent(key)}`)
+        .then((r) => r.json())
+        .then((b: { pins: { kind: "stay" | "eat"; name: string; lat: number; lon: number; url: string }[] }) =>
+          setAll(b.pins.map((p) => ({ kind: p.kind, label: p.name, lat: p.lat, lon: p.lon, url: p.url }))))
+        .catch(() => setAll([]));
+      return;
+    }
+    onPins(all.filter((p) => on[p.kind]));
+  }, [on, all, key, onPins]);
+  const chip = (kind: "stay" | "eat", label: string) => (
+    <button
+      type="button"
+      aria-pressed={on[kind]}
+      className={`tabi-leg-link ${on[kind] ? "!bg-[var(--t-blue)] !text-white" : ""}`}
+      onClick={() => setOn((o) => ({ ...o, [kind]: !o[kind] }))}
+    >
+      {label}
+    </button>
+  );
+  const shown = all?.filter((p) => on[p.kind]).length ?? 0;
+  return (
+    <div className="mb-2 flex flex-wrap items-center gap-1.5 px-1">
+      <span className="tabi-muted text-xs">แสดงบนแผนที่:</span>
+      {chip("stay", "🛏️ ที่พัก")}
+      {chip("eat", "🍜 ร้านอาหาร")}
+      {all && (on.stay || on.eat) && !shown && <span className="tabi-muted text-xs">ไกด์ยังไม่มีพิกัดในเมืองนี้</span>}
     </div>
   );
 }

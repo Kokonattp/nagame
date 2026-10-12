@@ -51,14 +51,25 @@ const SLEEP_PRICE_LABEL = ["", "ราคาประหยัด", "ราค�
 // net/manga cafés are listed under Sleep in the guide, but are not what someone asking for a place to stay means
 const NOT_A_STAY = /internet|media|comic|manga|caf[eé]/i;
 
+/**
+ * The district named in the message, unless it is part of another city's name: "คิโนะซากิออนเซ็น"
+ * contains "กิออน" (Gion), so a district only counts when no other base city was named.
+ */
+function districtIn(message: string, focus: string[]) {
+  const d = DISTRICTS.find(([re]) => re.test(message));
+  const named = focus.filter((f) => CITY_BY_NAME.has(f));
+  return d && (!named.length || named.includes(d[1])) ? d : undefined;
+}
+
 const maps = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 
 export type EatBuyAnswer = { bubbles: string[]; links: { label: string; url: string }[] };
 
 export function findEatBuy(message: string, focus: string[]): EatBuyAnswer {
   const kind = IS_BUY.test(message) ? "buy" : "eat";
-  const district = DISTRICTS.find(([re]) => re.test(message));
-  const city = district?.[1] ?? focus.find((f) => DATA[f]?.length);
+  const district = districtIn(message, focus);
+  // a city the guide covers first; else any named base city still gets a Google Maps search
+  const city = district?.[1] ?? focus.find((f) => DATA[f]?.some((l) => l.k !== "sleep")) ?? focus.find((f) => CITY_BY_NAME.has(f));
   const tag = (kind === "eat" ? EAT_TH : BUY_TH).find(([re]) => re.test(message));
   const what = tag?.[2] ?? (kind === "eat" ? "ร้านอาหาร" : "ที่ช้อปปิ้ง");
 
@@ -78,9 +89,9 @@ export function findEatBuy(message: string, focus: string[]): EatBuyAnswer {
     lead.push(`แถว ${district[2]} ไกด์ยังไม่มี${what}แนะนำ แต่ใน${cityTh}มีที่น่าลองตามนี้`);
   } else if (!tagged.length && tag) {
     pickFrom = inArea;
-    lead.push(`${what}แถว${place} ไกด์ยังไม่มีแนะนำเฉพาะ กดค้นใน Google Maps ด้านบนได้เลย ส่วนนี่คือ${kind === "eat" ? "ร้าน" : "ที่ซื้อของ"}อื่นที่ไกด์แนะนำใน${place}`);
+    lead.push(`${what}แถว${/^[A-Za-z]/.test(place) ? " " : ""}${place} ไกด์ยังไม่มีแนะนำเฉพาะ กดค้นใน Google Maps ด้านบนได้เลย ส่วนนี่คือ${kind === "eat" ? "ร้าน" : "ที่ซื้อของ"}อื่นที่ไกด์แนะนำใน${place}`);
   } else if (tagged.length) {
-    lead.push(`${what}แถว${place} ที่ไกด์ Wikivoyage แนะนำ ${Math.min(tagged.length, 5)} ที่ กดดูรีวิวกับเวลาเปิดได้เลย`);
+    lead.push(`${what}แถว${/^[A-Za-z]/.test(place) ? " " : ""}${place} ที่ไกด์ Wikivoyage แนะนำ ${Math.min(tagged.length, 5)} ที่ กดดูรีวิวกับเวลาเปิดได้เลย`);
   }
 
   const picks = [...pickFrom].sort((a, b) => Number(Boolean(b.la)) - Number(Boolean(a.la))).slice(0, 5);
@@ -96,16 +107,43 @@ export function findEatBuy(message: string, focus: string[]): EatBuyAnswer {
   else links.push(search);
 
   if (!picks.length) {
-    return { bubbles: [`${what}แถว${place} ทาบิยังไม่มีข้อมูลจากไกด์ กดค้นใน Google Maps ได้เลย ดูรีวิวกับเวลาเปิดประกอบได้`], links };
+    return { bubbles: [`${what}แถว${/^[A-Za-z]/.test(place) ? " " : ""}${place} ทาบิยังไม่มีข้อมูลจากไกด์ กดค้นใน Google Maps ได้เลย ดูรีวิวกับเวลาเปิดประกอบได้`], links };
   }
   return { bubbles: [...lead, "ร้านอาจปิดหรือย้ายได้ เช็กเวลาเปิดใน Google Maps ก่อนไปนะ · ข้อมูล: Wikivoyage"], links };
+}
+
+// dinner in a day plan: places a traveller sits down for in the evening, from the guide
+const DINNER_KINDS = ["izakaya", "seafood", "yakiniku", "ramen", "sushi", "okonomiyaki", "kaiseki", "udon_soba", "tempura_tonkatsu", "curry"];
+
+/** A guide restaurant for night `night` in `city` (rotates), or undefined when the guide lists none. */
+export function dinnerPick(city: string, night: number): { name: string; alt?: string; lat?: number; lon?: number } | undefined {
+  // a sit-down dinner: not a café, bakery or supermarket ("Max Valu" is listed under Eat on Miyako)
+  const eat = (DATA[city] ?? []).filter((l) => l.k === "eat" && !/caf[eé]|coffee|bakery|sweets|^max ?valu|supermarket|convenience|7-eleven|lawson|familymart/i.test(l.n));
+  const meal = eat.filter((l) => l.t.some((t) => DINNER_KINDS.includes(t)));
+  const pool = (meal.length ? meal : eat).sort((a, b) => Number(Boolean(b.la)) - Number(Boolean(a.la)));
+  const l = pool[night % Math.max(pool.length, 1)];
+  return l ? { name: l.n, alt: l.a, lat: l.la, lon: l.lo } : undefined;
+}
+
+export type NearbyPin = { kind: "stay" | "eat"; name: string; city: string; lat: number; lon: number; url: string };
+
+/** Map pins for the route's cities: up to `per` stays and restaurants each, only listings with coordinates. */
+export function nearbyPins(cities: string[], per = 6): NearbyPin[] {
+  const pins: NearbyPin[] = [];
+  for (const city of cities) {
+    for (const kind of ["stay", "eat"] as const) {
+      const ls = (DATA[city] ?? []).filter((l) => l.k === (kind === "stay" ? "sleep" : "eat") && l.la && l.lo && !(kind === "stay" && NOT_A_STAY.test(l.n)));
+      for (const l of ls.slice(0, per)) pins.push({ kind, name: `${l.n}${l.a ? ` ${l.a}` : ""}`, city, lat: l.la!, lon: l.lo!, url: maps(`${l.n} ${l.la},${l.lo}`) });
+    }
+  }
+  return pins;
 }
 
 const hotels = (q: string) => `https://www.google.com/travel/hotels?q=${encodeURIComponent(q)}`;
 
 /** "แนะนำที่พักเกียวโต" / "เรียวกังที่ฮาโกเนะ" / "ที่พักถูก ๆ แถวชินจูกุ" */
 export function findStay(message: string, focus: string[]): EatBuyAnswer {
-  const district = DISTRICTS.find(([re]) => re.test(message));
+  const district = districtIn(message, focus);
   const city = district?.[1] ?? focus.find((f) => CITY_BY_NAME.has(f));
   const tag = SLEEP_TH.find(([re]) => re.test(message));
   const band = SLEEP_PRICE.find(([re]) => re.test(message));

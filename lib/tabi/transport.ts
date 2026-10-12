@@ -62,6 +62,19 @@ export const AIRPORTS: Record<string, { code: string; th: string; query: string 
 
 export const stationFor = (city: string) => STATION[city] ?? `${city} Station`;
 
+/**
+ * "พักที่ไหนดี" for a base city without a hand-written line (lib/tabi/stay.ts): next to where the
+ * next leg leaves — the station, bus terminal or port — or in the onsen village / town itself.
+ */
+export function stayNear(city: string): string {
+  const stop = stationFor(city);
+  if (/ Station$/.test(stop)) return `ใกล้ ${stop} ลากกระเป๋าไปต่อเมืองอื่นสะดวก`;
+  if (/Bus (?:Terminal|Center|Stop)$/.test(stop)) return `ใกล้ ${stop} ขึ้นรถบัสต่อสะดวก`;
+  if (/ Port(?: Terminal)?$/.test(stop)) return `ใกล้ ${stop} ขึ้นเรือต่อสะดวก`;
+  const th = CITY_BY_NAME.get(city)?.th ?? city;
+  return /onsen|ออนเซ็น/i.test(`${city} ${stop} ${th}`) ? `ในหมู่บ้าน${th} เดินไปบ่อน้ำร้อนได้` : `ในตัว${th}`;
+}
+
 /** Google Maps transit directions (free Maps URL; live timetable shown by Google). */
 export function mapsTransit(origin: string, destination: string) {
   const q = new URLSearchParams({ api: "1", origin, destination, travelmode: "transit" });

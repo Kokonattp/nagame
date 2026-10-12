@@ -56,6 +56,9 @@ const CASES = [
   { id: "stay-tip-airport", msg: "ที่พักเกาะมิยาโกะ", action: "answer", check: (r) => !r.bubbles.join(" ").includes("รถไฟ") },
   { id: "nagoya-spelling", msg: "อิเสะ นาโงย่า 3 วัน", action: "suggest_routes", check: (r) => ["Nagoya", "Ise"].every((c) => stopsIn(r).includes(c)) },
   { id: "place-thai-spelling", msg: "คินคาคุจิคนเยอะไหม", action: "answer", check: (r) => r.bubbles.join(" ").includes("Kinkaku") },
+  // "คิโนะซากิออนเซ็น" contains "กิออน" (Gion, Kyoto): the city wins over a district hidden in its name
+  { id: "district-in-name", msg: "ที่พักแถวคิโนะซากิออนเซ็น", action: "answer", check: (r) => !r.bubbles.join(" ").includes("เกียวโต") },
+  { id: "food-no-guide", msg: "ร้านอาหารแถวคิโนะซากิออนเซ็น", action: "answer", check: (r) => r.links?.some((l) => l.url.includes("google.com/maps")) },
   { id: "stay-no-guide", msg: "ที่พักที่คิโนะซากิ", action: "answer", check: (r) => r.links?.[0]?.url.includes("google.com/travel/hotels") },
   // weather and food answers come from data (normals / guide listings), never a canned reply
   { id: "weather-snow", msg: "ซัปโปโร ธ.ค. หิมะตกไหม", action: "answer", month: 12, check: (r) => /ซัปโปโร ธ\.ค\.: กลางวัน/.test(r.bubbles.join(" ")) && r.bubbles.join(" ").includes("หิมะ") },

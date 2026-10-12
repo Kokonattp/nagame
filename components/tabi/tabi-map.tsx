@@ -4,11 +4,13 @@
 // MapLibre + OpenFreeMap (free, no key). The "positron" base is recoloured at load
 // into the Tabi pastel palette, labels switched to English, road names hidden.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MlMap, StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 export type MapPoint = { lat: number; lon: number; label: string; kind: "stop" | "place" };
+/** Optional pins the traveller switches on: stays and restaurants from the guide, each linked to Google Maps. */
+export type MapPin = { lat: number; lon: number; label: string; kind: "stay" | "eat"; url: string };
 
 const STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 
@@ -41,9 +43,10 @@ async function pastelStyle(): Promise<StyleSpecification> {
 
 let styleCache: Promise<StyleSpecification> | null = null;
 
-export function TabiMap({ points, height = 220, interactive = true }: { points: MapPoint[]; height?: number; interactive?: boolean }) {
+export function TabiMap({ points, pins = [], height = 220, interactive = true }: { points: MapPoint[]; pins?: MapPin[]; height?: number; interactive?: boolean }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);
+  const [ready, setReady] = useState(0); // bumps each time a map is built, so pins re-attach to it
 
   useEffect(() => {
     let cancelled = false;
@@ -121,6 +124,7 @@ export function TabiMap({ points, height = 220, interactive = true }: { points: 
           new maplibregl.Marker({ element: node }).setLngLat([p.lon, p.lat]).addTo(m);
         }
       }
+      if (!cancelled) setReady((r) => r + 1);
       if (points.length > 1) {
         const lons = points.map((p) => p.lon);
         const lats = points.map((p) => p.lat);
@@ -134,6 +138,28 @@ export function TabiMap({ points, height = 220, interactive = true }: { points: 
       map.current = null;
     };
   }, [points, interactive]);
+
+  // stay / eat pins: a small emoji badge; tapping opens the place in Google Maps
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !pins.length) return;
+    const added: { remove: () => void }[] = [];
+    let gone = false;
+    void import("maplibre-gl").then((maplibregl) => {
+      if (gone) return;
+      for (const p of pins) {
+        const a = document.createElement("a");
+        a.href = p.url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.title = p.label;
+        a.setAttribute("aria-label", `${p.kind === "stay" ? "ที่พัก" : "ร้านอาหาร"}: ${p.label}`);
+        a.innerHTML = `<span style="display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:${p.kind === "stay" ? "#eef1f7" : "#fff4d6"};border:2px solid #fff;box-shadow:0 2px 6px rgba(12,31,74,.25);font-size:14px">${p.kind === "stay" ? "🛏️" : "🍜"}</span>`;
+        added.push(new maplibregl.Marker({ element: a }).setLngLat([p.lon, p.lat]).addTo(m));
+      }
+    });
+    return () => { gone = true; added.forEach((x) => x.remove()); };
+  }, [pins, ready]);
 
   return <div ref={el} style={{ height }} className="tabi-map overflow-hidden rounded-[18px]" role="img" aria-label={`แผนที่: ${points.filter((p) => p.kind === "stop").map((p) => p.label).join(" → ")}`} />;
 }
