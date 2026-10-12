@@ -7,6 +7,7 @@ import { closedIn, draftItinerary, findPlaceByText, fitRouteToDays, partlyOpenIn
 import { faqAnswer } from "./faq";
 import { findEatBuy, findStay, STAY_WORDS } from "./eat-buy";
 import { findSights } from "./sights";
+import { chatReply } from "./chat-llm";
 import { REGION_CITY, weatherAnswer, weatherCities } from "./weather";
 import { cheapestDates } from "./flight-calendar";
 import { FLIGHTS_CHECKED_AT, flightSnapFor } from "./flight-snapshot";
@@ -99,7 +100,8 @@ function describePlace(p: Place, month?: number): string[] {
 export async function respond(message: string, ctx: TabiContext): Promise<TabiReply> {
   const u = await understand(message, ctx);
   // "เที่ยวเกียวโต 5 วัน ไปไหนดี" names a trip length: that is a trip to plan, not a list of sights
-  if (u.intent === "find_sights" && u.durationDays) u.intent = "start_trip";
+  // (a place and a length are a clear enough request: no "not sure what you mean" question)
+  if (u.intent === "find_sights" && u.durationDays) Object.assign(u, { intent: "start_trip", confidence: Math.max(u.confidence, 0.5) });
   const intent = mergeIntent(ctx.intent, u);
   const source = u.source;
   const base = { intent, source } as const;
@@ -150,17 +152,22 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
 
   switch (u.intent) {
     case "smalltalk":
-      return { ...base, action: "chat", bubbles: [smalltalkReply(message)], chips: START_CHIPS };
+      return { ...base, action: "chat", bubbles: [(await chatReply(message)) ?? smalltalkReply(message)], chips: START_CHIPS };
 
     case "booking":
       return { ...base, action: "chat", bubbles: ["เรื่องจองหรือจ่ายเงิน ทาบิยังทำให้ไม่ได้นะ แต่ช่วยวางเส้นทางกับร่างทริปได้ แล้วค่อยกดไปจองที่เว็บต้นทาง"], chips: chipsAfter };
 
-    case "other":
+    case "other": {
+      const chips = ctx.selectedRoute ? ["ทริปนี้หิมะตกไหม", "จัดแผนรายวัน", "ดูตั๋วเครื่องบิน"] : START_CHIPS;
+      // a chat model may talk, but never about anything that needs live facts (news, scores, today's prices)
+      const said = u.needsFresh ? null : await chatReply(message);
+      if (said) return { ...base, action: "chat", bubbles: [said], chips };
       return {
         ...base, action: "chat",
         bubbles: [pick(["เรื่องนี้ทาบิยังตอบไม่ได้นะ 🐾", "อันนี้ทาบิยังไม่รู้จริง ๆ ขอไม่เดานะ"], message), "ถามทาบิได้เรื่องวางทริปญี่ปุ่น อากาศ หิมะ ที่เที่ยว ร้านอาหาร ของฝาก ที่พัก ตั๋วเครื่องบิน และเรื่องเตรียมตัวอย่างวีซ่าหรือซิม"],
-        chips: ctx.selectedRoute ? ["ทริปนี้หิมะตกไหม", "จัดแผนรายวัน", "ดูตั๋วเครื่องบิน"] : START_CHIPS,
+        chips,
       };
+    }
 
     case "ask_flight": {
       const arrive = ctx.selectedRoute?.gateway.city ?? focusGateway(intent);
