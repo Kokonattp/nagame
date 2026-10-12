@@ -118,6 +118,10 @@
 .tabi-nav-inner { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; max-width: 480px; }
 .tabi-nav button { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 52px; font-size: 12px; color: var(--t-muted); }
 .tabi-nav button[aria-current="page"] { color: var(--t-blue); font-weight: 600; }
+/* Tailwind's preflight gives buttons the arrow cursor; everything clickable here shows the hand */
+.tabi :is(button, [role="button"], summary, label[for], select):not(:disabled), .tabi-nav button { cursor: pointer; }
+.tabi-nav button { transition: color 150ms ease, background-color 150ms ease; }
+.tabi-nav button:hover { color: var(--t-blue); }
 
 .tabi-img {
   background: linear-gradient(135deg, var(--t-blue-soft), var(--t-sakura));
@@ -291,6 +295,7 @@
   .tabi-nav .tabi-nav-brand { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-right: auto; min-height: 48px; }
   .tabi-nav button:not(.tabi-nav-brand) { flex-direction: row; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; font-size: 15px; }
   .tabi-nav button[aria-current="page"] { background: var(--t-blue-soft); }
+  .tabi-nav button:not(.tabi-nav-brand):not([aria-current="page"]):hover { background: color-mix(in srgb, var(--t-blue-soft) 60%, transparent); }
   .tabi-nav .tabi-nav-help { display: flex; }
   .tabi-sticky { position: sticky; top: 92px; }
   /* .tabi-scroll-x sets display:flex outside Tailwind's layers, so the grid lives here */

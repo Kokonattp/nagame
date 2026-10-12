@@ -182,16 +182,31 @@ function buildCandidates(intent: TripIntent): Candidate[] {
       candidates.push({ ...scoreRoute(pair, intent), score: scoreRoute(pair, intent).score - 0.5 });
     }
   }
-  // de-duplicate by stop set
+  // Several named cities ("โตเกียว เกียวโต โอซาก้า 7 วัน") must come back together as the first
+  // option, even when they are further apart than the neighbour radius above (Tokyo–Kyoto ≈ 370 km).
+  // At most one city per night; order: the one nearest an airport first, then nearest-next.
+  const named = cityFocus.map((f) => CITY_BY_NAME.get(f)).filter((c): c is BaseCity => Boolean(c)).slice(0, Math.max(days - 1, 1));
+  if (named.length >= 2) {
+    const ordered = [named.sort((a, b) => nearestGateway(a).d - nearestGateway(b).d)[0]];
+    const rest = named.slice(1);
+    while (rest.length) {
+      const last = ordered[ordered.length - 1];
+      rest.sort((a, b) => km(last, a) - km(last, b));
+      ordered.push(rest.shift()!);
+    }
+    const all = scoreRoute(ordered, intent);
+    candidates.push({ ...all, score: Math.max(all.score, ...candidates.map((c) => c.score)) + 1 });
+  }
+  // de-duplicate by stop set, keeping the best-scored copy
   const seen = new Set<string>();
   return candidates
+    .sort((a, b) => b.score - a.score)
     .filter((c) => {
       const key = c.stops.map((s) => s.name).sort().join("|");
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
-    })
-    .sort((a, b) => b.score - a.score);
+    });
 }
 
 function scoreRoute(stops: BaseCity[], intent: TripIntent): Candidate {

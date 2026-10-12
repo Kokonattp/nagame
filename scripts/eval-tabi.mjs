@@ -24,6 +24,9 @@ const CASES = [
   { id: "discover-nature", msg: "อยากไปญี่ปุ่น 5 วันกลาง พ.ค. เน้นธรรมชาติ", action: "suggest_routes", month: 5, days: 5 },
   { id: "exact-date", msg: "ไป 10 ธ.ค. 5 วัน อยากเห็นหิมะ", action: "suggest_routes", month: 12, days: 5, date: "2026-12-10" },
   { id: "kyoto-autumn", msg: "อยากไปเกียวโต ดูใบไม้เปลี่ยนสี พ.ย. 5 วัน", action: "suggest_routes", month: 11, check: (r) => stopsIn(r).includes("Kyoto") },
+  // every city the traveller names comes back together as the first option (Tokyo–Kyoto is ~370 km apart)
+  { id: "golden-route", msg: "เที่ยวโตเกียว เกียวโต โอซาก้า 7 วัน เดือนพฤศจิกายน ชอบวัดและของกิน", action: "suggest_routes", month: 11, days: 7,
+    check: (r) => ["Tokyo", "Kyoto", "Osaka"].every((c) => (r.routes?.[0]?.stops ?? []).some((s) => s.city === c)) },
   { id: "hokkaido-only", msg: "ฮอกไกโด ธันวาคม 7 วัน หิมะ ออนเซ็น", action: "suggest_routes", month: 12, days: 7, check: (r) => [...regionsOf(r)].every((g) => g === "hokkaido") },
   { id: "family-first", msg: "พาลูกไปญี่ปุ่นครั้งแรก เมษา 6 วัน", action: "suggest_routes", month: 4, days: 6 },
   { id: "tateyama", msg: "อยากไปทาเตยามะ ดูกำแพงหิมะ พ.ค.", action: "suggest_routes", month: 5, check: (r) => stopsIn(r).includes("Toyama") },

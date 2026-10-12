@@ -42,6 +42,9 @@ const EDGES: Edge[] = [
   ["airport:NGO", "Nagoya", 30], ["airport:FUK", "Fukuoka", 10], ["airport:CTS", "Sapporo", 40], ["airport:OKA", "Naha", 15],
 ];
 
+/** The visitor connections themselves (scripts/build-rail-shapes.mjs draws each one along the real line). */
+export const RAIL_EDGES: readonly Edge[] = EDGES;
+
 const TRANSFER_MIN = 20;
 
 const graph = new Map<string, { to: string; min: number; mode: HopMode }[]>();

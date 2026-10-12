@@ -58,21 +58,35 @@ export function TabiMap({ points, height = 220, interactive = true }: { points: 
       map.current?.remove();
 
       const stops = points.filter((p) => p.kind === "stop");
+      // the line follows the real track/road between stops (loaded with the map, not the page)
+      const { routeLine } = await import("@/lib/tabi/rail-shapes");
+      if (cancelled || !el.current) return;
+      const line = routeLine(stops.map((p) => ({ city: p.label, lon: p.lon, lat: p.lat })));
       const m = new maplibregl.Map({
         container: el.current,
         style,
         center: points[0] ? [points[0].lon, points[0].lat] : [138.2, 36.2],
         zoom: points.length ? 7 : 4.3,
         interactive,
-        attributionControl: { compact: true },
+        // route lines: 国土数値情報 鉄道データ (MLIT, CC BY 4.0) + OSRM roads on OpenStreetMap
+        attributionControl: { compact: true, customAttribution: "Rail lines: 国土数値情報 (MLIT)" },
         cooperativeGestures: interactive, // one-finger scroll keeps scrolling the page
       });
       map.current = m;
       if (interactive) m.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
 
       m.on("load", () => {
+        // our stop pills already name the city: hide the base map's own label for it (they overlapped)
+        const names = stops.map((p) => p.label);
+        for (const layer of m.getStyle().layers ?? []) {
+          if (layer.type === "symbol" && /^label_(city|town)/.test(layer.id)) {
+            const own = m.getFilter(layer.id);
+            const notOurs = ["!", ["in", ["coalesce", ["get", "name:en"], ["get", "name_en"], ["get", "name"]], ["literal", names]]];
+            m.setFilter(layer.id, (own ? ["all", own, notOurs] : notOurs) as Parameters<typeof m.setFilter>[1]);
+          }
+        }
         if (stops.length > 1) {
-          const coords = stops.map((p) => [p.lon, p.lat]);
+          const coords = line;
           const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
           m.addSource("route", {
             type: "geojson",
@@ -90,12 +104,13 @@ export function TabiMap({ points, height = 220, interactive = true }: { points: 
             raf = requestAnimationFrame(step);
           }
           m.addLayer({ id: "route-glow", type: "line", source: "route", paint: { "line-color": "#2d7ff9", "line-width": 8, "line-opacity": 0.18 }, layout: { "line-cap": "round", "line-join": "round" } });
-          m.addLayer({ id: "route", type: "line", source: "route", paint: { "line-color": "#2d7ff9", "line-width": 3.5, "line-dasharray": [2, 1.5] }, layout: { "line-cap": "round", "line-join": "round" } });
+          m.addLayer({ id: "route", type: "line", source: "route", paint: { "line-color": "#2d7ff9", "line-width": 3.5 }, layout: { "line-cap": "round", "line-join": "round" } });
         }
       });
 
       let n = 0;
-      for (const p of points) {
+      // places first: markers added later sit on top, so a nearby place dot never hides a stop number
+      for (const p of [...points.filter((q) => q.kind === "place"), ...stops]) {
         const node = document.createElement("div");
         if (p.kind === "stop") {
           n++;

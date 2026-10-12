@@ -345,8 +345,8 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
             <span className="tabi-title text-[22px] font-bold leading-none tracking-tight text-[var(--t-navy)]">Nagame</span>
           </button>
           <NavButton icon={<Home size={22} />} label="หน้าแรก" active={screen === "home"} onClick={nav("home")} />
-          <NavButton icon={<MapIcon size={22} />} label="วางแผนทริป" active={["chat", "route", "itinerary", "flights", "trips"].includes(screen)} onClick={nav(turns.length ? "chat" : "trips")} />
-          <NavButton icon={<Heart size={22} />} label="ทริปของฉัน" active={false} onClick={nav("trips")} />
+          <NavButton icon={<MapIcon size={22} />} label="วางแผนทริป" active={["chat", "route", "itinerary", "flights"].includes(screen)} onClick={nav(turns.length ? "chat" : "home")} />
+          <NavButton icon={<Heart size={22} />} label="ทริปของฉัน" active={screen === "trips"} onClick={nav("trips")} />
           <NavButton icon={<User size={22} />} label="โปรไฟล์" active={screen === "soon"} onClick={nav("soon")} />
           <button type="button" className="tabi-nav-help" onClick={tour.replay}><CircleHelp size={22} />วิธีใช้</button>
         </div>
