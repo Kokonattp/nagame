@@ -27,6 +27,11 @@ const CASES = [
   // every city the traveller names comes back together as the first option (Tokyo–Kyoto is ~370 km apart)
   { id: "golden-route", msg: "เที่ยวโตเกียว เกียวโต โอซาก้า 7 วัน เดือนพฤศจิกายน ชอบวัดและของกิน", action: "suggest_routes", month: 11, days: 7,
     check: (r) => ["Tokyo", "Kyoto", "Osaka"].every((c) => (r.routes?.[0]?.stops ?? []).some((s) => s.city === c)) },
+  // smaller cities added 2026-10-12 (128 bases): asked-for towns must come back, and names must not collide
+  { id: "small-city", msg: "อยากไปทตโตริ 3 วัน ดูเนินทราย", action: "suggest_routes", days: 3, check: (r) => stopsIn(r).includes("Tottori") },
+  { id: "onsen-town", msg: "อยากแช่ออนเซ็นที่คิโนะซากิ 3 วัน เดือนมกรา", action: "suggest_routes", month: 1, check: (r) => stopsIn(r).includes("Kinosaki") },
+  { id: "two-new-cities", msg: "เที่ยวฟุกุโอกะ นางาซากิ 5 วัน", action: "suggest_routes", days: 5, check: (r) => ["Fukuoka", "Nagasaki"].every((c) => (r.routes?.[0]?.stops ?? []).some((s) => s.city === c)) },
+  { id: "nagoya-not-nago", msg: "trip to nagoya 4 days in march", action: "suggest_routes", check: (r) => !stopsIn(r).includes("Nago") },
   { id: "hokkaido-only", msg: "ฮอกไกโด ธันวาคม 7 วัน หิมะ ออนเซ็น", action: "suggest_routes", month: 12, days: 7, check: (r) => [...regionsOf(r)].every((g) => g === "hokkaido") },
   { id: "family-first", msg: "พาลูกไปญี่ปุ่นครั้งแรก เมษา 6 วัน", action: "suggest_routes", month: 4, days: 6 },
   { id: "tateyama", msg: "อยากไปทาเตยามะ ดูกำแพงหิมะ พ.ค.", action: "suggest_routes", month: 5, check: (r) => stopsIn(r).includes("Toyama") },

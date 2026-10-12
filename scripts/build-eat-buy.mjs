@@ -23,7 +23,10 @@ const CITIES = [
   ...[...extra.matchAll(/name:\s*"([^"]+)",\s*th:\s*"[^"]*",\s*lat:/g)].map((m) => m[1]),
 ];
 // Wikivoyage titles that differ from our base-city names (same as build-places.mjs)
-const WV_TITLE = { Kawaguchiko: "Fujikawaguchiko", Izu: "Shuzenji" };
+const WV_TITLE = {
+  Kawaguchiko: "Fujikawaguchiko", Izu: "Shuzenji",
+  ...Object.fromEntries([...extra.matchAll(/\{ name: "([^"]+)",[^}]*wv: "([^"]+)" \}/g)].map((m) => [m[1], m[2]])),
+};
 
 mkdirSync(CACHE_DIR, { recursive: true });
 const pages = existsSync(CACHE) && !process.argv.includes("--fresh") ? JSON.parse(readFileSync(CACHE, "utf8")) : {};

@@ -4,7 +4,7 @@
 // added (free, no key, cached 3 h). Server only.
 
 import normalsData from "@/data/weather/normals.json";
-import { CITY_BY_NAME, type Region } from "./cities";
+import { CITY_BY_NAME, km, type Region } from "./cities";
 import { SEASON_WEAR } from "./faq";
 
 type Normal = [tmax: number, tmin: number, rainDays: number, snowDays: number];
@@ -16,6 +16,17 @@ const REGION_CITY: Record<Region, string> = {
   hokkaido: "Sapporo", tohoku: "Sendai", kanto: "Tokyo", chubu: "Takayama", kansai: "Kyoto",
   chugoku: "Hiroshima", shikoku: "Matsuyama", kyushu: "Fukuoka", okinawa: "Naha",
 };
+
+/** A town without its own normals yet borrows the nearest base within 60 km (and says so). */
+function normalsFor(city: string): { from: string; months: Normal[] } | null {
+  if (NORMALS[city]) return { from: city, months: NORMALS[city] };
+  const c = CITY_BY_NAME.get(city);
+  if (!c) return null;
+  const near = Object.keys(NORMALS)
+    .map((n) => ({ n, d: CITY_BY_NAME.get(n) ? km(c, CITY_BY_NAME.get(n)!) : Infinity }))
+    .sort((a, b) => a.d - b.d)[0];
+  return near && near.d <= 60 ? { from: near.n, months: NORMALS[near.n] } : null;
+}
 
 export type WeatherAnswer = { bubbles: string[]; links: { label: string; url: string }[]; needMonth?: boolean };
 
@@ -32,7 +43,7 @@ function snowVerdict(n: Normal) {
 /** Cities to talk about: named in the message, else the trip's stops (max 3), regions → their main city. */
 export function weatherCities(focus: string[], tripStops: string[]): string[] {
   const named = focus.map((f) => (f.startsWith("region:") ? REGION_CITY[f.slice(7) as Region] : f));
-  const list = (named.length ? named : tripStops).filter((c) => NORMALS[c]);
+  const list = (named.length ? named : tripStops).filter((c) => normalsFor(c));
   return [...new Set(list)].slice(0, 3);
 }
 
@@ -76,9 +87,12 @@ export async function weatherAnswer(opts: { cities: string[]; month?: number; st
     return { bubbles: [`ไป${names}ช่วงเดือนไหน? บอกเดือนมา ทาบิจะบอกว่าหนาวแค่ไหน มีหิมะหรือฝนไหม`], links: [], needMonth: true };
   }
   const bubbles = [...lead, ...opts.cities.map((city) => {
-    const n = NORMALS[city][month - 1];
+    const src = normalsFor(city)!;
+    const n = src.months[month - 1];
     const [tmax, tmin, rain] = n;
-    return `${CITY_BY_NAME.get(city)?.th ?? city} ${MONTH_TH[month]}: กลางวัน ~${deg(tmax)} กลางคืน ~${deg(tmin)} · ฝนหรือหิมะ ~${Math.round(rain)} วัน/เดือน · ${snowVerdict(n)}`;
+    const th = (x: string) => CITY_BY_NAME.get(x)?.th ?? x;
+    const borrowed = src.from !== city ? ` (ใช้ค่าของ${th(src.from)}ที่อยู่ใกล้)` : "";
+    return `${th(city)} ${MONTH_TH[month]}${borrowed}: กลางวัน ~${deg(tmax)} กลางคืน ~${deg(tmin)} · ฝนหรือหิมะ ~${Math.round(rain)} วัน/เดือน · ${snowVerdict(n)}`;
   })];
   // live forecast only when the trip is close enough for one to exist
   if (opts.startDate) {

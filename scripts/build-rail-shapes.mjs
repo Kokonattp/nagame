@@ -13,7 +13,10 @@
 // A connection that cannot be traced is left out and the map draws it straight.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { RAIL_EDGES } from "../lib/tabi/rail-times.ts";
+import { RAIL_EDGES as CHECKED } from "../lib/tabi/rail-edges.ts";
+// hand-checked + computed connections (scripts/build-rail-times.mjs)
+const GENERATED_FILE = new URL("../data/transport/rail-times-generated.json", import.meta.url);
+const RAIL_EDGES = [...CHECKED, ...(existsSync(GENERATED_FILE) ? JSON.parse(readFileSync(GENERATED_FILE, "utf8")) : [])];
 
 const OUT = new URL("../data/transport/rail-shapes.json", import.meta.url);
 const ALL = process.argv.includes("--all");

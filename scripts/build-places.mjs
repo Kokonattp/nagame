@@ -8,7 +8,7 @@
 //   4. Code adds nearest base city + region
 // Every stage caches under data/places/_cache, so re-runs skip finished work.
 //
-// Run: node --env-file=.env.local scripts/build-places.mjs [--limit=2000]
+// Run: node --env-file=.env.local scripts/build-places.mjs [--limit=4000]
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { askSystemOne } from "../lib/tabi/system-one.ts";
@@ -17,7 +17,7 @@ const ROOT = new URL("../data/places/", import.meta.url);
 const CACHE = new URL("./_cache/", ROOT);
 mkdirSync(CACHE, { recursive: true });
 const UA = "nagame-place-store/0.1 (https://nagame.vercel.app)";
-const LIMIT = Number(process.argv.find((a) => a.startsWith("--limit="))?.split("=")[1] ?? 2000);
+const LIMIT = Number(process.argv.find((a) => a.startsWith("--limit="))?.split("=")[1] ?? 4000); // 128 base cities since 2026-10-12
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const readJson = (name, fallback) => (existsSync(new URL(name, CACHE)) ? JSON.parse(readFileSync(new URL(name, CACHE), "utf8")) : fallback);
 const writeJson = (url, value) => writeFileSync(url, JSON.stringify(value, null, 1));
@@ -132,9 +132,13 @@ console.log(`must-see: ${mustSeeAdded} added, ${mustSee.length - mustSeeAdded} a
 
 // ── 1c. Wikivoyage listings per base city (cached per article) ──
 const baseFile = readFileSync(new URL("../lib/cities/japan-major-cities.ts", import.meta.url), "utf8");
-const BASE_NAMES = [...baseFile.matchAll(/\["([^"]+)", "[^"]+", "[^"]+", [\d.]+, [\d.]+\]/g)].map((m) => m[1]).concat(["Toyama"]);
+// Tabi-only bases (TABI_EXTRA_BASES in lib/tabi/cities.ts): name, Thai name, point, prefecture, optional Wikivoyage title
+const tabiFile = readFileSync(new URL("../lib/tabi/cities.ts", import.meta.url), "utf8");
+const TABI_BASES = [...tabiFile.matchAll(/\{ name: "([^"]+)", th: "[^"]*", lat: ([\d.]+), lon: ([\d.]+), prefecture: "([^"]+)"(?:, wv: "([^"]+)")? \}/g)]
+  .map(([, name, lat, lon, prefecture, wv]) => ({ name, lat: Number(lat), lon: Number(lon), prefecture, wv }));
+const BASE_NAMES = [...baseFile.matchAll(/\["([^"]+)", "[^"]+", "[^"]+", [\d.]+, [\d.]+\]/g)].map((m) => m[1]).concat(TABI_BASES.map((b) => b.name));
 // Wikivoyage titles that differ from our base-city names
-const WV_TITLE = { Kawaguchiko: "Fujikawaguchiko", Izu: "Shuzenji", Koyasan: "Koyasan", Yufuin: "Yufuin", Miyajima: "Miyajima" };
+const WV_TITLE = { Kawaguchiko: "Fujikawaguchiko", Izu: "Shuzenji", Koyasan: "Koyasan", Yufuin: "Yufuin", Miyajima: "Miyajima", ...Object.fromEntries(TABI_BASES.filter((b) => b.wv).map((b) => [b.name, b.wv])) };
 const wvCache = readJson("wikivoyage.json", {});
 // fields are "| key=value"; the first one has no leading "|" (the template name consumed it)
 const field = (body, key) => `|${body}`.match(new RegExp(`\\|\\s*${key}\\s*=\\s*([^|\\n]*)`, "i"))?.[1]?.trim() || null;
@@ -331,15 +335,19 @@ writeJson(new URL("scores.json", CACHE), scores);
 const cityFile = readFileSync(new URL("../lib/cities/japan-major-cities.ts", import.meta.url), "utf8");
 const CITIES = [...cityFile.matchAll(/\["([^"]+)", "([^"]+)", "([^"]+)", ([\d.]+), ([\d.]+)\]/g)]
   .map(([, name, ja, prefecture, lat, lon]) => ({ name, ja, prefecture, lat: Number(lat), lon: Number(lon) }));
-// Tabi-only bases (see TABI_EXTRA_BASES in lib/tabi/cities.ts)
-const EXTRA_BASES = [{ name: "Toyama", ja: "富山", prefecture: "Toyama", lat: 36.6953, lon: 137.2113 }];
-CITIES.push(...EXTRA_BASES);
+// Tabi-only bases (TABI_EXTRA_BASES in lib/tabi/cities.ts, parsed above)
+CITIES.push(...TABI_BASES);
+// all 47 prefectures (same as PREFECTURE_REGION in lib/tabi/cities.ts)
 const REGION = {
-  Hokkaido: "hokkaido", Aomori: "tohoku", Miyagi: "tohoku", Tokyo: "kanto", Kanagawa: "kanto", Tochigi: "kanto",
-  Yamanashi: "chubu", Nagano: "chubu", Toyama: "chubu", Aichi: "chubu", Ishikawa: "chubu", Gifu: "chubu", Shizuoka: "chubu",
-  Osaka: "kansai", Kyoto: "kansai", Nara: "kansai", Hyogo: "kansai", Wakayama: "kansai",
-  Hiroshima: "chugoku", Okayama: "chugoku", Kagawa: "shikoku", Ehime: "shikoku",
-  Fukuoka: "kyushu", Kagoshima: "kyushu", Oita: "kyushu", Kumamoto: "kyushu", Okinawa: "okinawa",
+  Hokkaido: "hokkaido",
+  Aomori: "tohoku", Iwate: "tohoku", Miyagi: "tohoku", Akita: "tohoku", Yamagata: "tohoku", Fukushima: "tohoku",
+  Ibaraki: "kanto", Tochigi: "kanto", Gunma: "kanto", Saitama: "kanto", Chiba: "kanto", Tokyo: "kanto", Kanagawa: "kanto",
+  Niigata: "chubu", Toyama: "chubu", Ishikawa: "chubu", Fukui: "chubu", Yamanashi: "chubu", Nagano: "chubu", Gifu: "chubu", Shizuoka: "chubu", Aichi: "chubu",
+  Mie: "kansai", Shiga: "kansai", Kyoto: "kansai", Osaka: "kansai", Hyogo: "kansai", Nara: "kansai", Wakayama: "kansai",
+  Tottori: "chugoku", Shimane: "chugoku", Okayama: "chugoku", Hiroshima: "chugoku", Yamaguchi: "chugoku",
+  Tokushima: "shikoku", Kagawa: "shikoku", Ehime: "shikoku", Kochi: "shikoku",
+  Fukuoka: "kyushu", Saga: "kyushu", Nagasaki: "kyushu", Kumamoto: "kyushu", Oita: "kyushu", Miyazaki: "kyushu", Kagoshima: "kyushu",
+  Okinawa: "okinawa",
 };
 const km = (a, b) => {
   const r = Math.PI / 180;
