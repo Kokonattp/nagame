@@ -3253,6 +3253,29 @@
   "wikiTitle": "Matsuyama Castle (Iyo)"
  },
  {
+  "id": "Q145371",
+  "nameEn": "Zamami Island",
+  "nameJa": "座間味島",
+  "nameTh": "เกาะซามามิ",
+  "type": "nature",
+  "mustSee": true,
+  "lat": 26.23444,
+  "lon": 127.3075,
+  "sitelinks": 20,
+  "baseCity": "Zamami",
+  "baseKm": 1,
+  "region": "okinawa",
+  "crowd": 1.6,
+  "season": "summer",
+  "firstTimer": false,
+  "family": false,
+  "tags": [
+   "nature",
+   "scenic_photo"
+  ],
+  "wikiTitle": "Zamami Island"
+ },
+ {
   "id": "Q93490",
   "nameEn": "Nagasaki Peace Park",
   "nameJa": "平和公園",
@@ -4154,6 +4177,29 @@
   "wikiTitle": "Ritsurin Garden"
  },
  {
+  "id": "Q15894675",
+  "nameEn": "Kerama Shotō National Park",
+  "nameJa": "慶良間諸島国立公園",
+  "nameTh": "อุทยานแห่งชาติหมู่เกาะเคระมะ",
+  "type": "nature",
+  "mustSee": true,
+  "lat": 26.2,
+  "lon": 127.3,
+  "sitelinks": 17,
+  "baseCity": "Zamami",
+  "baseKm": 3,
+  "region": "okinawa",
+  "crowd": 1.9,
+  "season": "summer",
+  "firstTimer": false,
+  "family": false,
+  "tags": [
+   "nature",
+   "scenic_photo"
+  ],
+  "wikiTitle": "Kerama Shotō National Park"
+ },
+ {
   "id": "Q1207989",
   "nameEn": "Yokohama Marine Tower",
   "nameJa": "横浜マリンタワー",
@@ -4568,6 +4614,28 @@
    "shopping"
   ],
   "wikiTitle": "Yokohama Chinatown"
+ },
+ {
+  "id": "Q3579074",
+  "nameEn": "Aka Island",
+  "nameJa": "阿嘉島",
+  "nameTh": "เกาะอากะ",
+  "type": "nature",
+  "mustSee": true,
+  "lat": 26.19972,
+  "lon": 127.28083,
+  "sitelinks": 16,
+  "baseCity": "Zamami",
+  "baseKm": 4,
+  "region": "okinawa",
+  "crowd": 1.3,
+  "season": "summer",
+  "firstTimer": false,
+  "family": false,
+  "tags": [
+   "nature"
+  ],
+  "wikiTitle": "Aka Island"
  },
  {
   "id": "Q847033",
@@ -5086,6 +5154,48 @@
    "culture"
   ],
   "wikiTitle": "Ponto-chō"
+ },
+ {
+  "id": "Q187366",
+  "nameEn": "Irabu Island",
+  "nameJa": "伊良部島",
+  "nameTh": "เกาะอิราบุ",
+  "type": "nature",
+  "mustSee": true,
+  "lat": 24.83167,
+  "lon": 125.19083,
+  "sitelinks": 15,
+  "baseCity": "Miyakojima",
+  "baseKm": 15,
+  "region": "okinawa",
+  "crowd": 1.6,
+  "season": "summer",
+  "firstTimer": false,
+  "family": false,
+  "tags": [
+   "nature"
+  ],
+  "wikiTitle": "Irabu Island"
+ },
+ {
+  "id": "Q702436",
+  "nameEn": "Ikema Island",
+  "nameJa": "池間島",
+  "nameTh": "เกาะอิเคมะ",
+  "type": "nature",
+  "mustSee": true,
+  "lat": 24.93222,
+  "lon": 125.24194,
+  "sitelinks": 15,
+  "baseCity": "Miyakojima",
+  "baseKm": 20,
+  "region": "okinawa",
+  "crowd": 1.5,
+  "season": "summer",
+  "firstTimer": false,
+  "family": false,
+  "tags": [],
+  "wikiTitle": "Ikema Island"
  },
  {
   "id": "Q988508",
@@ -6158,6 +6268,28 @@
    "scenic_photo"
   ],
   "wikiTitle": "Ōwakudani"
+ },
+ {
+  "id": "Q709253",
+  "nameEn": "Kurima Island",
+  "nameJa": "来間島",
+  "nameTh": "เกาะคุริมะ",
+  "type": "nature",
+  "mustSee": true,
+  "lat": 24.72222,
+  "lon": 125.24694,
+  "sitelinks": 14,
+  "baseCity": "Miyakojima",
+  "baseKm": 9,
+  "region": "okinawa",
+  "crowd": 1.6,
+  "season": "summer",
+  "firstTimer": false,
+  "family": false,
+  "tags": [
+   "nature"
+  ],
+  "wikiTitle": "Kurima-jima"
  },
  {
   "id": "Q1186344",
@@ -23064,6 +23196,29 @@
   "wikiTitle": "Sengan-en"
  },
  {
+  "id": "Q5753922",
+  "nameEn": "Higashi-hennazaki",
+  "nameJa": "東平安名岬",
+  "nameTh": "แหลมฮิงาชิเฮนนะ",
+  "type": "nature",
+  "mustSee": true,
+  "lat": 24.71889,
+  "lon": 125.46889,
+  "sitelinks": 7,
+  "baseCity": "Miyakojima",
+  "baseKm": 16,
+  "region": "okinawa",
+  "crowd": 2.1,
+  "season": "all_year",
+  "firstTimer": false,
+  "family": false,
+  "tags": [
+   "nature",
+   "scenic_photo"
+  ],
+  "wikiTitle": "Higashi-hennazaki"
+ },
+ {
   "id": "Q4902594",
   "nameEn": "Yokohama History Museum",
   "nameJa": "横浜市歴史博物館",
@@ -34279,6 +34434,29 @@
    "shopping"
   ],
   "wikiTitle": "Harborland"
+ },
+ {
+  "id": "Q11361952",
+  "nameEn": "Yonaha-Maehama",
+  "nameJa": "与那覇前浜",
+  "nameTh": "หาดโยนาฮะมาเอะฮามะ",
+  "type": "nature",
+  "mustSee": true,
+  "lat": 24.73611,
+  "lon": 125.26111,
+  "sitelinks": 4,
+  "baseCity": "Miyakojima",
+  "baseKm": 7,
+  "region": "okinawa",
+  "crowd": 2.9,
+  "season": "summer",
+  "firstTimer": false,
+  "family": true,
+  "tags": [
+   "nature",
+   "scenic_photo"
+  ],
+  "wikiTitle": "Yonaha Maehama"
  },
  {
   "id": "Q11532469",

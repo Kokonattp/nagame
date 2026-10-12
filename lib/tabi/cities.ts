@@ -162,7 +162,7 @@ export const REGION_TH: Record<Region, string> = {
 
 /** Thai/English words → base city or region. Longer aliases first so "โอซาก้า" wins over "โอ". */
 const EXTRA_ALIASES: [string, string][] = [
-  ["โอซาก้", "Osaka"], ["ฟูจิ", "Kawaguchiko"], ["ภูเขาไฟฟูจิ", "Kawaguchiko"],
+  ["โอซาก้", "Osaka"], ["นาโงย่า", "Nagoya"], ["นาโงยา", "Nagoya"], ["ฟูจิ", "Kawaguchiko"], ["ภูเขาไฟฟูจิ", "Kawaguchiko"],
   ["ทาเตยามะ", "Toyama"], ["ทาเตะยามะ", "Toyama"], ["tateyama", "Toyama"], ["คามิโคจิ", "Matsumoto"], ["ชิราคาวะโกะ", "Shirakawa-go"], ["shirakawago", "Shirakawa-go"],
   ["ทตโตะริ", "Tottori"], ["ทตโทริ", "Tottori"], ["คิโนซากิ", "Kinosaki"], ["นางาซากิ", "Nagasaki"], ["นากาซากิ", "Nagasaki"], ["คุซัตสึ", "Kusatsu"],
   ["อุจิ", "Kyoto"], ["ดาไซฟุ", "Fukuoka"], ["นาโอชิมะ", "Takamatsu"], ["อาริมะ", "Kobe"], ["ซาโอ", "Yamagata"], ["คินุงาวะ", "Nikko"], ["อินุยามะ", "Gifu"], ["เกาะโอกินาว่า", "Naha"],

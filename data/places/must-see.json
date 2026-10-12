@@ -77,6 +77,14 @@
     ["Asahiyama Zoo", "theme_park"],
     ["Kunōzan Tōshō-gū", "shrine_temple"],
     ["Okunoin", "shrine_temple"],
-    ["Wakayama Castle", "castle"]
+    ["Wakayama Castle", "castle"],
+    ["Yonaha Maehama", "nature", "หาดโยนาฮะมาเอะฮามะ"],
+    ["Kurima-jima", "nature", "เกาะคุริมะ"],
+    ["Irabu Island", "nature", "เกาะอิราบุ"],
+    ["Ikema Island", "nature", "เกาะอิเคมะ"],
+    ["Higashi-hennazaki", "nature", "แหลมฮิงาชิเฮนนะ"],
+    ["Zamami Island", "nature", "เกาะซามามิ"],
+    ["Aka Island", "nature", "เกาะอากะ"],
+    ["Kerama Shotō National Park", "nature", "อุทยานแห่งชาติหมู่เกาะเคระมะ"]
   ]
 }

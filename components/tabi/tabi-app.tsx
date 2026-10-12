@@ -1441,7 +1441,12 @@ function ProfileScreen({ me, tripCount, onSignOut, onDeleteAll }: {
 }) {
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState<string | null>(null);
-  const privacy = <p className="tabi-muted text-xs">Nagame นับสถิติการใช้งานแบบไม่ระบุตัวตน เช่น จำนวนคนที่จัดแผนสำเร็จ เพื่อปรับปรุงทาบิ ไม่เก็บชื่อ อีเมล หรือข้อความที่พิมพ์ · คำถามทั่วไปที่ไม่เกี่ยวกับทริปจะส่งให้ AI ภายนอก (Typhoon) ช่วยตอบ อย่าพิมพ์ข้อมูลส่วนตัวในแชท</p>;
+  const privacy = (
+    <div className="tabi-muted space-y-1 text-xs">
+      <p>Nagame นับสถิติการใช้งานแบบไม่ระบุตัวตน เช่น จำนวนคนที่จัดแผนสำเร็จ เพื่อปรับปรุงทาบิ ไม่เก็บชื่อ อีเมล หรือข้อความที่พิมพ์</p>
+      <p>คำถามทั่วไปที่ไม่เกี่ยวกับทริปจะส่งให้ AI ภายนอก (Typhoon) ช่วยตอบ อย่าพิมพ์ข้อมูลส่วนตัวในแชท</p>
+    </div>
+  );
   return (
     <div className="tabi-rise space-y-4">
       <TopBar />

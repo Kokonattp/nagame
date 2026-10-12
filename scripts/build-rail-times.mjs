@@ -51,6 +51,17 @@ const km = ([lon1, lat1], [lon2, lat2]) => 12742 * Math.asin(Math.sqrt(Math.sin(
 // JR "本線" trunk lines carry the limited expresses; other JR lines and mountain railways are slower.
 let SPEED = { 1: 270, 2: 90, b: 55, 3: 30, 4: 45, 5: 40 }; // km/h, tuned below ("b" = JR branch line)
 // JR lines without "本線" in the name that limited expresses / mini-shinkansen run on
+// non-JR lines with limited expresses as fast as JR trunk lines (operator|line): Super Hakuto on the
+// Chizu Express, Kintetsu to Ise, Odakyu Romancecar to Hakone, Tobu to Nikko, Nankai/Meitetsu/Keisei
+// airport expresses, the Hokuhoku line. Counted at the JR trunk speed. Not the Izukyu line: its
+// coast curves keep the Odoriko slow (Tokyo–Shimoda ~2 h 40), and an underestimate makes people miss trains.
+const PRIVATE_EXPRESS = new Set([
+  "智頭急行|智頭線", "北越急行|ほくほく線",
+  "近畿日本鉄道|山田線", "近畿日本鉄道|大阪線", "近畿日本鉄道|鳥羽線", "近畿日本鉄道|名古屋線",
+  "小田急電鉄|小田原線", "東武鉄道|伊勢崎線", "東武鉄道|日光線", "西武鉄道|池袋線",
+  "南海電気鉄道|南海本線", "南海電気鉄道|空港線", "名古屋鉄道|名古屋本線", "名古屋鉄道|空港線",
+  "京成電鉄|本線", "京成電鉄|成田空港線",
+]);
 const EXPRESS_LINES = new Set(["湖西線", "予讃線", "土讃線", "高徳線", "伯備線", "田沢湖線", "石勝線", "千歳線", "本四備讃線", "宇野線", "篠ノ井線", "身延線", "播但線", "徳島線", "上越線", "吾妻線", "日光線", "成田線", "総武線", "内房線", "外房線", "鹿島線", "常磐線", "宗谷本線", "釧網本線", "石北本線", "富良野線", "室蘭本線"]);
 let ACCESS = 40, BOARD = 5; // town centre → line (km/h), boarding allowance (min), tuned below
 const sections = JSON.parse(readFileSync(N02, "utf8")).features.filter((f) => ["11", "12"].includes(f.properties.N02_001));
@@ -63,7 +74,8 @@ for (const f of sections) {
     const ids = line.map(([x, y]) => `${x.toFixed(5)},${y.toFixed(5)}`);
     for (let i = 0; i < ids.length; i++) {
       pos.set(ids[i], line[i]);
-      const kind = f.properties.N02_002 === "2" && !f.properties.N02_003.includes("本線") && !EXPRESS_LINES.has(f.properties.N02_003) ? "b" : f.properties.N02_002;
+      const kind = PRIVATE_EXPRESS.has(`${f.properties.N02_004}|${f.properties.N02_003}`) ? "2"
+        : f.properties.N02_002 === "2" && !f.properties.N02_003.includes("本線") && !EXPRESS_LINES.has(f.properties.N02_003) ? "b" : f.properties.N02_002;
       if (i) { const d = km(line[i - 1], line[i]); link(ids[i - 1], ids[i], d, kind); link(ids[i], ids[i - 1], d, kind); }
     }
   }

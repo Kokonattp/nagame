@@ -33,7 +33,7 @@ const STATION: Record<string, string> = {
   "Nozawa Onsen": "Nozawa Onsen",
   "Gujo Hachiman": "Gujo-Hachiman Station",
   Kurobe: "Unazuki-Onsen Station",
-  Kinosaki: "Kinosakionsen Station",
+  Kinosaki: "Kinosaki Onsen Station",
   Matsushima: "Matsushima-Kaigan Station",
   Shimoda: "Izukyu-Shimoda Station",
   Ise: "Iseshi Station",

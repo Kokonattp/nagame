@@ -133,14 +133,16 @@ export function findStay(message: string, focus: string[]): EatBuyAnswer {
   while (!band && mixed.length < ranked.length) for (const group of byBand) { const next = group.shift(); if (next) mixed.push(next); }
   const picks = (band ? ranked : mixed).slice(0, 5);
   const station = stationFor(city);
-  // a district answer is already "where": the main-station tip is for a whole city
-  const tip = district ? [] : [`ถ้าจะนั่งรถไฟต่อไปเมืองอื่น พักใกล้ ${station} จะลากกระเป๋าน้อยสุด`];
+  // where the next leg leaves from: a station, a bus terminal or a port (an airport or an onsen
+  // village is not a "stay near it" tip). A district answer is already "where", so no tip.
+  const leaves = / Station$/.test(station) ? "นั่งรถไฟ" : /Bus (?:Terminal|Center|Stop)$/.test(station) ? "นั่งรถบัส" : / Port(?: Terminal)?$/.test(station) ? "นั่งเรือ" : null;
+  const tip = district || !leaves ? [] : [`ถ้าจะ${leaves}ต่อไปที่อื่น พักใกล้ ${station} จะลากกระเป๋าน้อยสุด`];
   const at = (word: string, where: string) => `${word}${/^[A-Za-z]/.test(where) ? " " : ""}${where}`;
 
   if (!picks.length) {
     return {
       bubbles: [`${at(`${what}ที่`, place)} ไกด์ยังไม่มีรายชื่อแนะนำ กดดูที่พักกับราคาวันที่พี่ไปใน Google Hotels ได้เลย`, ...tip],
-      links: [search, ...(district ? [] : [{ label: `ที่พักใกล้ ${station} ใน Google Maps`, url: maps(`hotels near ${station}`) }])],
+      links: [search, ...(tip.length ? [{ label: `ที่พักใกล้ ${station} ใน Google Maps`, url: maps(`hotels near ${station}`) }] : [])],
     };
   }
   const links = picks.map((l) => ({
