@@ -24,7 +24,8 @@ const CITIES = [
 ];
 // Wikivoyage titles that differ from our base-city names (same as build-places.mjs)
 const WV_TITLE = {
-  Kawaguchiko: "Fujikawaguchiko", Izu: "Shuzenji",
+  // "Fujikawaguchiko" has no article; the Fuji Five Lakes region page lists the lake's stays
+  Kawaguchiko: "Fuji Five Lakes", Izu: "Shuzenji",
   ...Object.fromEntries([...extra.matchAll(/\{ name: "([^"]+)",[^}]*wv: "([^"]+)" \}/g)].map((m) => [m[1], m[2]])),
 };
 

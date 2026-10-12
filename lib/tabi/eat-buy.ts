@@ -61,6 +61,9 @@ function districtIn(message: string, focus: string[]) {
   return d && (!named.length || named.includes(d[1])) ? d : undefined;
 }
 
+/** Tabelog keyword search (link only: Tabelog's terms forbid reusing its listings or scores). */
+export const tabelog = (q: string) => `https://tabelog.com/en/rstLst/?sw=${encodeURIComponent(q)}`;
+
 const maps = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 
 export type EatBuyAnswer = { bubbles: string[]; links: { label: string; url: string }[] };
@@ -102,9 +105,11 @@ export function findEatBuy(message: string, focus: string[]): EatBuyAnswer {
     url: l.la && l.lo ? maps(`${l.n} ${l.la},${l.lo}`) : maps(`${l.n} ${area} Japan`),
   }));
   const search = { label: `ค้น ${searchWord} แถว ${area} ใน Google Maps (มีรีวิว)`, url: maps(`${searchWord} ${area} Japan`) };
+  // restaurants: Japan's own review site too (scores from Japanese diners)
+  const tabelogLink = kind === "eat" ? [{ label: `ดูคะแนนร้าน${tag ? tag[2] : ""}แถว ${area} ใน Tabelog`, url: tabelog(`${area} ${tag ? searchWord : ""}`.trim()) }] : [];
   // nothing of that kind right where they asked: the live search is the most useful answer, so it goes first
-  if (tag && !tagged.length) links.unshift(search);
-  else links.push(search);
+  if (tag && !tagged.length) links.unshift(search, ...tabelogLink);
+  else links.push(search, ...tabelogLink);
 
   if (!picks.length) {
     return { bubbles: [`${what}แถว${/^[A-Za-z]/.test(place) ? " " : ""}${place} ทาบิยังไม่มีข้อมูลจากไกด์ กดค้นใน Google Maps ได้เลย ดูรีวิวกับเวลาเปิดประกอบได้`], links };

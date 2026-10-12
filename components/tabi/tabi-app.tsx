@@ -1055,7 +1055,11 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
                           {it.approx && <span className="ml-1 rounded bg-[var(--t-blue-soft)] px-1 text-[10px] text-[var(--t-blue)]">ประมาณ</span>}
                           <LegLinks links={legLinks(it.from, it.to)} />
                           {it.kind === "eat" && it.mapQuery && (
-                            <span className="mt-1 flex"><a className="tabi-leg-link" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`restaurants near ${it.mapQuery}`)}`} target="_blank" rel="noopener noreferrer">🔎 หาร้านแถวนี้ ↗</a></span>
+                            <span className="mt-1 flex flex-wrap gap-1.5">
+                              <a className="tabi-leg-link" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`restaurants near ${it.mapQuery}`)}`} target="_blank" rel="noopener noreferrer">🔎 หาร้านแถวนี้ ↗</a>
+                              {/* link only: Tabelog's terms forbid reusing its listings */}
+                              <a className="tabi-leg-link" href={`https://tabelog.com/en/rstLst/?sw=${encodeURIComponent(d.city)}`} target="_blank" rel="noopener noreferrer">⭐ Tabelog ↗</a>
+                            </span>
                           )}
                           {it.kind === "see" && (
                             <span className="mt-1 flex gap-1">
