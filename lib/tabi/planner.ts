@@ -423,10 +423,14 @@ export function restoreStops(raw: unknown, intent?: TripIntent): Highlight[] {
     .map((p) => toHighlight(p, intent ?? { preferences: [], focus: [] }));
 }
 
+// Thai spellings drift on tone marks and the final vowel (same rule as city names in cities.ts)
+const loose = (s: string) => s.toLowerCase().replace(/[็-์]/g, "").replace(/ะ/g, "า");
+
 export function findPlaceByText(text: string): Place | undefined {
   const t = text.toLowerCase();
+  const tl = loose(text);
   // Thai names too: travellers type "ฟุชิมิ อินะริ", not "Fushimi Inari-taisha"
-  const thai = (p: Place) => !!p.nameTh && p.nameTh.length >= 4 && t.includes(p.nameTh.replace(/^(ศาลเจ้า|วัด|ปราสาท|ทะเลสาบ|ภูเขา)/, "").toLowerCase());
+  const thai = (p: Place) => !!p.nameTh && p.nameTh.length >= 4 && tl.includes(loose(p.nameTh.replace(/^(ศาลเจ้า|วัด|ปราสาท|ทะเลสาบ|ภูเขา)/, "")));
   return PLACES.filter((p) => (p.nameEn.length >= 4 && t.includes(p.nameEn.toLowerCase().replace(/ (temple|shrine)$/, ""))) || thai(p))
     .sort((a, b) => b.sitelinks - a.sitelinks)[0];
 }

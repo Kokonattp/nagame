@@ -5,6 +5,7 @@
 
 import { findFocus } from "./cities";
 import { STAY_WORDS } from "./eat-buy";
+import { findPlaceByText } from "./planner";
 import { FAQ_KEYWORDS, FAQ_TOPICS, type FaqTopic } from "./faq";
 import { askSystemOne, systemOneConfigured } from "./system-one";
 import { PREFERENCES, type Preference, type TabiContext, type TripIntent } from "./types";
@@ -202,6 +203,8 @@ function keywordFallback(message: string, ctx: TabiContext) {
   else if (has(/ที่เที่ยว|เที่ยวไหนดี|เที่ยวที่ไหนดี|มีอะไรน่าเที่ยว|มีอะไรเที่ยว|สถานที่ท่องเที่ยว|things to do|attractions/)) intent = "find_sights";
   else if (has(/ร้าน|กินอะไร|ของกิน|ราเม|ซูชิ|คาเฟ่|ช้อปปิ้ง|ช็อป|ชอป|ของฝาก|ซื้อของ|ตลาด|ห้าง|restaurant|souvenir/)) intent = "find_food_shop";
   else if (faqTopic) intent = "practical_question";
+  // "ฟุชิมิ อินะริ คนเยอะไหม" with Jev down: a question about a place Tabi knows
+  else if (has(/ไหม|มั้ย|ยังไง|เป็นไง|กี่โมง|เท่าไหร่|เท่าไร|ที่ไหน|\?/) && findPlaceByText(message)) intent = "ask_detail";
   else if (has(/ตั๋ว|ไฟลท์|เครื่องบิน|flight/)) intent = "ask_flight";
   else if (has(/สวัสดี|ขอบคุณ|\bhello\b|\bhi\b/)) intent = "smalltalk";
   else if (has(/จอง|จ่ายเงิน/)) intent = "booking";

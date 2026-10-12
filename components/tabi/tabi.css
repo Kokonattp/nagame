@@ -232,6 +232,8 @@
 .tabi-leg-link { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 999px; background: var(--t-blue-soft); color: var(--t-blue); font-size: 12px; font-weight: 600; transition: translate 200ms ease; }
 .tabi-leg-link:focus-visible { outline: 3px solid rgba(45, 127, 249, 0.45); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) { .tabi-leg-link:hover { translate: 0 -2px; } }
+/* a thumb needs ~44 px; a mouse does not, so desktop keeps the compact chip */
+@media (pointer: coarse) { .tabi-leg-link { min-height: 44px; padding: 0 14px; font-size: 13px; } }
 .tabi-track { position: relative; display: grid; gap: 4px; padding-left: 34px; }
 .tabi-track::before { content: ""; position: absolute; left: 13px; top: 14px; bottom: 14px; border-left: 3px dashed var(--t-line); }
 .tabi-track > li { position: relative; display: grid; gap: 4px; min-height: 30px; }

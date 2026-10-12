@@ -85,6 +85,8 @@
     ["Higashi-hennazaki", "nature", "แหลมฮิงาชิเฮนนะ"],
     ["Zamami Island", "nature", "เกาะซามามิ"],
     ["Aka Island", "nature", "เกาะอากะ"],
-    ["Kerama Shotō National Park", "nature", "อุทยานแห่งชาติหมู่เกาะเคระมะ"]
+    ["Kerama Shotō National Park", "nature", "อุทยานแห่งชาติหมู่เกาะเคระมะ"],
+    ["Kinkaku-ji", "shrine_temple", "วัดคินคาคุจิ"],
+    ["Ginkaku-ji", "shrine_temple", "วัดกินคาคุจิ"]
   ]
 }

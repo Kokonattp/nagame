@@ -55,6 +55,7 @@ const CASES = [
   { id: "island-zamami", msg: "ไปเกาะซามามิ 3 วัน", action: "suggest_routes", days: 3, check: (r) => stopsIn(r).includes("Zamami") },
   { id: "stay-tip-airport", msg: "ที่พักเกาะมิยาโกะ", action: "answer", check: (r) => !r.bubbles.join(" ").includes("รถไฟ") },
   { id: "nagoya-spelling", msg: "อิเสะ นาโงย่า 3 วัน", action: "suggest_routes", check: (r) => ["Nagoya", "Ise"].every((c) => stopsIn(r).includes(c)) },
+  { id: "place-thai-spelling", msg: "คินคาคุจิคนเยอะไหม", action: "answer", check: (r) => r.bubbles.join(" ").includes("Kinkaku") },
   { id: "stay-no-guide", msg: "ที่พักที่คิโนะซากิ", action: "answer", check: (r) => r.links?.[0]?.url.includes("google.com/travel/hotels") },
   // weather and food answers come from data (normals / guide listings), never a canned reply
   { id: "weather-snow", msg: "ซัปโปโร ธ.ค. หิมะตกไหม", action: "answer", month: 12, check: (r) => /ซัปโปโร ธ\.ค\.: กลางวัน/.test(r.bubbles.join(" ")) && r.bubbles.join(" ").includes("หิมะ") },

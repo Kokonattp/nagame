@@ -326,7 +326,11 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
           <ProfileScreen
             me={me}
             tripCount={trips.length}
-            onSignOut={async () => { if (account.current) await forgetAccountTrips(account.current); await signOut().catch(() => {}); }}
+            onSignOut={async () => {
+              // only an account copy online makes removing them safe; on-device trips stay (hidden until the same account signs in)
+              if (account.current && syncOn.current) await forgetAccountTrips(account.current);
+              await signOut().catch(() => {});
+            }}
             onDeleteAll={async () => {
               const r = await deleteEverything(account.current, Boolean(me?.sync));
               setTrips((await listTrips()).filter(visibleTo(account.current)));
@@ -1106,6 +1110,7 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
         <button type="button" className="tabi-btn tabi-btn--primary whitespace-nowrap px-2 text-sm" onClick={() => onAsk("อยากปรับแผนหน่อย")}><Pencil size={18} />ปรับแผน</button>
       </div>
       <ShareButton onShare={onShare} />
+      <LineSendButton trip={trip} />
       </div>
       </div>
     </div>
@@ -1235,6 +1240,42 @@ function ShareButton({ onShare }: { onShare: () => Promise<ShareResult> }) {
       <p className="tabi-muted mt-1 min-h-[1.25rem] text-center text-xs" role="status">
         {state === "copied" ? "คัดลอกลิงก์และบันทึกรูปทริปแล้ว วางในแชทได้เลย" : state === "shared" ? "ส่งแล้ว เพื่อนเปิดลิงก์ดูแผนเดียวกันได้" : ""}
       </p>
+    </div>
+  );
+}
+
+/**
+ * Trips live only on this device, so "send to my LINE" is how they move: the link carries the
+ * whole trip (/t/<code>, nothing stored on a server) and opening it elsewhere offers "เก็บไว้".
+ * Phones open the LINE app's share screen; desktops use LINE's share page.
+ */
+function LineSendButton({ trip }: { trip: SavedTrip }) {
+  const [href, setHref] = useState<string | null>(null);
+  useEffect(() => {
+    const code = encodeShare(trip);
+    if (!code) return setHref(null);
+    const url = `${location.origin}/t/${code}`;
+    const text = `ทริป ${trip.route?.stops.map((s) => s.cityTh).join(" → ") ?? trip.title} ${trip.itinerary?.length ?? ""} วัน (Nagame)`;
+    const phone = window.matchMedia("(pointer: coarse)").matches;
+    setHref(phone
+      ? `https://line.me/R/share?text=${encodeURIComponent(`${text}
+${url}`)}`
+      : `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}`);
+  }, [trip]);
+  if (!href) return null;
+  return (
+    <div className="-mt-3">
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="tabi-btn w-full text-white"
+        style={{ background: "#06C755" }}
+        onClick={() => { const code = encodeShare(trip); track("trip_shared", { method: "line", ref: code ? shareRef(code) : "" }); }}
+      >
+        ส่งทริปเข้า LINE
+      </a>
+      <p className="tabi-muted mt-1 text-center text-xs">ส่งให้ตัวเองหรือเพื่อน แล้วเปิดลิงก์ในเครื่องอื่นเพื่อเก็บทริปไว้</p>
     </div>
   );
 }
@@ -1457,14 +1498,14 @@ function ProfileScreen({ me, tripCount, onSignOut, onDeleteAll }: {
         <section className="tabi-card space-y-2 p-5 text-center">
           <Avatar size={64} />
           <p className="font-bold">ยังไม่ต้องสมัครสมาชิก</p>
-          <p className="tabi-muted text-sm">ทริปทั้งหมดเก็บไว้ในเครื่องนี้ เร็ว ๆ นี้จะเข้าสู่ระบบด้วย LINE เพื่อเก็บทริปไว้ใช้ได้ทุกเครื่อง</p>
+          <p className="tabi-muted text-sm">ทริปทั้งหมดเก็บไว้ในเครื่องนี้เท่านั้น Nagame ไม่เก็บทริปของพี่ไว้ที่ server จะย้ายไปเครื่องอื่น กด “ส่งทริปเข้า LINE” ในหน้าแผนรายวัน</p>
           {privacy}
         </section>
       ) : !me.user ? (
         <section className="tabi-card space-y-3 p-5">
           <div className="flex items-center gap-3">
             <Avatar size={56} mood="happy" />
-            <p className="text-sm"><b className="text-[var(--t-pink-ink)]">เก็บทริปไว้ใช้ได้ทุกเครื่อง</b><br />เข้าสู่ระบบครั้งเดียว ทริปจากมือถือกับคอมจะตรงกัน ไม่ต้องเข้าสู่ระบบก็ใช้ทาบิได้ครบเหมือนเดิม</p>
+            <p className="text-sm"><b className="text-[var(--t-pink-ink)]">แยกทริปของพี่ไว้ในบัญชี LINE</b><br />ใช้เครื่องร่วมกับคนอื่นได้โดยทริปไม่ปนกัน ไม่ต้องเข้าสู่ระบบก็ใช้ทาบิได้ครบเหมือนเดิม</p>
           </div>
           {me.providers.includes("line") && (
             <button type="button" className="tabi-btn w-full text-white" style={{ background: "#06C755" }} onClick={() => { track("login_started", { method: "line" }); void signIn("line"); }}>
@@ -1476,7 +1517,7 @@ function ProfileScreen({ me, tripCount, onSignOut, onDeleteAll }: {
               เข้าสู่ระบบด้วย Google
             </button>
           )}
-          <p className="tabi-muted text-xs">เราเก็บแค่ชื่อที่แสดงกับรูปโปรไฟล์ และทริปที่พี่บันทึก ไม่เก็บอีเมลหรือเบอร์โทร ลบทั้งหมดได้ทุกเมื่อจากหน้านี้</p>
+          <p className="tabi-muted text-xs">ทริปยังเก็บในเครื่องนี้เท่านั้น ชื่อกับรูปจาก LINE อยู่ในเครื่องนี้ ไม่ส่งไปเก็บที่ server และไม่ขออีเมลหรือเบอร์โทร</p>
           {privacy}
         </section>
       ) : (
@@ -1492,10 +1533,10 @@ function ProfileScreen({ me, tripCount, onSignOut, onDeleteAll }: {
             </div>
           </div>
           <p className="rounded-2xl bg-[var(--t-green)] px-3 py-2 text-sm text-[var(--t-green-ink)]">
-            {me.sync ? `☁️ ทริปซิงก์อัตโนมัติแล้ว (${tripCount} ทริป)` : "ระบบเก็บทริปออนไลน์ยังไม่เปิด ตอนนี้ทริปยังอยู่ในเครื่องนี้"}
+            {me.sync ? `☁️ ทริปซิงก์อัตโนมัติแล้ว (${tripCount} ทริป)` : `ทริปเก็บในเครื่องนี้เท่านั้น (${tripCount} ทริป) จะย้ายเครื่อง กด “ส่งทริปเข้า LINE” ในหน้าแผนรายวัน`}
           </p>
           <button type="button" className="tabi-btn tabi-btn--soft w-full" onClick={() => void onSignOut()}>ออกจากระบบ</button>
-          <p className="tabi-muted text-[11px]">ออกจากระบบแล้ว ทริปของบัญชีนี้จะถูกเอาออกจากเครื่องนี้ (ยังอยู่ในบัญชี)</p>
+          <p className="tabi-muted text-[11px]">{me.sync ? "ออกจากระบบแล้ว ทริปของบัญชีนี้จะถูกเอาออกจากเครื่องนี้ (ยังอยู่ในบัญชี)" : "ออกจากระบบแล้ว ทริปของบัญชีนี้จะซ่อนไว้ เข้าสู่ระบบด้วยบัญชีเดิมก็เห็นอีกครั้ง"}</p>
           {done ? <p role="status" className="text-sm text-[var(--t-green-ink)]">{done}</p> : (
             <button
               type="button"
@@ -1503,11 +1544,11 @@ function ProfileScreen({ me, tripCount, onSignOut, onDeleteAll }: {
               onClick={async () => {
                 if (!confirming) { setConfirming(true); return; }
                 const r = await onDeleteAll();
-                setDone(!r.ok ? "ลบไม่สำเร็จ ลองใหม่อีกครั้งนะ" : r.server ? "ลบทริปทั้งหมดแล้ว ทั้งในเครื่องนี้และออนไลน์" : "ลบทริปในเครื่องนี้แล้ว (ยังไม่ได้เปิดระบบเก็บทริปออนไลน์)");
+                setDone(!r.ok ? "ลบไม่สำเร็จ ลองใหม่อีกครั้งนะ" : r.server ? "ลบทริปทั้งหมดแล้ว ทั้งในเครื่องนี้และออนไลน์" : "ลบทริปในเครื่องนี้แล้ว");
                 if (r.ok) void signOut().catch(() => {});
               }}
             >
-              {confirming ? "กดอีกครั้งเพื่อยืนยัน: ลบทริปทั้งหมดทั้งในเครื่องและออนไลน์" : "ลบข้อมูลทั้งหมด"}
+              {confirming ? (me.sync ? "กดอีกครั้งเพื่อยืนยัน: ลบทริปทั้งหมดทั้งในเครื่องและออนไลน์" : "กดอีกครั้งเพื่อยืนยัน: ลบทริปทั้งหมดในเครื่องนี้ กู้คืนไม่ได้") : "ลบข้อมูลทั้งหมด"}
             </button>
           )}
           {privacy}
