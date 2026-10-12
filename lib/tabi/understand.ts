@@ -11,7 +11,7 @@ import { PREFERENCES, type Preference, type TabiContext, type TripIntent } from 
 
 export type Intent =
   | "start_trip" | "refine" | "pick_option" | "ask_detail" | "add_stop"
-  | "draft_itinerary" | "ask_flight" | "practical_question" | "ask_weather" | "find_food_shop"
+  | "draft_itinerary" | "ask_flight" | "practical_question" | "ask_weather" | "find_food_shop" | "find_sights"
   | "booking" | "smalltalk" | "other";
 
 export type Understanding = {
@@ -93,6 +93,7 @@ const INTENTS: Record<Intent, string> = {
   practical_question: "Asks a practical how-to question about travelling in Japan (visa, money, SIM or internet, IC cards, luggage, manners, emergencies, clothes to pack, plugs, airport transfer, rail pass) rather than planning the route",
   ask_weather: "Asks about the weather: will it snow or rain, how cold or hot it is, temperature, or the weather forecast for the trip or a place",
   find_food_shop: "Asks for restaurants, food to eat, cafes, bars, shopping, markets or souvenirs in a place, or asks where to stay (hotel, ryokan, hostel, which area to stay in)",
+  find_sights: "Asks what to see or which sights, attractions, temples or things to do there are in a place, without asking for a trip plan",
   booking: "Asks Tabi itself to make a booking, reservation or payment (hotel, ticket, tour), not just for recommendations",
   smalltalk: "Greeting, thanks, or chit-chat with no planning request",
   other: "Anything else that is not about planning or travelling in Japan",
@@ -195,7 +196,8 @@ function keywordFallback(message: string, ctx: TabiContext) {
   let intent: Intent = "start_trip";
   if (has(/หิมะจะตก|ฝนจะตก|อากาศ.*(ไหม|ยังไง|เป็นไง)|หนาวไหม|ร้อนไหม|กี่องศา|พยากรณ์|weather|forecast/)) intent = "ask_weather";
   else if (has(STAY_WORDS) && !has(/จอง|จ่ายเงิน/)) intent = "find_food_shop";
-  else if (has(/ร้าน|กินอะไร|ของกิน|ราเม|ซูชิ|คาเฟ่|ช้อปปิ้ง|ของฝาก|ซื้อของ|ตลาด|ห้าง|restaurant|souvenir/)) intent = "find_food_shop";
+  else if (has(/ที่เที่ยว|เที่ยวไหนดี|เที่ยวที่ไหนดี|มีอะไรน่าเที่ยว|มีอะไรเที่ยว|สถานที่ท่องเที่ยว|things to do|attractions/)) intent = "find_sights";
+  else if (has(/ร้าน|กินอะไร|ของกิน|ราเม|ซูชิ|คาเฟ่|ช้อปปิ้ง|ช็อป|ชอป|ของฝาก|ซื้อของ|ตลาด|ห้าง|restaurant|souvenir/)) intent = "find_food_shop";
   else if (faqTopic) intent = "practical_question";
   else if (has(/ตั๋ว|ไฟลท์|เครื่องบิน|flight/)) intent = "ask_flight";
   else if (has(/สวัสดี|ขอบคุณ|\bhello\b|\bhi\b/)) intent = "smalltalk";

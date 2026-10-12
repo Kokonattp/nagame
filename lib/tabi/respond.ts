@@ -6,7 +6,8 @@ import { CITY_BY_NAME, GATEWAYS, nearestGateway, REGION_TH, type Region } from "
 import { closedIn, draftItinerary, findPlaceByText, fitRouteToDays, partlyOpenIn, PREF_TH, seasonOf, suggestRoutes, suggestStops } from "./planner";
 import { faqAnswer } from "./faq";
 import { findEatBuy, findStay, STAY_WORDS } from "./eat-buy";
-import { weatherAnswer, weatherCities } from "./weather";
+import { findSights } from "./sights";
+import { REGION_CITY, weatherAnswer, weatherCities } from "./weather";
 import { cheapestDates } from "./flight-calendar";
 import { FLIGHTS_CHECKED_AT, flightSnapFor } from "./flight-snapshot";
 import type { FlightLink, Place, Preference, TabiContext, TabiReply, TripIntent } from "./types";
@@ -97,6 +98,8 @@ function describePlace(p: Place, month?: number): string[] {
 
 export async function respond(message: string, ctx: TabiContext): Promise<TabiReply> {
   const u = await understand(message, ctx);
+  // "เที่ยวเกียวโต 5 วัน ไปไหนดี" names a trip length: that is a trip to plan, not a list of sights
+  if (u.intent === "find_sights" && u.durationDays) u.intent = "start_trip";
   const intent = mergeIntent(ctx.intent, u);
   const source = u.source;
   const base = { intent, source } as const;
@@ -115,11 +118,20 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
   // "ร้านราเมนแถวชินจูกุ" / "ของฝากที่โอซาก้า" / "เรียวกังที่ฮาโกเนะ": guide listings + Google Maps / Hotels links.
   // "จองโรงแรมให้หน่อย" is still refused (Tabi books nothing), but gets the same stay suggestions.
   const stayAsked = STAY_WORDS.test(message);
+  // a region ("ฮอกไกโด") stands for its main city in a where-to question
+  const asked = (u.focus.length ? u.focus : intent.focus.length ? intent.focus : tripStops).map((f) => (f.startsWith("region:") ? REGION_CITY[f.slice(7) as Region] ?? f : f));
   if (u.intent === "find_food_shop" || (u.intent === "booking" && stayAsked)) {
-    const places = u.focus.length ? u.focus : intent.focus.length ? intent.focus : tripStops;
+    const places = asked;
     const found = stayAsked ? findStay(message, places) : findEatBuy(message, places);
     const refuse = u.intent === "booking" ? ["ทาบิจองหรือจ่ายเงินให้ไม่ได้นะ แต่ช่วยหาที่พักให้เลือกได้"] : [];
     return { ...base, action: "answer", bubbles: [...refuse, ...found.bubbles.filter((b) => !refuse.length || !b.includes("จองให้ไม่ได้"))], links: found.links, chips: chipsAfter };
+  }
+
+  // "ที่เที่ยวเกียวโตมีอะไรบ้าง" / "วัดในนารา": the best-known sights there (a region keeps its whole area)
+  if (u.intent === "find_sights") {
+    const found = findSights(message, u.focus.length ? u.focus : intent.focus.length ? intent.focus : tripStops);
+    const th = found.city ? CITY_BY_NAME.get(found.city)?.th : undefined;
+    return { ...base, action: "answer", bubbles: found.bubbles, links: found.links, chips: th ? [`เที่ยว${th} 3 วัน`, `ร้านอาหารแถว${th}`, `ที่พักแถว${th}`] : chipsAfter };
   }
 
   // A practical question ("ต้องขอวีซ่าไหม") gets a checked answer, whatever stage the trip is at.
@@ -146,7 +158,7 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
     case "other":
       return {
         ...base, action: "chat",
-        bubbles: [pick(["เรื่องนี้ทาบิยังตอบไม่ได้นะ 🐾", "อันนี้ทาบิยังไม่รู้จริง ๆ ขอไม่เดานะ"], message), "ถามทาบิได้เรื่องวางทริปญี่ปุ่น อากาศ หิมะ ร้านอาหาร ของฝาก ที่พัก ตั๋วเครื่องบิน และเรื่องเตรียมตัวอย่างวีซ่าหรือซิม"],
+        bubbles: [pick(["เรื่องนี้ทาบิยังตอบไม่ได้นะ 🐾", "อันนี้ทาบิยังไม่รู้จริง ๆ ขอไม่เดานะ"], message), "ถามทาบิได้เรื่องวางทริปญี่ปุ่น อากาศ หิมะ ที่เที่ยว ร้านอาหาร ของฝาก ที่พัก ตั๋วเครื่องบิน และเรื่องเตรียมตัวอย่างวีซ่าหรือซิม"],
         chips: ctx.selectedRoute ? ["ทริปนี้หิมะตกไหม", "จัดแผนรายวัน", "ดูตั๋วเครื่องบิน"] : START_CHIPS,
       };
 

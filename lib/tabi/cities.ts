@@ -179,16 +179,24 @@ const ALIASES: [string, string][] = [
   ...Object.entries(REGION_TH).map(([id, th]): [string, string] => [th, `region:${id}`]),
 ].sort((a, b) => b[0].length - a[0].length);
 
+// Thai spellings drift on tone marks and the final vowel ("คานาซาว่า" / "คานาซาวะ" / "คานาซาวา"):
+// compare without tone marks and with short "ะ" read as "า"
+const loose = (s: string) => s.toLowerCase().replace(/[็-์]/g, "").replace(/ะ/g, "า");
+
 export function findFocus(message: string): string[] {
-  const text = message.toLowerCase();
+  let text = loose(message);
   const found = new Set<string>();
-  for (const [alias, target] of ALIASES) {
-    if (alias.length < 3) continue;
+  for (const [raw, target] of ALIASES) {
+    if (raw.length < 3) continue;
+    const alias = loose(raw);
     // Latin names must match a whole word: "nago" is not "nagoya", "ise" is not "paradise"
     const hit = /^[a-z0-9 .-]+$/.test(alias)
       ? new RegExp(`(^|[^a-z])${alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^a-z])`).test(text)
       : text.includes(alias);
-    if (hit) found.add(target);
+    if (!hit) continue;
+    found.add(target);
+    // a name inside a longer one already matched is not a second place ("ซากะ" in "โอซาก้า")
+    if (!/^[a-z0-9 .-]+$/.test(alias)) text = text.split(alias).join(" ");
   }
   return [...found];
 }

@@ -37,7 +37,7 @@ const BUY_TH: [RegExp, string, string][] = [
   [/ตลาด|ถนนช้อป|market/i, "market", "ตลาด"], [/ไฟฟ้า|กล้อง|อนิเมะ|การ์ตูน|เกม|ฟิกเกอร์|anime|electronics/i, "electronics", "ไฟฟ้า/อนิเมะ"],
   [/ยา|เครื่องสำอาง|ดองกิ|ดอนกิ|drugstore|cosmetic/i, "drugstore", "ยา/เครื่องสำอาง"], [/ขนมฝาก|ชา|สาเก|sake/i, "food_gift", "ขนม/ชา/สาเก"],
 ];
-const IS_BUY = /ของฝาก|ซื้อ|ช้อป|ตลาด|ห้าง|เอาท์เล็ท|outlet|ดองกิ|ไฟฟ้า|อนิเมะ|ฟิกเกอร์|souvenir|shopping/i;
+const IS_BUY = /ของฝาก|ซื้อ|ช้อป|ช็อป|ชอป|ตลาด|ห้าง|เอาท์เล็ท|outlet|ดองกิ|ไฟฟ้า|อนิเมะ|ฟิกเกอร์|souvenir|shopping/i;
 const PRICE = ["", "ราคาประหยัด", "ราคากลาง ๆ", "ราคาสูง"];
 
 /** a question about where to stay (not about booking it — that stays with the booking reply) */

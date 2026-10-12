@@ -12,7 +12,7 @@ const NORMALS = normalsData as unknown as Record<string, Normal[]>;
 
 const MONTH_TH = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 /** a region's weather is told by its main city */
-const REGION_CITY: Record<Region, string> = {
+export const REGION_CITY: Record<Region, string> = {
   hokkaido: "Sapporo", tohoku: "Sendai", kanto: "Tokyo", chubu: "Takayama", kansai: "Kyoto",
   chugoku: "Hiroshima", shikoku: "Matsuyama", kyushu: "Fukuoka", okinawa: "Naha",
 };

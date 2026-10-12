@@ -46,6 +46,12 @@ const CASES = [
   { id: "stay-city", msg: "แนะนำที่พักเกียวโตหน่อย", action: "answer", check: (r) => r.links?.some((l) => l.url.includes("google.com/travel/hotels")) && r.links.length > 1 },
   { id: "stay-ryokan", msg: "เรียวกังที่ฮาโกเนะดีๆ", action: "answer", check: (r) => r.links?.some((l) => l.url.includes("ryokan")) },
   { id: "stay-cheap", msg: "ที่พักถูกๆแถวชินจูกุ", action: "answer", check: (r) => r.links?.filter((l) => l.url.includes("/maps/")).every((l) => l.label.includes("ราคาประหยัด")) },
+  // sights: a list, unless a trip length is given; spellings people actually type
+  { id: "sights-city", msg: "ที่เที่ยวเกียวโตมีอะไรบ้าง", action: "answer", check: (r) => r.links?.length >= 4 && r.links.some((l) => /Kiyomizu|Fushimi|Kinkaku/.test(decodeURIComponent(l.url))) },
+  { id: "sights-region", msg: "ฮอกไกโดมีที่เที่ยวอะไรบ้าง", action: "answer", check: (r) => r.links?.length >= 4 },
+  { id: "sights-with-days", msg: "เที่ยวเกียวโต 5 วัน ไปไหนดี", action: "suggest_routes", days: 5, check: (r) => stopsIn(r).includes("Kyoto") },
+  { id: "shop-spelling", msg: "แหล่งช็อปปิ้งโอซาก้า", action: "answer", check: (r) => r.bubbles[0].includes("ช้อปปิ้ง") && !r.intent.focus.includes("Saga") },
+  { id: "city-spelling", msg: "ของฝากคานาซาวะ", action: "answer", check: (r) => r.intent.focus.includes("Kanazawa") },
   { id: "stay-no-guide", msg: "ที่พักที่คิโนะซากิ", action: "answer", check: (r) => r.links?.[0]?.url.includes("google.com/travel/hotels") },
   // weather and food answers come from data (normals / guide listings), never a canned reply
   { id: "weather-snow", msg: "ซัปโปโร ธ.ค. หิมะตกไหม", action: "answer", month: 12, check: (r) => /ซัปโปโร ธ\.ค\.: กลางวัน/.test(r.bubbles.join(" ")) && r.bubbles.join(" ").includes("หิมะ") },
