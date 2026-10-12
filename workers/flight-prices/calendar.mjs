@@ -2,7 +2,7 @@
 //
 // Google Flights' "Price graph" lists the round-trip price for every departure date (~60 days per
 // view) at a fixed trip length. This opens one results page per gateway, opens the graph, reads each
-// bar (hover → "Sat, Jan 23 - Wed, Jan 27 · From THB 14,516"), scrolls forward for ~6 months, then
+// bar (hover → "Sat, Jan 23 - Wed, Jan 27 · From THB 14,516"), scrolls forward for ~10 months, then
 // switches the trip length with the page's own "Extend your stay" button. Same rules as collect.mjs:
 // normal Chrome, nothing faked, stop on any block or CAPTCHA, keep the previous file.
 //
@@ -15,8 +15,8 @@ import { BLOCKED, GATEWAYS, openChrome } from "./collect.mjs";
 const OUT = new URL("../../data/flights/calendar.json", import.meta.url);
 const ONLY = process.argv.find((a) => a.startsWith("--gateways="))?.split("=")[1]?.split(",");
 /** Tabi trip lengths in days (Google counts nights: a 5-day trip is its "4-day trip"). */
-const LENGTHS = [5, 7];
-const WINDOWS = 6; // a scroll moves ~a month: 6 views ≈ 6 months
+const LENGTHS = [4, 5, 6, 7, 10];
+const WINDOWS = 10; // a scroll moves ~a month: 10 views ≈ 10 months
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const iso = (d) => d.toISOString().slice(0, 10);

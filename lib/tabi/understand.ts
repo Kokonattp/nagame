@@ -194,7 +194,10 @@ function keywordFallback(message: string, ctx: TabiContext) {
   const faqTopic = FAQ_KEYWORDS.find(([, re]) => re.test(message))?.[0] ?? null;
 
   let intent: Intent = "start_trip";
-  if (has(/หิมะจะตก|ฝนจะตก|อากาศ.*(ไหม|ยังไง|เป็นไง)|หนาวไหม|ร้อนไหม|กี่องศา|พยากรณ์|weather|forecast/)) intent = "ask_weather";
+  // "ไปฟุกุโอกะ 4 วัน กินราเมน": a trip length makes it a trip to plan, whatever else is mentioned
+  const tripLength = has(/\d+\s*(?:วัน|คืน|days?|nights?)/);
+  if (tripLength && !hasOptions && !has(/ตั๋ว|ไฟลท์|เครื่องบิน|flight|หิมะจะตก|ฝนจะตก|อากาศ|กี่องศา/)) intent = "start_trip";
+  else if (has(/หิมะจะตก|ฝนจะตก|อากาศ.*(ไหม|ยังไง|เป็นไง)|หนาวไหม|ร้อนไหม|กี่องศา|พยากรณ์|weather|forecast/)) intent = "ask_weather";
   else if (has(STAY_WORDS) && !has(/จอง|จ่ายเงิน/)) intent = "find_food_shop";
   else if (has(/ที่เที่ยว|เที่ยวไหนดี|เที่ยวที่ไหนดี|มีอะไรน่าเที่ยว|มีอะไรเที่ยว|สถานที่ท่องเที่ยว|things to do|attractions/)) intent = "find_sights";
   else if (has(/ร้าน|กินอะไร|ของกิน|ราเม|ซูชิ|คาเฟ่|ช้อปปิ้ง|ช็อป|ชอป|ของฝาก|ซื้อของ|ตลาด|ห้าง|restaurant|souvenir/)) intent = "find_food_shop";

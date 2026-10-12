@@ -100,8 +100,10 @@ function describePlace(p: Place, month?: number): string[] {
 export async function respond(message: string, ctx: TabiContext): Promise<TabiReply> {
   const u = await understand(message, ctx);
   // "เที่ยวเกียวโต 5 วัน ไปไหนดี" names a trip length: that is a trip to plan, not a list of sights
-  // (a place and a length are a clear enough request: no "not sure what you mean" question)
-  if (u.intent === "find_sights" && u.durationDays) Object.assign(u, { intent: "start_trip", confidence: Math.max(u.confidence, 0.5) });
+  // (a place and a length are a clear enough request: no "not sure what you mean" question, even when
+  // Jev is split between planning a trip and listing sights)
+  if ((u.intent === "find_sights" || u.intent === "start_trip") && u.durationDays && u.focus.length)
+    Object.assign(u, { intent: "start_trip", confidence: Math.max(u.confidence, 0.5) });
   const intent = mergeIntent(ctx.intent, u);
   const source = u.source;
   const base = { intent, source } as const;

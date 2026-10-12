@@ -13,7 +13,7 @@
 const DEFAULT_URL = "https://api.opentyphoon.ai/v1";
 const DEFAULT_MODEL = "typhoon-v2.5-30b-a3b-instruct";
 
-const SYSTEM = [
+export const CHAT_SYSTEM = [
   "คุณคือ \"ทาบิ\" แมวมาสคอตของ Nagame เว็บช่วยวางแผนเที่ยวญี่ปุ่นสำหรับคนไทย",
   "ตอบเป็นภาษาไทยเท่านั้น สั้น 1-2 ประโยค เป็นกันเอง อบอุ่น เรียกผู้ใช้ว่า \"พี่\" ได้",
   "ห้ามบอกตัวเลขหรือข้อเท็จจริงที่ต้องเช็ก: ราคา ค่าเงิน เวลาเปิดปิด ตารางรถ ระยะทาง วันที่ ข่าว ผลกีฬา หรือข้อมูลล่าสุด ถ้าถูกถามให้บอกตรง ๆ ว่ายังไม่รู้",
@@ -32,7 +32,7 @@ export function scrub(text: string): string {
 }
 
 // a reply that states numbers/money/time, slips into Chinese, or runs long is not used
-const BREAKS_RULES = /[\u4e00-\u9fff]|\d\s*(?:บาท|เยน|฿|¥|นาที|ชั่วโมง|ชม\.|กม\.|km|%)|[฿¥$]\s*\d/i;
+export const BREAKS_RULES = /[\u4e00-\u9fff]|\d\s*(?:บาท|เยน|฿|¥|นาที|ชั่วโมง|ชม\.|กม\.|km|%)|[฿¥$]\s*\d/i;
 
 export function chatLlmConfigured() {
   return Boolean(process.env.CHAT_LLM_KEY);
@@ -48,7 +48,7 @@ export async function chatReply(message: string): Promise<string | null> {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
       body: JSON.stringify({
         model: process.env.CHAT_LLM_MODEL ?? DEFAULT_MODEL,
-        messages: [{ role: "system", content: SYSTEM }, { role: "user", content: scrub(message) }],
+        messages: [{ role: "system", content: CHAT_SYSTEM }, { role: "user", content: scrub(message) }],
         max_tokens: 200,
         temperature: 0.6,
       }),
