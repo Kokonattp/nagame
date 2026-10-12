@@ -1,11 +1,12 @@
-// "ร้านราเมนแถวชินจูกุ" / "ซื้อของฝากที่ไหนดีในโอซาก้า" — guide listings, never invented.
-// Data: data/places/eat-buy.json (scripts/build-eat-buy.mjs, Wikivoyage Eat/Buy, CC BY-SA).
+// "ร้านราเมนแถวชินจูกุ" / "ซื้อของฝากที่ไหนดีในโอซาก้า" / "เรียวกังที่ฮาโกเนะ" — guide listings, never invented.
+// Data: data/places/eat-buy.json (scripts/build-eat-buy.mjs, Wikivoyage Eat/Buy/Sleep, CC BY-SA).
 // Every listing links to Google Maps, where opening hours and reviews are current. Server only.
 
 import eatBuyData from "@/data/places/eat-buy.json";
 import { CITY_BY_NAME } from "./cities";
+import { stationFor } from "./transport";
 
-type Listing = { n: string; a?: string; k: "eat" | "buy"; d?: string; la?: number; lo?: number; p?: 1 | 2 | 3; t: string[] };
+type Listing = { n: string; a?: string; k: "eat" | "buy" | "sleep"; d?: string; la?: number; lo?: number; p?: 1 | 2 | 3; t: string[] };
 // guide headings written as listings ("Various Eateries") are not places
 const DATA = Object.fromEntries(Object.entries(eatBuyData as unknown as Record<string, Listing[]>).map(([c, ls]) => [c, ls.filter((l) => !/^(various|other|many|several)\b/i.test(l.n))]));
 
@@ -38,6 +39,17 @@ const BUY_TH: [RegExp, string, string][] = [
 ];
 const IS_BUY = /ของฝาก|ซื้อ|ช้อป|ตลาด|ห้าง|เอาท์เล็ท|outlet|ดองกิ|ไฟฟ้า|อนิเมะ|ฟิกเกอร์|souvenir|shopping/i;
 const PRICE = ["", "ราคาประหยัด", "ราคากลาง ๆ", "ราคาสูง"];
+
+/** a question about where to stay (not about booking it — that stays with the booking reply) */
+export const STAY_WORDS = /ที่พัก|พักที่ไหน|พักแถว|พักย่าน|นอนที่ไหน|โรงแรม|เรียวกัง|โฮสเทล|แคปซูล|เกสต์เฮาส์|hotel|ryokan|hostel|accommodation/i;
+const SLEEP_TH: [RegExp, string, string][] = [
+  [/เรียวกัง|ออนเซ็น|บ่อน้ำร้อน|ryokan/i, "ryokan", "เรียวกัง"], [/โฮสเทล|แคปซูล|เกสต์เฮาส์|hostel|capsule/i, "hostel", "โฮสเทล/เกสต์เฮาส์"],
+  [/บิสิเนส|business/i, "business", "บิสิเนสโฮเทล"],
+];
+const SLEEP_PRICE: [RegExp, 1 | 3, string][] = [[/ถูก|ประหยัด|งบน้อย|cheap|budget/i, 1, "ราคาประหยัด"], [/หรู|แพง|luxury/i, 3, "ระดับหรู"]];
+const SLEEP_PRICE_LABEL = ["", "ราคาประหยัด", "ราคากลาง ๆ", "ราคาสูง"];
+// net/manga cafés are listed under Sleep in the guide, but are not what someone asking for a place to stay means
+const NOT_A_STAY = /internet|media|comic|manga|caf[eé]/i;
 
 const maps = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 
@@ -87,4 +99,63 @@ export function findEatBuy(message: string, focus: string[]): EatBuyAnswer {
     return { bubbles: [`${what}แถว${place} ทาบิยังไม่มีข้อมูลจากไกด์ กดค้นใน Google Maps ได้เลย ดูรีวิวกับเวลาเปิดประกอบได้`], links };
   }
   return { bubbles: [...lead, "ร้านอาจปิดหรือย้ายได้ เช็กเวลาเปิดใน Google Maps ก่อนไปนะ · ข้อมูล: Wikivoyage"], links };
+}
+
+const hotels = (q: string) => `https://www.google.com/travel/hotels?q=${encodeURIComponent(q)}`;
+
+/** "แนะนำที่พักเกียวโต" / "เรียวกังที่ฮาโกเนะ" / "ที่พักถูก ๆ แถวชินจูกุ" */
+export function findStay(message: string, focus: string[]): EatBuyAnswer {
+  const district = DISTRICTS.find(([re]) => re.test(message));
+  const city = district?.[1] ?? focus.find((f) => CITY_BY_NAME.has(f));
+  const tag = SLEEP_TH.find(([re]) => re.test(message));
+  const band = SLEEP_PRICE.find(([re]) => re.test(message));
+  const what = `${tag?.[2] ?? "ที่พัก"}${band ? band[2] : ""}`;
+
+  if (!city) {
+    return { bubbles: [`อยากหาที่พักที่เมืองไหน หรือย่านไหน? เช่น "ที่พักแถวชินจูกุ" หรือ "เรียวกังที่ฮาโกเนะ"`], links: [] };
+  }
+  const cityTh = CITY_BY_NAME.get(city)?.th ?? city;
+  const place = district ? `${district[2]} (${cityTh})` : cityTh;
+  const area = district ? `${district[2]} ${city}` : city;
+  const searchWord = tag?.[1] === "ryokan" ? "ryokan" : tag?.[1] === "hostel" ? "hostels" : "hotels";
+  const search = { label: `ดูราคาและห้องว่าง${tag ? ` ${tag[2]}` : ""}แถว${/^[A-Za-z]/.test(place) ? " " : ""}${place} ใน Google Hotels`, url: hotels(`${searchWord} in ${area}`) };
+
+  const all = (DATA[city] ?? []).filter((l) => l.k === "sleep" && !NOT_A_STAY.test(l.n));
+  // a hostel with no yen figure in the guide still counts as a budget stay
+  const fits = (l: Listing) => (!tag || l.t.includes(tag[1])) && (!band || l.p === band[1] || (band[1] === 1 && !l.p && l.t.includes("hostel")));
+  const inArea = district ? all.filter((l) => l.d === district[2] && fits(l)) : [];
+  const pool = inArea.length ? inArea : all.filter(fits);
+  const widened = Boolean(district && !inArea.length && pool.length);
+  // mixed price bands when none was asked for (the guide lists hostels first), placed ones first
+  const ranked = [...pool].sort((a, b) => Number(Boolean(b.la)) - Number(Boolean(a.la)) || Number(Boolean(b.p)) - Number(Boolean(a.p)));
+  const byBand = [3, 2, 1, undefined].map((p) => ranked.filter((l) => l.p === p));
+  const mixed: Listing[] = [];
+  while (!band && mixed.length < ranked.length) for (const group of byBand) { const next = group.shift(); if (next) mixed.push(next); }
+  const picks = (band ? ranked : mixed).slice(0, 5);
+  const station = stationFor(city);
+  // a district answer is already "where": the main-station tip is for a whole city
+  const tip = district ? [] : [`ถ้าจะนั่งรถไฟต่อไปเมืองอื่น พักใกล้ ${station} จะลากกระเป๋าน้อยสุด`];
+  const at = (word: string, where: string) => `${word}${/^[A-Za-z]/.test(where) ? " " : ""}${where}`;
+
+  if (!picks.length) {
+    return {
+      bubbles: [`${at(`${what}ที่`, place)} ไกด์ยังไม่มีรายชื่อแนะนำ กดดูที่พักกับราคาวันที่พี่ไปใน Google Hotels ได้เลย`, ...tip],
+      links: [search, ...(district ? [] : [{ label: `ที่พักใกล้ ${station} ใน Google Maps`, url: maps(`hotels near ${station}`) }])],
+    };
+  }
+  const links = picks.map((l) => ({
+    label: `${l.n}${l.a ? ` ${l.a}` : ""}${l.d && (!district || widened) ? ` · ${l.d}` : ""}${l.p ? ` · ${SLEEP_PRICE_LABEL[l.p]}` : ""}`,
+    url: l.la && l.lo ? maps(`${l.n} ${l.la},${l.lo}`) : maps(`${l.n} ${area} Japan`),
+  }));
+  links.push(search);
+  return {
+    bubbles: [
+      widened
+        ? `${at(`${what}แถว`, district![2])} ไกด์ยังไม่มีแนะนำ แต่ใน${cityTh}มีที่ไกด์ Wikivoyage แนะนำตามนี้`
+        : `${at(`${what}แถว`, place)} ที่ไกด์ Wikivoyage แนะนำ ${picks.length} ที่`,
+      ...tip,
+      "ทาบิจองให้ไม่ได้ ราคากับห้องว่างของวันที่พี่ไปดูใน Google Hotels ได้เลย · ข้อมูล: Wikivoyage",
+    ],
+    links,
+  };
 }

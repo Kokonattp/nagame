@@ -1,9 +1,9 @@
-// Where to eat and shop in every base city, from Wikivoyage's "Eat" and "Buy" listings
+// Where to eat, shop and stay in every base city, from Wikivoyage's "Eat", "Buy" and "Sleep" listings
 // (CC BY-SA 3.0, credited on screen). Big cities are split into district articles
 // (Tokyo/Shinjuku, Osaka/Minami…), so their districts are read too. Only facts are kept
 // (name, Japanese name, district, coordinates, price band, food/shop kind from keywords);
 // the guide's prose is not shipped. Writes data/places/eat-buy.json:
-//   { "Tokyo": [{ n, a?, k: "eat" | "buy", d?, la?, lo?, p?, t: [kinds] }, …], … }
+//   { "Tokyo": [{ n, a?, k: "eat" | "buy" | "sleep", d?, la?, lo?, p?, t: [kinds] }, …], … }
 //
 //   node scripts/build-eat-buy.mjs           (cached pages are reused)
 //   node scripts/build-eat-buy.mjs --fresh   (download every page again)
@@ -67,31 +67,39 @@ const BUY_KINDS = [
   ["market", /market|ichiba|shotengai|arcade|street/i], ["electronics", /electronic|camera|anime|manga|game|figure|otaku/i],
   ["drugstore", /drugstore|drug store|pharmacy|cosmetic|don quijote|donki/i], ["food_gift", /snack|sweets|tea|sake|food|wagashi|confection/i],
 ];
-const kinds = (kind, text) => (kind === "eat" ? EAT_KINDS : BUY_KINDS).filter(([, re]) => re.test(text)).map(([k]) => k);
+const SLEEP_KINDS = [
+  ["ryokan", /ryokan|minshuku|onsen|hot spring|tatami|kaiseki/i],
+  ["hostel", /hostel|capsule|guest ?house|dorm|backpacker/i],
+  ["business", /business hotel|toyoko|dormy inn|apa hotel|route[- ]inn|super hotel|comfort hotel/i],
+];
+const kinds = (kind, text) => (kind === "eat" ? EAT_KINDS : kind === "buy" ? BUY_KINDS : SLEEP_KINDS).filter(([, re]) => re.test(text)).map(([k]) => k);
 
 function listings(text, district) {
   const out = [];
-  // {{eat|…}} {{buy|…}} and the generic {{listing|type=eat|…}}
-  for (const m of text.matchAll(/\{\{\s*(eat|buy|drink|listing)\s*\|([\s\S]*?)\}\}/gi)) {
+  // {{eat|…}} {{buy|…}} {{sleep|…}} and the generic {{listing|type=eat|…}}
+  for (const m of text.matchAll(/\{\{\s*(eat|buy|drink|sleep|listing)\s*\|([\s\S]*?)\}\}/gi)) {
     let kind = m[1].toLowerCase();
     if (kind === "listing") kind = (field(m[2], "type") ?? "").toLowerCase();
     if (kind === "drink") kind = "eat";
-    if (kind !== "eat" && kind !== "buy") continue;
+    if (kind !== "eat" && kind !== "buy" && kind !== "sleep") continue;
     const name = clean(field(m[2], "name"));
     if (!name || name.length > 80) continue;
     const alt = clean(field(m[2], "alt"));
     const content = clean(field(m[2], "content")) ?? "";
     const la = Number(field(m[2], "lat")), lo = Number(field(m[2], "long"));
     const price = clean(field(m[2], "price"));
-    const yen = price ? Math.max(...[...price.replace(/,/g, "").matchAll(/(\d{3,6})/g)].map((x) => Number(x[1])), 0) : 0;
+    const figures = price ? [...price.replace(/,/g, "").matchAll(/(\d{3,6})/g)].map((x) => Number(x[1])) : [];
+    // food: the dearer figure; a stay: the "from" price (guides add weekly rates and suites after it)
+    const yen = kind === "sleep" ? Math.min(...figures.filter((y) => y >= 1000), Infinity) : Math.max(...figures, 0);
     out.push({
       n: name,
       ...(alt && /[\u3040-\u30ff\u4e00-\u9fff]/.test(alt) ? { a: alt } : {}),
       k: kind,
       ...(district ? { d: district } : {}),
       ...(Number.isFinite(la) && la && Number.isFinite(lo) && lo ? { la: Math.round(la * 1e4) / 1e4, lo: Math.round(lo * 1e4) / 1e4 } : {}),
-      // price band: 1 under ¥1,500 · 2 under ¥5,000 · 3 above (only when the guide gives a yen figure)
-      ...(yen ? { p: yen < 1500 ? 1 : yen < 5000 ? 2 : 3 } : {}),
+      // price band (only when the guide gives a yen figure): food 1 under ¥1,500 · 2 under ¥5,000 · 3 above;
+      // a night's stay from 1 under ¥8,000 · 2 under ¥20,000 · 3 above
+      ...(yen && yen !== Infinity ? { p: kind === "sleep" ? (yen < 8000 ? 1 : yen < 20000 ? 2 : 3) : yen < 1500 ? 1 : yen < 5000 ? 2 : 3 } : {}),
       t: kinds(kind, `${name} ${content}`),
     });
   }
@@ -112,8 +120,8 @@ for (const city of CITIES) {
   }
   const seen = new Set();
   result[city] = all.filter((l) => { const key = `${l.k}|${l.n.toLowerCase()}`; if (seen.has(key)) return false; seen.add(key); return true; });
-  const eat = result[city].filter((l) => l.k === "eat").length;
-  console.log(`${city}: ${eat} eat · ${result[city].length - eat} buy${districts.length ? ` (${districts.length} districts)` : ""}`);
+  const count = (k) => result[city].filter((l) => l.k === k).length;
+  console.log(`${city}: ${count("eat")} eat · ${count("buy")} buy · ${count("sleep")} sleep${districts.length ? ` (${districts.length} districts)` : ""}`);
 }
 writeFileSync(OUT, JSON.stringify(result) + "\n");
 const total = Object.values(result).flat().length;

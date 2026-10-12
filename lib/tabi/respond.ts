@@ -5,7 +5,7 @@ import { buildOutbound } from "@/lib/outbound";
 import { CITY_BY_NAME, GATEWAYS, nearestGateway, REGION_TH, type Region } from "./cities";
 import { closedIn, draftItinerary, findPlaceByText, fitRouteToDays, partlyOpenIn, PREF_TH, seasonOf, suggestRoutes, suggestStops } from "./planner";
 import { faqAnswer } from "./faq";
-import { findEatBuy } from "./eat-buy";
+import { findEatBuy, findStay, STAY_WORDS } from "./eat-buy";
 import { weatherAnswer, weatherCities } from "./weather";
 import { cheapestDates } from "./flight-calendar";
 import { FLIGHTS_CHECKED_AT, flightSnapFor } from "./flight-snapshot";
@@ -112,10 +112,14 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
     return { ...base, action: w.needMonth ? "ask" : "answer", bubbles: w.bubbles, links: w.links, ...(w.needMonth ? { ask: { question: "ไปเดือนไหน", chips: ["ธ.ค.", "ม.ค.", "ก.พ.", "เม.ย."] } } : { chips: chipsAfter }) };
   }
 
-  // "ร้านราเมนแถวชินจูกุ" / "ของฝากที่โอซาก้า": guide listings + Google Maps / Tabelog search links
-  if (u.intent === "find_food_shop") {
-    const found = findEatBuy(message, u.focus.length ? u.focus : intent.focus.length ? intent.focus : tripStops);
-    return { ...base, action: "answer", bubbles: found.bubbles, links: found.links, chips: chipsAfter };
+  // "ร้านราเมนแถวชินจูกุ" / "ของฝากที่โอซาก้า" / "เรียวกังที่ฮาโกเนะ": guide listings + Google Maps / Hotels links.
+  // "จองโรงแรมให้หน่อย" is still refused (Tabi books nothing), but gets the same stay suggestions.
+  const stayAsked = STAY_WORDS.test(message);
+  if (u.intent === "find_food_shop" || (u.intent === "booking" && stayAsked)) {
+    const places = u.focus.length ? u.focus : intent.focus.length ? intent.focus : tripStops;
+    const found = stayAsked ? findStay(message, places) : findEatBuy(message, places);
+    const refuse = u.intent === "booking" ? ["ทาบิจองหรือจ่ายเงินให้ไม่ได้นะ แต่ช่วยหาที่พักให้เลือกได้"] : [];
+    return { ...base, action: "answer", bubbles: [...refuse, ...found.bubbles.filter((b) => !refuse.length || !b.includes("จองให้ไม่ได้"))], links: found.links, chips: chipsAfter };
   }
 
   // A practical question ("ต้องขอวีซ่าไหม") gets a checked answer, whatever stage the trip is at.
@@ -142,7 +146,7 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
     case "other":
       return {
         ...base, action: "chat",
-        bubbles: [pick(["เรื่องนี้ทาบิยังตอบไม่ได้นะ 🐾", "อันนี้ทาบิยังไม่รู้จริง ๆ ขอไม่เดานะ"], message), "ถามทาบิได้เรื่องวางทริปญี่ปุ่น อากาศ หิมะ ร้านอาหาร ของฝาก ตั๋วเครื่องบิน และเรื่องเตรียมตัวอย่างวีซ่าหรือซิม"],
+        bubbles: [pick(["เรื่องนี้ทาบิยังตอบไม่ได้นะ 🐾", "อันนี้ทาบิยังไม่รู้จริง ๆ ขอไม่เดานะ"], message), "ถามทาบิได้เรื่องวางทริปญี่ปุ่น อากาศ หิมะ ร้านอาหาร ของฝาก ที่พัก ตั๋วเครื่องบิน และเรื่องเตรียมตัวอย่างวีซ่าหรือซิม"],
         chips: ctx.selectedRoute ? ["ทริปนี้หิมะตกไหม", "จัดแผนรายวัน", "ดูตั๋วเครื่องบิน"] : START_CHIPS,
       };
 

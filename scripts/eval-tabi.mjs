@@ -41,7 +41,12 @@ const CASES = [
   { id: "okinawa", msg: "โอกินาว่า มิถุนา 5 วัน", action: "suggest_routes", month: 6, check: (r) => [...regionsOf(r)].every((g) => g === "okinawa") },
   { id: "vague", msg: "อยากไปญี่ปุ่น", action: "ask" },
   { id: "greeting", msg: "สวัสดีทาบิ", action: "chat" },
-  { id: "booking-refused", msg: "ช่วยจองโรงแรมให้หน่อย", action: "chat", check: (r) => r.bubbles.join(" ").includes("จอง") },
+  { id: "booking-refused", msg: "ช่วยจองโรงแรมให้หน่อย", action: "answer", check: (r) => r.bubbles.join(" ").includes("จองหรือจ่ายเงินให้ไม่ได้") },
+  // where to stay: guide listings + Google Hotels, never a booking
+  { id: "stay-city", msg: "แนะนำที่พักเกียวโตหน่อย", action: "answer", check: (r) => r.links?.some((l) => l.url.includes("google.com/travel/hotels")) && r.links.length > 1 },
+  { id: "stay-ryokan", msg: "เรียวกังที่ฮาโกเนะดีๆ", action: "answer", check: (r) => r.links?.some((l) => l.url.includes("ryokan")) },
+  { id: "stay-cheap", msg: "ที่พักถูกๆแถวชินจูกุ", action: "answer", check: (r) => r.links?.filter((l) => l.url.includes("/maps/")).every((l) => l.label.includes("ราคาประหยัด")) },
+  { id: "stay-no-guide", msg: "ที่พักที่คิโนะซากิ", action: "answer", check: (r) => r.links?.[0]?.url.includes("google.com/travel/hotels") },
   // weather and food answers come from data (normals / guide listings), never a canned reply
   { id: "weather-snow", msg: "ซัปโปโร ธ.ค. หิมะตกไหม", action: "answer", month: 12, check: (r) => /ซัปโปโร ธ\.ค\.: กลางวัน/.test(r.bubbles.join(" ")) && r.bubbles.join(" ").includes("หิมะ") },
   { id: "food-district", msg: "ร้านราเมนแถวชินจูกุแนะนำหน่อย", action: "answer", check: (r) => r.links?.some((l) => l.url.includes("google.com/maps")) && !r.bubbles.join(" ").includes("จอง") },

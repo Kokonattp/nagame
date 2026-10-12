@@ -4,6 +4,7 @@
 // message alone, never with route context (context made Jev over-tag).
 
 import { findFocus } from "./cities";
+import { STAY_WORDS } from "./eat-buy";
 import { FAQ_KEYWORDS, FAQ_TOPICS, type FaqTopic } from "./faq";
 import { askSystemOne, systemOneConfigured } from "./system-one";
 import { PREFERENCES, type Preference, type TabiContext, type TripIntent } from "./types";
@@ -91,8 +92,8 @@ const INTENTS: Record<Intent, string> = {
   ask_flight: "Asks about flights, tickets, airfare, or airlines",
   practical_question: "Asks a practical how-to question about travelling in Japan (visa, money, SIM or internet, IC cards, luggage, manners, emergencies, clothes to pack, plugs, airport transfer, rail pass) rather than planning the route",
   ask_weather: "Asks about the weather: will it snow or rain, how cold or hot it is, temperature, or the weather forecast for the trip or a place",
-  find_food_shop: "Asks for restaurants, food to eat, cafes, bars, shopping, markets or souvenirs in a place",
-  booking: "Asks Tabi to book, reserve or pay for something (hotel, ticket, tour)",
+  find_food_shop: "Asks for restaurants, food to eat, cafes, bars, shopping, markets or souvenirs in a place, or asks where to stay (hotel, ryokan, hostel, which area to stay in)",
+  booking: "Asks Tabi itself to make a booking, reservation or payment (hotel, ticket, tour), not just for recommendations",
   smalltalk: "Greeting, thanks, or chit-chat with no planning request",
   other: "Anything else that is not about planning or travelling in Japan",
 };
@@ -193,6 +194,7 @@ function keywordFallback(message: string, ctx: TabiContext) {
 
   let intent: Intent = "start_trip";
   if (has(/หิมะจะตก|ฝนจะตก|อากาศ.*(ไหม|ยังไง|เป็นไง)|หนาวไหม|ร้อนไหม|กี่องศา|พยากรณ์|weather|forecast/)) intent = "ask_weather";
+  else if (has(STAY_WORDS) && !has(/จอง|จ่ายเงิน/)) intent = "find_food_shop";
   else if (has(/ร้าน|กินอะไร|ของกิน|ราเม|ซูชิ|คาเฟ่|ช้อปปิ้ง|ของฝาก|ซื้อของ|ตลาด|ห้าง|restaurant|souvenir/)) intent = "find_food_shop";
   else if (faqTopic) intent = "practical_question";
   else if (has(/ตั๋ว|ไฟลท์|เครื่องบิน|flight/)) intent = "ask_flight";

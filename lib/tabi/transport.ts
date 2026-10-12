@@ -60,7 +60,7 @@ export const AIRPORTS: Record<string, { code: string; th: string; query: string 
   OKA: [{ code: "OKA", th: "นาฮะ", query: "Naha Airport" }],
 };
 
-const stationFor = (city: string) => STATION[city] ?? `${city} Station`;
+export const stationFor = (city: string) => STATION[city] ?? `${city} Station`;
 
 /** Google Maps transit directions (free Maps URL; live timetable shown by Google). */
 export function mapsTransit(origin: string, destination: string) {
