@@ -366,12 +366,14 @@ export function draftItinerary(route: RouteOption, intent: TripIntent, extraStop
       const dinner = dinnerArea(stop.city, n);
       if (dinner) items.push({ kind: "eat", slot: "evening", text: `แถว ${displayName(dinner)}`, placeId: dinner.id, wikiTitle: dinner.wikiTitle, mapQuery: `${dinner.nameEn}, ${stop.city}` });
       else {
-        // no eating area in the data: a restaurant the guide lists in this city (Wikivoyage)
+        // no eating area in the data: a restaurant listed for this city (guide, else the Google Maps snapshot)
         const meal = dinnerPick(stop.city, n);
-        if (meal) items.push({ kind: "eat", slot: "evening", text: `ร้าน ${meal.name}${meal.alt ? ` ${meal.alt}` : ""}`, mapQuery: meal.lat ? `${meal.lat},${meal.lon}` : `${meal.name}, ${stop.city}` });
-        // nothing in the guide: an onsen town eats at the ryokan; elsewhere, a search near the centre
-        else if (/onsen|ออนเซ็น/i.test(`${stop.city} ${stop.cityTh}`)) items.push({ kind: "eat", slot: "evening", text: "มื้อเย็นที่เรียวกัง (ถ้าจองแบบรวมอาหาร) หรือร้านในหมู่บ้าน", mapQuery: `${stop.city}, Japan` });
-        else items.push({ kind: "eat", slot: "evening", text: `หาร้านมื้อเย็นในตัว${stop.cityTh}`, mapQuery: `${stop.city}, Japan` });
+        const mealName = meal ? `${meal.name}${meal.alt ? ` ${meal.alt}` : ""}` : "";
+        const mealQuery = meal ? (meal.lat ? `${meal.lat},${meal.lon}` : `${meal.name}, ${stop.city}`) : `${stop.city}, Japan`;
+        // an onsen town: most stays include dinner (1泊2食), so the ryokan comes first and a restaurant is the fallback
+        if (/onsen|ออนเซ็น/i.test(`${stop.city} ${stop.cityTh}`)) items.push({ kind: "eat", slot: "evening", text: `มื้อเย็นที่เรียวกัง (ถ้าจองแบบรวมอาหาร) หรือ${meal ? `ร้าน ${mealName}` : "ร้านในหมู่บ้าน"}`, mapQuery: mealQuery });
+        else if (meal) items.push({ kind: "eat", slot: "evening", text: `ร้าน ${mealName}`, mapQuery: mealQuery });
+        else items.push({ kind: "eat", slot: "evening", text: `หาร้านมื้อเย็นในตัว${stop.cityTh}`, mapQuery: mealQuery });
       }
       if (!picks.length && !items.some((it) => it.kind === "move")) items.unshift({ kind: "see", slot: "afternoon", text: `เดินเล่นใน${stop.cityTh}ตามสบาย` });
       items.push({ kind: "stay", slot: "evening", text: `พักที่ ${stop.cityTh}` });
