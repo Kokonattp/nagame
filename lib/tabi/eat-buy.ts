@@ -120,25 +120,38 @@ const card = (l: Listing, area: string, city: string): PlaceCard => ({
   lat: l.la, lon: l.lo, fromStop: fromStop(city, l.la, l.lo),
 });
 
-/** The place and dish in a restaurant question, as the live-search worker takes them. */
-export function eatQuery(message: string, focus: string[]) {
-  if (IS_BUY.test(message)) return undefined; // shopping questions stay with the guide
+// what the live-search worker may look up for each tag (its own allow-list mirrors these words)
+const BUY_WORD: Record<string, string> = { souvenir: "souvenir shops", department: "department stores", market: "markets", electronics: "electronics stores", drugstore: "drugstores", food_gift: "food gift shops" };
+const SLEEP_WORD: Record<string, string> = { ryokan: "ryokan", hostel: "hostels", business: "business hotels" };
+
+/**
+ * The place and what to look for in a restaurant / shopping / stay question, as the live-search worker
+ * takes them: { kind, city, area ("Shinjuku Tokyo"), what ("ramen"), whatTh, placeTh }.
+ */
+export function placeQuery(message: string, focus: string[], stay = false) {
   const district = districtIn(message, focus);
   const city = district?.[1] ?? focus.find((f) => CITY_BY_NAME.has(f));
   if (!city) return undefined;
+  const base = { city, area: district ? `${district[2]} ${city}` : city, district: Boolean(district), placeTh: district ? district[2] : CITY_BY_NAME.get(city)?.th ?? city };
+  if (stay) {
+    const tag = SLEEP_TH.find(([re]) => re.test(message));
+    return { ...base, kind: "stay" as const, what: tag ? SLEEP_WORD[tag[1]] : "hotels", whatTh: tag?.[2] ?? "ที่พัก" };
+  }
+  if (IS_BUY.test(message)) {
+    const tag = BUY_TH.find(([re]) => re.test(message));
+    return { ...base, kind: "buy" as const, what: tag ? BUY_WORD[tag[1]] : "shopping", whatTh: tag?.[2] ?? "ที่ช้อปปิ้ง" };
+  }
   const tag = EAT_TH.find(([re]) => re.test(message));
-  return {
-    city,
-    area: district ? `${district[2]} ${city}` : city,
-    what: tag ? tag[1].replace(/_/g, " ") : "restaurant",
-    whatTh: tag?.[2] ?? "ร้านอาหาร",
-    placeTh: district ? district[2] : CITY_BY_NAME.get(city)?.th ?? city,
-  };
+  return { ...base, kind: "eat" as const, what: tag ? tag[1].replace(/_/g, " ") : "restaurant", whatTh: tag?.[2] ?? "ร้านอาหาร" };
 }
 
-/** Live look-up results as cards, same shape as the snapshot ones. */
-export function livePlaceCards(places: { n: string; r: number; rc: number; url: string; cat: string; la: number; lo: number }[], city: string): PlaceCard[] {
-  return places.slice(0, 6).map((p) => ({ kind: "eat", name: p.n, url: p.url, rating: p.r, reviews: p.rc, tag: cuisineTh(p.cat) || undefined, lat: p.la, lon: p.lo, fromStop: fromStop(city, p.la, p.lo) }));
+/** Live look-up results as cards, same shape as the snapshot ones. A hotel's rate is tonight's (no dates sent). */
+export function livePlaceCards(places: { n: string; r: number; rc: number; url: string; cat: string; la: number; lo: number; price?: { cur: "THB" | "JPY"; amount: number } | null }[], city: string, kind: PlaceCard["kind"] = "eat"): PlaceCard[] {
+  return places.slice(0, 6).map((p) => ({
+    kind, name: p.n, url: p.url, rating: p.r, reviews: p.rc, lat: p.la, lon: p.lo, fromStop: fromStop(city, p.la, p.lo),
+    tag: kind === "eat" ? cuisineTh(p.cat) || undefined : undefined,
+    price: kind === "sleep" && p.price ? `${p.price.cur === "THB" ? "฿" : "¥"}${p.price.amount.toLocaleString("en-US")}/คืน (ราคาคืนนี้)` : undefined,
+  }));
 }
 
 export function findEatBuy(message: string, focus: string[]): EatBuyAnswer {

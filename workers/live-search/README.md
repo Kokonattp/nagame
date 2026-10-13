@@ -1,11 +1,11 @@
 # Live search worker
 
-Every flight-price and restaurant question is checked live (owner decision 2026-10-13): Tabi
+Flight prices, train fares, restaurants, stays, shops and sights are checked live (owner decisions 2026-10-13): Tabi
 sends only the destination + dates (the trip's own, else the 10th of the month asked about), or the
 area + dish, to this worker. Jev UltraFast opens Google Flights / Google Maps in a normal Chrome,
 the page's own results are read (nothing generated), and Tabi answers with "ทาบิเพิ่งเช็ก…".
 When the worker is busy, over its cap, blocked or down, Tabi quietly answers from the published
-snapshots instead. Shopping, stays, sights and the cheapest-dates calendar still use snapshots.
+snapshots / guide instead. The cheapest-dates calendar still uses its daily snapshot.
 
 - **Off by default.** Live checks run only when Vercel has `LIVE_SEARCH_URL` and `LIVE_SEARCH_TOKEN`.
 - **Search only.** No sign-in, no booking. A block or CAPTCHA page ends the search (HTTP 503);

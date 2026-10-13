@@ -5,10 +5,10 @@ import { buildOutbound } from "@/lib/outbound";
 import { CITY_BY_NAME, GATEWAYS, nearestGateway, REGION_TH, type Region } from "./cities";
 import { closedIn, draftItinerary, findPlaceByText, fitRouteToDays, partlyOpenIn, PREF_TH, seasonOf, suggestRoutes, suggestStops } from "./planner";
 import { faqAnswer } from "./faq";
-import { eatQuery, findEatBuy, findStay, livePlaceCards, STAY_WORDS, tabelog } from "./eat-buy";
-import { liveConfigured, liveEat, liveFlight } from "./live-search";
+import { findEatBuy, findStay, livePlaceCards, placeQuery, STAY_WORDS, tabelog } from "./eat-buy";
+import { liveConfigured, liveFlight, livePlaces } from "./live-search";
 import { fetchSafety } from "./safety";
-import { findSights } from "./sights";
+import { findSights, sightQuery } from "./sights";
 import { chatReply } from "./chat-llm";
 import { REGION_CITY, weatherAnswer, weatherCities } from "./weather";
 import { cheapestDates } from "./flight-calendar";
@@ -124,17 +124,58 @@ async function liveFlightBubbles(arrive: string, depart: string, back: string, s
 }
 
 /** Live restaurant list for a food question, or null so the guide / snapshot answer is used. */
-async function liveEatAnswer(message: string, places: string[]): Promise<{ bubbles: string[]; links: { label: string; url: string }[]; places: PlaceCard[] } | null> {
+type LiveList = { bubbles: string[]; links: { label: string; url: string }[]; places: PlaceCard[] };
+const at = (word: string, where: string) => `${word}แถว${/^[A-Za-z]/.test(where) ? " " : ""}${where}`;
+const mapsSearch = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+
+/**
+ * Restaurants, shops or stays checked live in Google Maps (live-search worker), or null so the guide /
+ * snapshot answer is used. Only the area and what to look for leave the server.
+ */
+async function liveListAnswer(message: string, places: string[], stay: boolean): Promise<LiveList | null> {
   if (!liveConfigured()) return null;
-  const q = eatQuery(message, places);
+  const q = placeQuery(message, places, stay);
   if (!q) return null;
-  const res = await liveEat(q.area, q.what);
+  const res = await livePlaces(q.kind, q.area, q.what);
   if ("error" in res || !res.places.length) return null;
-  const search = { label: `ค้น ${q.what} แถว ${q.area} ใน Google Maps (มีรีวิว)`, url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${q.what} ${q.area} Japan`)}` };
+  const n = Math.min(res.places.length, 6);
+  const cardCity = q.district ? "" : q.city; // a district answer is already "where"
+  const search = { label: `ค้น ${q.what} แถว ${q.area} ใน Google Maps (มีรีวิว)`, url: mapsSearch(`${q.what} ${q.area} Japan`) };
+  if (q.kind === "stay") {
+    // "ที่พักถูก ๆ" / "หรู ๆ": order by tonight's rate (places without a rate go last)
+    const band = /ถูก|ประหยัด|งบน้อย|cheap|budget/i.test(message) ? 1 : /หรู|แพง|luxury/i.test(message) ? -1 : 0;
+    if (band) res.places.sort((a, b) => (a.price ? band * a.price.amount : Infinity) - (b.price ? band * b.price.amount : Infinity));
+    return {
+      bubbles: [`${at(q.whatTh, q.placeTh)} ที่คะแนนดีใน Google Maps ตอนนี้ ${n} ที่${band === 1 ? " เรียงจากถูกไปแพง" : band === -1 ? " เรียงจากแพงไปถูก" : ""} ราคาในการ์ดเป็นของคืนนี้`, "ทาบิจองให้ไม่ได้ ราคากับห้องว่างของวันที่พี่ไปดูใน Google Hotels ได้เลย · ทาบิเพิ่งเช็กใน Google Maps"],
+      places: livePlaceCards(res.places, cardCity, "sleep"),
+      links: [{ label: `ดูราคาและห้องว่างแถว ${q.area} ใน Google Hotels`, url: `https://www.google.com/travel/hotels?q=${encodeURIComponent(`${q.what} in ${q.area}`)}` }],
+    };
+  }
+  if (q.kind === "buy") {
+    return {
+      bubbles: [`${at(q.whatTh, q.placeTh)} ที่คะแนนดีใน Google Maps ตอนนี้ ${n} ที่ กดดูรีวิวกับเวลาเปิดได้เลย`, "ร้านอาจปิดหรือย้ายได้ เช็กเวลาเปิดก่อนไปนะ · ทาบิเพิ่งเช็กใน Google Maps"],
+      places: livePlaceCards(res.places, cardCity, "buy"),
+      links: [search],
+    };
+  }
   return {
-    bubbles: [`${q.whatTh}แถว${/^[A-Za-z]/.test(q.placeTh) ? " " : ""}${q.placeTh} ที่คะแนนดีใน Google Maps ตอนนี้ ${Math.min(res.places.length, 6)} ที่ กดดูรีวิวกับเวลาเปิดได้เลย`, "ร้านอาจปิดหรือย้ายได้ เช็กเวลาเปิดก่อนไปนะ · ทาบิเพิ่งเช็กใน Google Maps"],
-    places: livePlaceCards(res.places, q.area === q.city ? q.city : ""),
+    bubbles: [`${at(q.whatTh, q.placeTh)} ที่คะแนนดีใน Google Maps ตอนนี้ ${n} ที่ กดดูรีวิวกับเวลาเปิดได้เลย`, "ร้านอาจปิดหรือย้ายได้ เช็กเวลาเปิดก่อนไปนะ · ทาบิเพิ่งเช็กใน Google Maps"],
+    places: livePlaceCards(res.places, cardCity),
     links: [search, { label: `ดูคะแนนร้าน${q.whatTh === "ร้านอาหาร" ? "" : q.whatTh}แถว ${q.area} ใน Tabelog`, url: tabelog(q.what === "restaurant" ? q.area : `${q.area} ${q.what}`) }],
+  };
+}
+
+/** The best-rated sights in a city right now (Google Maps), or null so the curated list answers. */
+async function liveSightsAnswer(message: string, focus: string[]): Promise<LiveList | null> {
+  if (!liveConfigured()) return null;
+  const q = sightQuery(message, focus);
+  if (!q) return null;
+  const res = await livePlaces("sight", q.area, q.what);
+  if ("error" in res || !res.places.length) return null;
+  return {
+    bubbles: [`${at(q.whatTh, q.placeTh)} ที่คะแนนดีใน Google Maps ตอนนี้ ${Math.min(res.places.length, 6)} ที่ กดดูในแผนที่ได้เลย`, "อยากให้ทาบิจัดเป็นทริปด้วยไหม บอกจำนวนวันมาได้เลย · ทาบิเพิ่งเช็กใน Google Maps"],
+    places: livePlaceCards(res.places, q.city, "see"),
+    links: [{ label: `ค้น${q.whatTh}แถว${q.placeTh} ใน Google Maps`, url: mapsSearch(`${q.what} ${q.area} Japan`) }],
   };
 }
 
@@ -187,14 +228,21 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
   if (u.intent === "find_food_shop" || (u.intent === "booking" && stayAsked)) {
     const places = asked;
     // restaurants: checked live in Google Maps when the worker is up, else the guide / snapshot list
-    const found = stayAsked ? findStay(message, places) : (await liveEatAnswer(message, places)) ?? findEatBuy(message, places);
+    // checked live in Google Maps when the worker is up, else the guide / snapshot list
+    const found = (await liveListAnswer(message, places, stayAsked)) ?? (stayAsked ? findStay(message, places) : findEatBuy(message, places));
     const refuse = u.intent === "booking" ? ["ทาบิจองหรือจ่ายเงินให้ไม่ได้นะ แต่ช่วยหาที่พักให้เลือกได้"] : [];
     return { ...base, action: "answer", bubbles: [...refuse, ...found.bubbles.filter((b) => !refuse.length || !b.includes("จองให้ไม่ได้"))], links: found.links, places: found.places, chips: chipsAfter };
   }
 
   // "ที่เที่ยวเกียวโตมีอะไรบ้าง" / "วัดในนารา": the best-known sights there (a region keeps its whole area)
   if (u.intent === "find_sights") {
-    const found = findSights(message, u.focus.length ? u.focus : intent.focus.length ? intent.focus : tripStops);
+    const where = u.focus.length ? u.focus : intent.focus.length ? intent.focus : tripStops;
+    const live = await liveSightsAnswer(message, where);
+    if (live) {
+      const th = CITY_BY_NAME.get(sightQuery(message, where)!.city)?.th;
+      return { ...base, action: "answer", bubbles: live.bubbles, links: live.links, places: live.places, chips: th ? [`เที่ยว${th} 3 วัน`, `ร้านอาหารแถว${th}`, `ที่พักแถว${th}`] : chipsAfter };
+    }
+    const found = findSights(message, where);
     const th = found.city ? CITY_BY_NAME.get(found.city)?.th : undefined;
     return { ...base, action: "answer", bubbles: found.bubbles, links: found.links, chips: th ? [`เที่ยว${th} 3 วัน`, `ร้านอาหารแถว${th}`, `ที่พักแถว${th}`] : chipsAfter };
   }

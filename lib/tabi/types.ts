@@ -123,7 +123,7 @@ export type FlightLink = {
 };
 
 export type PlaceCard = {
-  kind: "eat" | "buy" | "sleep";
+  kind: "eat" | "buy" | "sleep" | "see";
   name: string;
   url: string;
   /** Google Maps rating + review count (snapshot or live), when known */

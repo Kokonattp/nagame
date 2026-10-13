@@ -439,7 +439,7 @@ function SeasonFx() {
     </div>
   );
 }
-const PLACE_ICON = { eat: "🍜", buy: "🛍️", sleep: "🛏️" } as const;
+const PLACE_ICON = { eat: "🍜", buy: "🛍️", sleep: "🛏️", see: "⛩️" } as const;
 
 /** Straight line ×1.3 at 80 m/min for a walk; beyond ~1.5 km just the distance (a bus or train is likelier). */
 function stopDistance({ name, km }: { name: string; km: number }) {
@@ -1157,6 +1157,7 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
       .catch(() => { /* nothing shown is the safe failure: JMA and the numbers stay on the card */ });
     return () => { live = false; };
   }, [alertCities]);
+  const liveLegs = useLiveFares(trip.route);
   const alerts = nearTrip ? safety.alerts : [];
   const events = safety.events.filter((e) => nearTrip || e.kind === "volcano");
   return (
@@ -1324,8 +1325,8 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
         <Avatar size={44} mood="happy" />
         <p className="text-sm"><b className="text-[var(--t-pink-ink)]">นี่คือร่างทริปคร่าว ๆ</b> เวลาเดินทางเป็นค่าประมาณ บอกทาบิให้ปรับได้ตลอดนะ</p>
       </section>
-      <BudgetCard trip={trip} />
-      {trip.route && <TransportCard route={trip.route} onAsk={onAsk} />}
+      <BudgetCard trip={trip} liveLegs={liveLegs} />
+      {trip.route && <TransportCard route={trip.route} onAsk={onAsk} liveLegs={liveLegs} />}
       <section className="tabi-card p-4">
         <h2 className="tabi-petal mb-2 font-bold">เตรียมก่อนเดินทาง</h2>
         <ul className="space-y-1">
@@ -1375,21 +1376,54 @@ function hopLabel(from: string, to: string, what: string) {
   return t ? `${HOP_ICON[t.mode]} ${what} ~${durationTh(t.minutes)}` : `🚆 ${what}`;
 }
 
+type LiveLeg = { from: string; to: string; yen: number; duration: string | null; line: string | null; checkedAt: string } | null;
+
+/**
+ * Train fare of each leg between the route's cities, checked live on Google Maps by the live-search
+ * worker (/api/tabi/fares). Empty until it answers — and for good when no worker is configured —
+ * so the cards keep the fare table meanwhile.
+ */
+function useLiveFares(route?: RouteOption): LiveLeg[] {
+  const legs = route ? route.stops.slice(1).map((s, i) => `${route.stops[i].city}>${s.city}`).join(",") : "";
+  const [live, setLive] = useState<{ key: string; legs: LiveLeg[] }>({ key: "", legs: [] });
+  useEffect(() => {
+    if (!legs) return;
+    let on = true;
+    fetch(`/api/tabi/fares?legs=${encodeURIComponent(legs)}`)
+      .then((r) => (r.ok ? r.json() : { legs: [] }))
+      .then((d: { legs?: LiveLeg[] }) => { if (on) setLive({ key: legs, legs: d.legs ?? [] }); })
+      .catch(() => {});
+    return () => { on = false; };
+  }, [legs]);
+  return live.key === legs ? live.legs : [];
+}
+
+/** A leg's fare: the live one when checked, else the table's range. */
+function legFareOf(route: RouteOption, i: number, live: LiveLeg[]): (LegFare & { live?: LiveLeg }) | null {
+  const l = live[i];
+  return l ? { min: l.yen, max: l.yen, sources: ["Google Maps"], live: l } : legFare(route.stops[i].city, route.stops[i + 1].city);
+}
+
 /** Subway-map style overview: airport → cities → airport, each hop opens live trains, plus one JR Pass verdict. */
-function TransportCard({ route, onAsk }: { route: RouteOption; onAsk?: (m: string) => void }) {
+function TransportCard({ route, onAsk, liveLegs = [] }: { route: RouteOption; onAsk?: (m: string) => void; liveLegs?: LiveLeg[] }) {
   const first = route.stops[0];
   const last = route.stops[route.stops.length - 1];
   const out = nearestGateway(last).g.airport;
   const airportNames = (code: string) => (AIRPORTS[code] ?? []).map((a) => a.th).join(" / ");
   // train fares between cities: only legs with a checked fare count; the rest point to Google Maps
-  const legFares = route.stops.slice(1).map((s, i) => legFare(route.stops[i].city, s.city));
+  const legFares = route.stops.slice(1).map((_, i) => legFareOf(route, i, liveLegs));
   const known = legFares.filter((f): f is LegFare => !!f);
   const unknown = legFares.length - known.length;
+  const liveAt = liveLegs.find((l) => l)?.checkedAt;
   const hops = [
     { label: hopLabel(`airport:${route.gateway.airport}`, first.city, "เข้าเมือง"), links: legLinks(`airport:${route.gateway.airport}`, first.city) },
     ...route.stops.slice(1).map((s, i) => {
       const fare = legFares[i];
-      return { label: `${hopLabel(route.stops[i].city, s.city, "ไปเมืองถัดไป")}${fare ? ` · ${yenRange(fare)}` : ""}`, links: legLinks(route.stops[i].city, s.city) };
+      const live = fare && "live" in fare ? fare.live : null;
+      const label = live
+        ? `🚆 ไปเมืองถัดไป ${live.duration ? `${live.duration.replace(" hr", " ชม.").replace(" min", " นาที")} · ` : ""}¥${live.yen.toLocaleString("en-US")}${live.line ? ` · ${live.line.replace(/\s{2,}/g, " + ")}` : ""}`
+        : `${hopLabel(route.stops[i].city, s.city, "ไปเมืองถัดไป")}${fare ? ` · ${yenRange(fare)}` : ""}`;
+      return { label, links: legLinks(route.stops[i].city, s.city) };
     }),
     { label: hopLabel(last.city, `airport:${out}`, "ไปสนามบิน"), links: legLinks(last.city, `airport:${out}`) },
   ];
@@ -1431,7 +1465,13 @@ function TransportCard({ route, onAsk }: { route: RouteOption; onAsk?: (m: strin
               : "ดูราคาในปุ่มดูทาง (Google Maps บอกค่ารถ)"}
             {known.length > 0 && unknown > 0 ? ` + อีก ${unknown} ช่วงดูราคาในปุ่มดูทาง` : ""}
           </p>
-          {known.length > 0 && <p className="tabi-muted text-[11px]">ผู้ใหญ่ 1 คน ชั้นธรรมดา ราคาอ้างอิง ณ {thaiDate(isoDay(FARES_CHECKED))} {FARES_CHECKED.slice(0, 4)} อาจเปลี่ยนตามฤดู</p>}
+          {known.length > 0 && (
+            <p className="tabi-muted text-[11px]">
+              {liveAt
+                ? `ผู้ใหญ่ 1 คน ทาบิเช็กใน Google Maps เมื่อ ${thaiDate(isoDay(liveAt.slice(0, 10)))} (เที่ยวรถไฟ 10 โมงเช้า)`
+                : `ผู้ใหญ่ 1 คน ชั้นธรรมดา ราคาอ้างอิง ณ ${thaiDate(isoDay(FARES_CHECKED))} ${FARES_CHECKED.slice(0, 4)} อาจเปลี่ยนตามฤดู`}
+            </p>
+          )}
         </div>
       )}
       <p className="mt-3 rounded-2xl bg-[var(--t-green)] px-3 py-2 text-sm text-[var(--t-green-ink)]">
@@ -1455,7 +1495,7 @@ function TransportCard({ route, onAsk }: { route: RouteOption; onAsk?: (m: strin
 const STAY_YEN_NIGHT = 10_800;
 const FOOD_YEN_DAY = 6_300;
 
-function BudgetCard({ trip }: { trip: SavedTrip }) {
+function BudgetCard({ trip, liveLegs = [] }: { trip: SavedTrip; liveLegs?: LiveLeg[] }) {
   const [fx, setFx] = useState<{ rate: number; date: string } | null>(null);
   useEffect(() => {
     let live = true;
@@ -1466,7 +1506,7 @@ function BudgetCard({ trip }: { trip: SavedTrip }) {
   if (!route) return null;
   const month = trip.intent.startDate ? Number(trip.intent.startDate.slice(5, 7)) : trip.intent.month;
   const fare = flightSnapFor(route.gateway.airport, month);
-  const rail = route.stops.slice(1).map((s, i) => legFare(route.stops[i].city, s.city)).filter((f): f is LegFare => !!f);
+  const rail = route.stops.slice(1).map((_, i) => legFareOf(route, i, liveLegs)).filter((f): f is LegFare => !!f);
   const railYen = rail.length ? { min: rail.reduce((a, f) => a + f.min, 0), max: rail.reduce((a, f) => a + f.max, 0) } : null;
   const nights = route.stops.reduce((a, s) => a + s.nights, 0);
   const days = nights + 1;

@@ -21,6 +21,17 @@ const maps = (q: string) => `https://www.google.com/maps/search/?api=1&query=${e
 
 export type SightsAnswer = { bubbles: string[]; links: { label: string; url: string }[]; city?: string };
 
+// what the live-search worker may look up for each kind of sight (its allow-list mirrors these words)
+const SIGHT_WORD: Record<string, string> = { shrine_temple: "temples", castle: "castles", nature: "parks", museum: "museums", onsen: "onsen" };
+
+/** City + kind of sight for a live Google Maps look-up; a region ("ฮอกไกโด") stays with the curated list. */
+export function sightQuery(message: string, focus: string[]) {
+  const city = focus.find((f) => CITY_BY_NAME.has(f));
+  if (!city) return undefined;
+  const type = TYPE_ASKED.find(([re]) => re.test(message))?.[1];
+  return { city, area: city, what: (type && SIGHT_WORD[type]) || "tourist attractions", whatTh: type ? TYPE_TH[type] : "ที่เที่ยว", placeTh: CITY_BY_NAME.get(city)?.th ?? city };
+}
+
 export function findSights(message: string, focus: string[]): SightsAnswer {
   const where = focus.find((f) => CITY_BY_NAME.has(f) || f.startsWith("region:"));
   if (!where) return { bubbles: [`อยากรู้ที่เที่ยวเมืองไหน? เช่น "ที่เที่ยวเกียวโต" หรือ "วัดในนารา"`], links: [] };

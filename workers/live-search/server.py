@@ -8,6 +8,8 @@ search only, no sign-in, no booking, and a block or CAPTCHA page ends the search
   POST /search   Authorization: Bearer $LIVE_SEARCH_TOKEN
     {"kind": "flight", "to": "Sendai", "depart": "2026-12-10", "back": "2026-12-15"}
     {"kind": "eat", "area": "Sasebo", "what": "ramen"}
+    {"kind": "stay" | "buy" | "sight", "area": "Kyoto", "what": "hotels" | "souvenir shops" | "temples" …}
+    {"kind": "rail", "from": "Kyoto Station", "to": "Osaka Station"}
   GET  /health
 
 Env: LIVE_SEARCH_TOKEN (required), LIVE_CDP_URL (default http://127.0.0.1:9224),
@@ -37,9 +39,17 @@ from jev_ultrafast import Agent  # noqa: E402  (after BU_* so the harness attach
 
 BLOCKED = re.compile(r"unusual traffic|captcha|are you a robot|not a robot|/sorry/", re.I)
 NAME = re.compile(r"^[A-Za-z][A-Za-z .'-]{1,39}$")
-WHAT = {"restaurant", "ramen", "sushi", "udon soba", "yakiniku", "tempura tonkatsu", "okonomiyaki",
-        "izakaya", "seafood", "cafe sweets", "kaiseki", "curry", "cheap"}
-TTL = {"flight": 6 * 3600, "eat": 30 * 86400}  # prices move within hours, restaurants within months
+# what each place search may ask Google Maps for (the app sends one of these words, nothing free-form)
+WHAT = {
+    "eat": {"restaurant", "ramen", "sushi", "udon soba", "yakiniku", "tempura tonkatsu", "okonomiyaki",
+            "izakaya", "seafood", "cafe sweets", "kaiseki", "curry", "cheap"},
+    "stay": {"hotels", "ryokan", "hostels", "business hotels"},
+    "buy": {"souvenir shops", "department stores", "markets", "electronics stores", "drugstores", "food gift shops", "shopping"},
+    "sight": {"tourist attractions", "temples", "shrines", "castles", "museums", "parks", "onsen", "viewpoints"},
+}
+PLACE_KINDS = set(WHAT)
+# prices move within hours (fares, room rates); places and train fares within months
+TTL = {"flight": 6 * 3600, "stay": 6 * 3600, "eat": 30 * 86400, "buy": 30 * 86400, "sight": 30 * 86400, "rail": 30 * 86400}
 
 GOALS = {
     "flight": "Show Google Flights results for this round trip. If a consent dialog is open, close it without signing in. "
@@ -47,6 +57,16 @@ GOALS = {
     "eat": "Show Google Maps search results for restaurants in this area. If a consent or cookie dialog is open, close it "
            "without signing in. Stop as soon as a list of restaurants with star ratings is visible. Do not sign in, "
            "open a website, call, book, or share anything.",
+    "stay": "Show Google Maps search results for places to stay in this area. If a consent or cookie dialog is open, close it "
+            "without signing in. Stop as soon as a list of hotels with star ratings is visible. Do not sign in, open a "
+            "website, check availability, book, or share anything.",
+    "buy": "Show Google Maps search results for shops in this area. If a consent or cookie dialog is open, close it without "
+           "signing in. Stop as soon as a list of shops with star ratings is visible. Do not sign in, buy, or share anything.",
+    "sight": "Show Google Maps search results for places to visit in this area. If a consent or cookie dialog is open, close it "
+             "without signing in. Stop as soon as a list of places with star ratings is visible. Do not sign in, book, or share anything.",
+    "rail": "Show Google Maps public transport directions between these two stations. If a consent or cookie dialog is open, "
+            "close it without signing in. Stop as soon as the route options with travel times and fares are visible. "
+            "Do not sign in, buy tickets, or share anything.",
 }
 
 # same reading as workers/eat-places/collect.py: names/ratings/coords from the result links
@@ -60,7 +80,11 @@ READ_EAT = r"""(() => {
     const rate = text.match(/(\d\.\d)\s*\(([\d,.]+)(K?)\)/);
     const coord = a.href.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
     const after = rate ? text.slice(text.indexOf(rate[0]) + rate[0].length).split('·').map(s => s.trim()) : [];
-    out.push({ n: name, r: rate ? Number(rate[1]) : null,
+    // hotels show tonight's rate ("THB 6,169", "¥12,000", "THB 14K"); ads are labelled "Sponsored"
+    const pm = text.match(/(THB|JPY|¥)\s?([\d.,]+)(K?)/);
+    const price = pm ? { cur: pm[1] === 'THB' ? 'THB' : 'JPY', amount: Math.round(Number(pm[2].replace(/,/g, '')) * (pm[3] ? 1000 : 1)) } : null;
+    if (/Sponsored/.test(text)) continue;
+    out.push({ n: name, r: rate ? Number(rate[1]) : null, price,
       rc: rate ? Math.round(Number(rate[2].replace(/,/g, '')) * (rate[3] ? 1000 : 1)) : null,
       la: coord ? Number(coord[1]) : null, lo: coord ? Number(coord[2]) : null,
       cat: after[0] && after[0].length < 40 ? after[0] : '', url: a.href.split('?')[0] });
@@ -106,18 +130,30 @@ def validate(body):
         if not NAME.match(to) or not (today <= a <= b <= today + timedelta(days=330)) or (b - a).days > 30:
             raise ValueError("bad flight request")
         return kind, {"to": to, "depart": d1, "back": d2}
-    if kind == "eat":
-        area, what = str(body.get("area", "")), str(body.get("what", "restaurant"))
-        if not NAME.match(area) or what not in WHAT:
-            raise ValueError("bad restaurant request")
+    if kind in PLACE_KINDS:
+        area, what = str(body.get("area", "")), str(body.get("what", ""))
+        if not NAME.match(area) or what not in WHAT[kind]:
+            raise ValueError(f"bad {kind} request")
         return kind, {"area": area, "what": what}
-    raise ValueError("kind must be flight or eat")
+    if kind == "rail":
+        a, b = str(body.get("from", "")), str(body.get("to", ""))
+        if not NAME.match(a) or not NAME.match(b) or a == b:
+            raise ValueError("bad rail request")
+        return kind, {"from": a, "to": b}
+    raise ValueError("kind must be flight, rail, eat, stay, buy or sight")
 
 
 def url_for(kind, q):
     if kind == "flight":
         words = f"Flights to {q['to']} from Bangkok on {q['depart']} through {q['back']}"
         return f"https://www.google.com/travel/flights?hl=en&curr=THB&q={quote(words)}"
+    if kind == "rail":
+        # public transport (3e3) leaving 10:00 tomorrow (8j = local time as epoch seconds): at night the
+        # first option is a night bus with no fare shown; mid-morning it is the train people actually take
+        d = date.today() + timedelta(days=1)
+        t10 = int(datetime(d.year, d.month, d.day, 10, 0, tzinfo=timezone.utc).timestamp())
+        return (f"https://www.google.com/maps/dir/{quote_plus(q['from'] + ' Japan')}/{quote_plus(q['to'] + ' Japan')}"
+                f"/data=!4m6!4m5!2m3!6e0!7e2!8j{t10}!3e3?hl=en")
     word = "restaurants" if q["what"] in {"restaurant", "cheap"} else q["what"]
     words = f"{word} in {q['area']} Japan"
     return f"https://www.google.com/maps/search/{quote_plus(words)}?hl=en"
@@ -152,6 +188,20 @@ def run_search(kind, q):
                 cheapest, flights = None, []
             nonstop = min((f for f in flights if f["nonstop"]), key=lambda f: f["price"], default=None)
             return {"cheapest": cheapest, "nonstop": nonstop, "results": len(flights), "url": url}
+        if kind == "rail":
+            # only the first (best) option is expanded: "2 hr 15 min / 10:00 AM—12:15 PM / Tokaido Shinkansen / … / ¥13,320 / Details"
+            if "¥" not in text:
+                time.sleep(3)
+                text = agent.browser.evaluate("document.body.innerText") or ""
+            text = re.sub(r"[   ]", " ", text)
+            start = text.find("Copy link")
+            block = text[start: text.find("Details", start)] if start >= 0 and "Details" in text[start:] else ""
+            lines = [x.strip() for x in block.splitlines() if x.strip()]
+            fare = re.search(r"¥\s?([\d,]+)", block)
+            dur = next((x for x in lines if re.fullmatch(r"\d+ hr(?: \d+ min)?|\d+ min", x)), None)
+            t = next((i for i, x in enumerate(lines) if "—" in x), -1)
+            line = lines[t + 1] if 0 <= t < len(lines) - 1 and not lines[t + 1].startswith("¥") else None
+            return {"yen": int(fare.group(1).replace(",", "")) if fare else None, "duration": dur, "line": re.sub(r"\s{2,}", " · ", line) if line else None, "url": url}
         rows = [r for r in agent.browser.evaluate(READ_EAT) if (r["r"] or 0) >= 3.8 and (r["rc"] or 0) >= 20 and r["la"] is not None]
         seen, out = set(), []
         for r in sorted(rows, key=lambda r: (r["r"] * r["rc"] + 400) / (r["rc"] + 100), reverse=True):
