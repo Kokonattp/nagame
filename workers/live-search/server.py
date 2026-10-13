@@ -1,7 +1,7 @@
 """Live search worker: Tabi asks, Jev UltraFast looks it up in a normal Chrome, Tabi answers.
 
-Used only when the traveller asks for something outside the published snapshots and taps
-"🔎 เช็กสด: …". It drives whatever Chrome LIVE_CDP_URL points at — Chrome on a small cloud
+Every flight and restaurant question goes through here first; when the worker is busy, over its
+daily cap, blocked or down, Tabi answers from the published snapshots instead. It drives whatever Chrome LIVE_CDP_URL points at — Chrome on a small cloud
 machine (see Dockerfile) or the owner's PC. Never a browser service that solves CAPTCHAs:
 search only, no sign-in, no booking, and a block or CAPTCHA page ends the search.
 
@@ -27,7 +27,8 @@ from urllib.parse import quote, quote_plus
 TOKEN = os.environ.get("LIVE_SEARCH_TOKEN", "")
 CAP = int(os.environ.get("LIVE_DAILY_CAP", "100"))
 PORT = int(os.environ.get("PORT", "8790"))
-DEADLINE_S = 40  # the app waits ~55 s in total
+DEADLINE_S = 30  # one search; the app waits ~50 s in total
+QUEUE_S = 15  # how long a question waits for the one Chrome
 os.environ.setdefault("BU_CDP_URL", os.environ.get("LIVE_CDP_URL", "http://127.0.0.1:9224"))
 os.environ.setdefault("BU_NAME", "nagame-live")
 
@@ -193,7 +194,8 @@ class Handler(BaseHTTPRequestHandler):
             State.day, State.used = date.today(), 0
         if State.used >= CAP:
             return self._send(429, {"error": "daily cap reached"})
-        if not State.lock.acquire(blocking=False):
+        # one Chrome: later questions queue briefly, then the app falls back to its snapshots
+        if not State.lock.acquire(timeout=QUEUE_S):
             return self._send(429, {"error": "busy"})
         try:
             State.used += 1

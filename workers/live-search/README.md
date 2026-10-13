@@ -1,16 +1,17 @@
-# Live search worker ("🔎 เช็กสด: …")
+# Live search worker
 
-When a traveller asks for something the published snapshots don't cover — the fare for their
-exact dates, or a dish Tabi has no restaurant names for — Tabi offers a **🔎 เช็กสด** chip.
-Tapping it sends only the destination + dates, or the area + dish, to this worker. Jev UltraFast
-opens Google Flights / Google Maps in a normal Chrome, the page's own results are read
-(nothing generated), and Tabi answers with "ทาบิเพิ่งเช็ก…".
+Every flight-price and restaurant question is checked live (owner decision 2026-10-13): Tabi
+sends only the destination + dates (the trip's own, else the 10th of the month asked about), or the
+area + dish, to this worker. Jev UltraFast opens Google Flights / Google Maps in a normal Chrome,
+the page's own results are read (nothing generated), and Tabi answers with "ทาบิเพิ่งเช็ก…".
+When the worker is busy, over its cap, blocked or down, Tabi quietly answers from the published
+snapshots instead. Shopping, stays, sights and the cheapest-dates calendar still use snapshots.
 
-- **Off by default.** The chip appears only when Vercel has `LIVE_SEARCH_URL` and `LIVE_SEARCH_TOKEN`.
+- **Off by default.** Live checks run only when Vercel has `LIVE_SEARCH_URL` and `LIVE_SEARCH_TOKEN`.
 - **Search only.** No sign-in, no booking. A block or CAPTCHA page ends the search (HTTP 503);
   Tabi then shows the Google link instead. Do **not** point it at a browser service that solves
   CAPTCHAs (Browser Use Cloud does, always) — project rule.
-- **Bounded.** One search at a time (a second gets "busy"), `LIVE_DAILY_CAP` searches a day
+- **Bounded.** One search at a time (others queue up to 15 s, then get "busy"), `LIVE_DAILY_CAP` searches a day
   (default 100), results cached in memory (flights 6 h, restaurants 30 days).
 - Tested: Sasebo ramen 3.4 s, Bangkok ⇄ Sendai 7.4 s, Bangkok ⇄ Tokyo 7.6 s, cache hit 0.06 s.
 

@@ -100,10 +100,11 @@ export const tabelog = (q: string) => `https://tabelog.com/en/rstLst/?sw=${encod
 const maps = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 const mapsLink = (l: Listing, area: string) => l.g?.url ?? (l.la && l.lo ? maps(`${l.n} ${l.la},${l.lo}`) : maps(`${l.n} ${area} Japan`));
 
-export type EatBuyAnswer = { bubbles: string[]; links: { label: string; url: string }[]; /** "🔎 เช็กสด: ราเมนที่ซาเซโบะ" when a live look-up would add something */ live?: string };
+export type EatBuyAnswer = { bubbles: string[]; links: { label: string; url: string }[] };
 
 /** The place and dish in a restaurant question, as the live-search worker takes them. */
 export function eatQuery(message: string, focus: string[]) {
+  if (IS_BUY.test(message)) return undefined; // shopping questions stay with the guide
   const district = districtIn(message, focus);
   const city = district?.[1] ?? focus.find((f) => CITY_BY_NAME.has(f));
   if (!city) return undefined;
@@ -168,13 +169,11 @@ export function findEatBuy(message: string, focus: string[]): EatBuyAnswer {
   if (tag && !tagged.length) links.unshift(search, ...tabelogLink);
   else links.push(search, ...tabelogLink);
 
-  // restaurants Tabi has no names for (none at all, or none of the dish asked for): offer a live look-up
-  const live = kind === "eat" && (!picks.length || (tag && !tagged.length)) ? `🔎 เช็กสด: ${what}ที่${place}` : undefined;
   if (!picks.length) {
-    return { bubbles: [`${what}แถว${/^[A-Za-z]/.test(place) ? " " : ""}${place} ทาบิยังไม่มีข้อมูลจากไกด์ กดค้นใน Google Maps ได้เลย ดูรีวิวกับเวลาเปิดประกอบได้`], links, live };
+    return { bubbles: [`${what}แถว${/^[A-Za-z]/.test(place) ? " " : ""}${place} ทาบิยังไม่มีข้อมูลจากไกด์ กดค้นใน Google Maps ได้เลย ดูรีวิวกับเวลาเปิดประกอบได้`], links };
   }
   const credit = fromGoogle ? `คะแนนจาก Google Maps ทาบิเช็กเมื่อ ${thDate(G_SNAP.checkedAt)}` : "ข้อมูล: Wikivoyage";
-  return { bubbles: [...lead, `ร้านอาจปิดหรือย้ายได้ เช็กเวลาเปิดใน Google Maps ก่อนไปนะ · ${credit}`], links, live };
+  return { bubbles: [...lead, `ร้านอาจปิดหรือย้ายได้ เช็กเวลาเปิดใน Google Maps ก่อนไปนะ · ${credit}`], links };
 }
 
 // dinner in a day plan: places a traveller sits down for in the evening, from the guide
