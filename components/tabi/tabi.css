@@ -187,6 +187,26 @@
   .tabi .tabi-sprite img { animation: none !important; transform: none; }
 }
 
+/* Home hero Tabi (full body, dancing): hold to squash, let go and it boings back. */
+.tabi-hero-cat { position: absolute; right: 4px; bottom: -6px; width: 150px; height: 150px; z-index: 2; }
+@media (min-width: 1024px) { .tabi-hero-cat { right: 24px; bottom: -4px; width: 250px; height: 250px; } }
+
+/* the dancing body + an invisible press target over the cat (not the empty corners) */
+.tabi-dancer { position: absolute; inset: 0; display: block; }
+.tabi-dancer-body { position: absolute; inset: 0; transform-origin: 50% 82%; will-change: transform; }
+.tabi-dancer .tabi-sprite img { width: 1600%; animation: tabi-sprite 1.6s steps(16) infinite; }
+.tabi-dancer-target { position: absolute; inset: 14% 18% 8%; border-radius: 45%; background: none; border: 0; padding: 0; cursor: grab; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
+.tabi-dancer-target:active { cursor: grabbing; }
+.tabi-dancer-target:focus-visible { outline: 3px solid var(--t-blue, #1a66d9); outline-offset: 4px; }
+@media (prefers-reduced-motion: reduce) { .tabi-dancer-body { transform: none !important; } }
+
+/* phone: one Tabi rides between docks while scrolling; the docks' own art steps aside */
+.tabi-dock-hello { display: grid; place-items: center; width: 72px; height: 72px; margin: -8px -4px -8px -8px; flex-shrink: 0; }
+.tabi-traveler { position: fixed; inset: 0; z-index: 30; pointer-events: none; overflow: hidden; }
+.tabi-traveler-box { position: absolute; left: 0; top: 0; will-change: transform; }
+.tabi-traveler .tabi-dancer-target { pointer-events: auto; }
+html[data-tabi-traveler="on"] [data-tabi-dock] > * { visibility: hidden; }
+
 /* ── playful hover / press (video feel: soft jelly bounce). Hover only where a real pointer exists;
    phones get the press squish. Lifts use `translate`/`scale` so they stack on top of .tabi-rise. ── */
 @keyframes tabi-jelly {

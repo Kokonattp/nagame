@@ -6,10 +6,11 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowRight, ArrowUp, CalendarDays, ChevronLeft, CircleHelp, Heart, Home, Map as MapIcon, Pencil, Plane, Plus, Send, User } from "lucide-react";
 import type { HazardAlert } from "@/lib/tabi/alerts";
 import { nearestGateway } from "@/lib/tabi/cities";
-import { TABI_ART, type TabiMood } from "@/lib/tabi/mascot";
+import { TABI_ART, TABI_DANCE, type TabiMood } from "@/lib/tabi/mascot";
 import { encodeShare, shareRef, tripTitle } from "@/lib/tabi/share";
 import type { SharedTrip } from "@/lib/tabi/share-server";
 import { listTrips, newTrip, saveTrip, type SavedTrip } from "@/lib/tabi/store";
@@ -433,6 +434,164 @@ function SeasonFx() {
     </div>
   );
 }
+/* ── Squishy Tabi (soft-toy feel): leans away from the pointer, squashes when pressed,
+   springs back with a wobble when let go. One under-damped spring per axis. ── */
+type Pose = { x: number; y: number; r: number; sx: number; sy: number };
+const REST: Pose = { x: 0, y: 0, r: 0, sx: 1, sy: 1 };
+const PRESSED: Pose = { x: 0, y: 14, r: 0, sx: 1.24, sy: 0.72 };
+const SPRING = { k: 380, c: 13, m: 0.8 }; // damping ratio ≈ 0.37 → two or three visible bounces
+
+/** `touchOnly`: the phone traveler sits at the end of <body>, so it stays out of the Tab order (a finger toy there). */
+function DancingTabi({ squish = true, touchOnly = false }: { squish?: boolean; touchOnly?: boolean }) {
+  const body = useRef<HTMLSpanElement>(null);
+  const goal = useRef<Pose>(REST);
+  const held = useRef<number | null>(null);
+  const kick = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    const el = body.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const keys = ["x", "y", "r", "sx", "sy"] as const;
+    const pos = { ...REST };
+    const vel = { x: 0, y: 0, r: 0, sx: 0, sy: 0 };
+    let raf = 0;
+    let last = 0;
+    const tick = (t: number) => {
+      const dt = last ? Math.min(0.032, (t - last) / 1000) : 0.016;
+      last = t;
+      let moving = false;
+      for (const k of keys) {
+        const f = -SPRING.k * (pos[k] - goal.current[k]) - SPRING.c * vel[k];
+        vel[k] += (f / SPRING.m) * dt;
+        pos[k] += vel[k] * dt;
+        if (Math.abs(vel[k]) > 0.002 || Math.abs(pos[k] - goal.current[k]) > 0.002) moving = true;
+      }
+      el.style.transform = `translate(${pos.x}px, ${pos.y}px) rotate(${pos.r}deg) scale(${pos.sx}, ${pos.sy})`;
+      raf = moving ? requestAnimationFrame(tick) : 0;
+      if (!moving) last = 0;
+    };
+    kick.current = () => { if (!raf) raf = requestAnimationFrame(tick); };
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const aim = (p: Pose) => { goal.current = p; kick.current(); };
+  const lean = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (held.current !== null || e.pointerType === "touch") return;
+    const b = e.currentTarget.getBoundingClientRect();
+    const nx = Math.max(-1, Math.min(1, ((e.clientX - b.left) / b.width) * 2 - 1));
+    const ny = Math.max(-1, Math.min(1, ((e.clientY - b.top) / b.height) * 2 - 1));
+    aim({ x: -14 * nx, y: -8 * ny, r: -7 * nx, sx: 1.03, sy: 0.97 }); // shies away from the cursor
+  };
+  const let_go = () => { held.current = null; aim(REST); };
+
+  return (
+    <span className="tabi-dancer">
+      <span ref={body} className="tabi-dancer-body">
+        <span className="tabi-sprite" aria-hidden>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={TABI_DANCE.sprite} alt="" />
+        </span>
+      </span>
+      {squish && (
+        <button
+          type="button"
+          className="tabi-dancer-target"
+          aria-label="บีบทาบิแล้วปล่อยให้เด้ง"
+          tabIndex={touchOnly ? -1 : undefined}
+          onPointerEnter={lean}
+          onPointerMove={lean}
+          onPointerLeave={() => { if (held.current === null) aim(REST); }}
+          onPointerDown={(e) => {
+            if (!e.isPrimary || e.button !== 0 || held.current !== null) return;
+            held.current = e.pointerId;
+            e.currentTarget.setPointerCapture(e.pointerId);
+            aim(PRESSED);
+          }}
+          onPointerUp={(e) => { if (held.current === e.pointerId) let_go(); }}
+          onPointerCancel={let_go}
+          onKeyDown={(e) => { if ((e.key === " " || e.key === "Enter") && !e.repeat) aim(PRESSED); }}
+          onKeyUp={(e) => { if (e.key === " " || e.key === "Enter") aim(REST); }}
+        />
+      )}
+    </span>
+  );
+}
+
+/**
+ * Phones: one Tabi rides down the home page as you scroll — it leaves the hero and settles on the
+ * next `[data-tabi-dock]` as that spot comes up, hopping in an arc on the way. Docks keep their own
+ * still art, so desktop, reduced motion and data saver simply show Tabi in place.
+ */
+function TabiTraveler() {
+  const [on, setOn] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const [atHero, setAtHero] = useState(true);
+
+  useEffect(() => {
+    const phone = window.matchMedia("(max-width: 1023px)");
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const saver = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+    const sync = () => setOn(phone.matches && !calm.matches && !saver && document.querySelectorAll("[data-tabi-dock]").length > 1);
+    sync();
+    phone.addEventListener("change", sync);
+    calm.addEventListener("change", sync);
+    return () => { phone.removeEventListener("change", sync); calm.removeEventListener("change", sync); };
+  }, []);
+
+  useEffect(() => {
+    if (!on) return;
+    const root = document.documentElement;
+    root.dataset.tabiTraveler = "on";
+    let raf = 0;
+    let hero = true;
+    const ease = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2);
+    const frame = () => {
+      const el = box.current;
+      const docks = [...document.querySelectorAll<HTMLElement>("[data-tabi-dock]")].map((d) => d.getBoundingClientRect());
+      if (el && docks.length) {
+        const h = window.innerHeight;
+        // the last dock whose middle has come up into the screen is where Tabi is heading
+        let j = 0;
+        docks.forEach((d, i) => { if (d.top + d.height / 2 < h) j = i; });
+        const to = docks[j];
+        const from = docks[Math.max(0, j - 1)];
+        const p = j === 0 ? 1 : ease(Math.max(0, Math.min(1, (h - (to.top + to.height / 2)) / (0.3 * h))));
+        const lerp = (a: number, b: number) => a + (b - a) * p;
+        const size = lerp(from.height, to.height);
+        const x = lerp(from.left + from.width / 2, to.left + to.width / 2) - size / 2;
+        const y = lerp(from.top + from.height / 2, to.top + to.height / 2) - size / 2 - Math.sin(Math.PI * p) * h * 0.08;
+        el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+        el.style.width = el.style.height = `${size}px`;
+        const nowHero = j === 0 || p === 0;
+        if (nowHero !== hero) { hero = nowHero; setAtHero(nowHero); }
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    const visibility = () => {
+      cancelAnimationFrame(raf);
+      raf = document.hidden ? 0 : requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener("visibilitychange", visibility);
+      delete root.dataset.tabiTraveler;
+    };
+  }, [on]);
+
+  if (!on) return null;
+  // portalled to <body>: an animated ancestor (transform) would otherwise trap `position: fixed`
+  return createPortal(
+    <div className="tabi-traveler" aria-hidden={!atHero}>
+      <div ref={box} className="tabi-traveler-box">
+        <DancingTabi squish={atHero} touchOnly />
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 /** Plays the 12-frame three.js loop (breathe, sway, tail wag, blink) unless `animated={false}`. */
 function Avatar({ mood = "idle", size = 44, wag = false, animated = true }: { mood?: TabiMood; size?: number; wag?: boolean; animated?: boolean }) {
   const art = TABI_ART[mood];
@@ -577,8 +736,10 @@ function HomeScreen({ onAsk }: { onAsk: (m: string) => void }) {
           <h1 className="text-[34px] font-bold leading-[1.15] tracking-tight lg:text-[52px]">เริ่มวางแผน<br />ทริปญี่ปุ่น 🌸</h1>
           <p className="mt-2 max-w-[260px] font-medium text-[var(--t-navy)] lg:max-w-[380px] lg:text-lg">บอกทาบิว่าอยากไปช่วงไหน กี่วัน และชอบเที่ยวแนวไหน</p>
         </div>
-        <p className="absolute bottom-2 right-3 rounded-full bg-black/40 px-2 text-[10px] text-white">ภาพ: Wikipedia</p>
+        <p className="absolute bottom-2 left-3 rounded-full bg-black/40 px-2 text-[10px] text-white">ภาพ: Wikipedia</p>
+        <div data-tabi-dock="hero" className="tabi-hero-cat"><DancingTabi /></div>
       </section>
+      <TabiTraveler />
       <div className="space-y-6">
       <div className="tabi-ask-row flex items-center gap-3">
         <Avatar size={52} />
@@ -609,7 +770,7 @@ function HomeScreen({ onAsk }: { onAsk: (m: string) => void }) {
         <p className="tabi-muted mt-1 text-[11px]">ภาพ: Wikipedia</p>
       </section>
       <section className="tabi-card flex gap-3 bg-[var(--t-sakura)] p-4">
-        <Avatar size={56} mood="happy" animated />
+        <span data-tabi-dock="hello" className="tabi-dock-hello"><Avatar size={56} mood="happy" animated /></span>
         <div>
           <p className="font-bold text-[var(--t-pink-ink)]">สวัสดี! ทาบิเองนะ</p>
           <p className="text-sm">ทาบิจะเสนอเส้นทางไม่เกิน 3 แบบ เลือกแล้วจัดเป็นแผนรายวันให้ ปรับได้ด้วยการพิมพ์บอก</p>
