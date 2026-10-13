@@ -133,7 +133,7 @@ async function liveEatAnswer(message: string, places: string[]): Promise<{ bubbl
   const search = { label: `ค้น ${q.what} แถว ${q.area} ใน Google Maps (มีรีวิว)`, url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${q.what} ${q.area} Japan`)}` };
   return {
     bubbles: [`${q.whatTh}แถว${/^[A-Za-z]/.test(q.placeTh) ? " " : ""}${q.placeTh} ที่คะแนนดีใน Google Maps ตอนนี้ ${Math.min(res.places.length, 6)} ที่ กดดูรีวิวกับเวลาเปิดได้เลย`, "ร้านอาจปิดหรือย้ายได้ เช็กเวลาเปิดก่อนไปนะ · ทาบิเพิ่งเช็กใน Google Maps"],
-    places: livePlaceCards(res.places),
+    places: livePlaceCards(res.places, q.area === q.city ? q.city : ""),
     links: [search, { label: `ดูคะแนนร้าน${q.whatTh === "ร้านอาหาร" ? "" : q.whatTh}แถว ${q.area} ใน Tabelog`, url: tabelog(q.what === "restaurant" ? q.area : `${q.area} ${q.what}`) }],
   };
 }

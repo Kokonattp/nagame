@@ -138,6 +138,8 @@ export type PlaceCard = {
   /** where it is (pin on the answer's overview map) */
   lat?: number;
   lon?: number;
+  /** straight-line distance from the city's main station / terminal / port (data/transport/stations.json) */
+  fromStop?: { name: string; km: number };
 };
 
 export type TabiReply = {

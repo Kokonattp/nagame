@@ -1,0 +1,708 @@
+{
+ "source": "OpenStreetMap contributors (ODbL), via Nominatim",
+ "checkedAt": "2026-10-13",
+ "stations": {
+  "Fukuoka": {
+   "name": "Hakata Station",
+   "lat": 33.59004,
+   "lon": 130.4199,
+   "osm": "way/72653571"
+  },
+  "Tokyo": {
+   "name": "Tokyo Station",
+   "lat": 35.68174,
+   "lon": 139.76432,
+   "osm": "way/661610689"
+  },
+  "Osaka": {
+   "name": "Osaka Station",
+   "lat": 34.70194,
+   "lon": 135.49712,
+   "osm": "node/5357207422"
+  },
+  "Kyoto": {
+   "name": "Kyoto Station",
+   "lat": 34.98645,
+   "lon": 135.75868,
+   "osm": "node/2794182048"
+  },
+  "Sapporo": {
+   "name": "Sapporo Station",
+   "lat": 43.06866,
+   "lon": 141.35079,
+   "osm": "way/115507509"
+  },
+  "Nagoya": {
+   "name": "Nagoya Station",
+   "lat": 35.17118,
+   "lon": 136.88391,
+   "osm": "node/7784263289"
+  },
+  "Yokohama": {
+   "name": "Yokohama Station",
+   "lat": 35.45099,
+   "lon": 139.63102,
+   "osm": "node/2738954706"
+  },
+  "Nara": {
+   "name": "Nara Station",
+   "lat": 34.68081,
+   "lon": 135.81894,
+   "osm": "node/267336809"
+  },
+  "Kobe": {
+   "name": "Sannomiya Station",
+   "lat": 34.69324,
+   "lon": 135.1951,
+   "osm": "node/9201534404"
+  },
+  "Hiroshima": {
+   "name": "Hiroshima Station",
+   "lat": 34.39783,
+   "lon": 132.47558,
+   "osm": "way/121045837"
+  },
+  "Kanazawa": {
+   "name": "Kanazawa Station",
+   "lat": 36.57742,
+   "lon": 136.64933,
+   "osm": "node/8490776142"
+  },
+  "Takayama": {
+   "name": "Takayama Station",
+   "lat": 36.14113,
+   "lon": 137.25128,
+   "osm": "node/265830186"
+  },
+  "Kawaguchiko": {
+   "name": "Kawaguchiko Station",
+   "lat": 35.49856,
+   "lon": 138.76834,
+   "osm": "node/11586058003"
+  },
+  "Hakone": {
+   "name": "Hakone-Yumoto Station",
+   "lat": 35.2332,
+   "lon": 139.10347,
+   "osm": "way/235933667"
+  },
+  "Naha": {
+   "name": "Kenchomae Station",
+   "lat": 26.21429,
+   "lon": 127.67963,
+   "osm": "node/11433161237"
+  },
+  "Kamakura": {
+   "name": "Kamakura Station",
+   "lat": 35.319,
+   "lon": 139.55068,
+   "osm": "way/101918460"
+  },
+  "Nikko": {
+   "name": "Tobu-Nikko Station",
+   "lat": 36.74741,
+   "lon": 139.61895,
+   "osm": "node/4310299597"
+  },
+  "Matsumoto": {
+   "name": "Matsumoto Station",
+   "lat": 36.23073,
+   "lon": 137.96444,
+   "osm": "node/6036834287"
+  },
+  "Nagano": {
+   "name": "Nagano Station",
+   "lat": 36.64312,
+   "lon": 138.18856,
+   "osm": "way/87612417"
+  },
+  "Sendai": {
+   "name": "Sendai Station",
+   "lat": 38.25975,
+   "lon": 140.88002,
+   "osm": "node/264415884"
+  },
+  "Kagoshima": {
+   "name": "Kagoshima-Chuo Station",
+   "lat": 31.58466,
+   "lon": 130.5435,
+   "osm": "node/872919582"
+  },
+  "Beppu": {
+   "name": "Beppu Station",
+   "lat": 33.27962,
+   "lon": 131.50031,
+   "osm": "node/8269550070"
+  },
+  "Kumamoto": {
+   "name": "Kumamoto Station",
+   "lat": 32.78968,
+   "lon": 130.6897,
+   "osm": "node/270881740"
+  },
+  "Miyajima": {
+   "name": "Miyajimaguchi Station",
+   "lat": 34.31231,
+   "lon": 132.30294,
+   "osm": "node/6063546665"
+  },
+  "Ishigaki": {
+   "name": "Ishigaki Port Terminal",
+   "lat": 24.32651,
+   "lon": 124.14157,
+   "osm": "way/712398528"
+  },
+  "Matsuyama": {
+   "name": "Matsuyama Station",
+   "lat": 33.83978,
+   "lon": 132.75076,
+   "osm": "way/1314617025"
+  },
+  "Okayama": {
+   "name": "Okayama Station",
+   "lat": 34.66541,
+   "lon": 133.91783,
+   "osm": "node/11435050207"
+  },
+  "Kurashiki": {
+   "name": "Kurashiki Station",
+   "lat": 34.60195,
+   "lon": 133.76578,
+   "osm": "node/6375717341"
+  },
+  "Takamatsu": {
+   "name": "Takamatsu Station",
+   "lat": 34.35069,
+   "lon": 134.04615,
+   "osm": "node/8667971394"
+  },
+  "Aomori": {
+   "name": "Aomori Station",
+   "lat": 40.82887,
+   "lon": 140.73357,
+   "osm": "relation/12606576"
+  },
+  "Hakodate": {
+   "name": "Hakodate Station",
+   "lat": 41.77434,
+   "lon": 140.72625,
+   "osm": "node/8206074563"
+  },
+  "Otaru": {
+   "name": "Otaru Station",
+   "lat": 43.19725,
+   "lon": 140.99419,
+   "osm": "node/10295331542"
+  },
+  "Asahikawa": {
+   "name": "Asahikawa Station",
+   "lat": 43.76442,
+   "lon": 142.36014,
+   "osm": "node/1256677824"
+  },
+  "Shizuoka": {
+   "name": "Shizuoka Station",
+   "lat": 34.97154,
+   "lon": 138.38833,
+   "osm": "node/3999393706"
+  },
+  "Atami": {
+   "name": "Atami Station",
+   "lat": 35.10288,
+   "lon": 139.07802,
+   "osm": "node/10235169236"
+  },
+  "Izu": {
+   "name": "Shuzenji Station",
+   "lat": 34.97921,
+   "lon": 138.95047,
+   "osm": "way/450149044"
+  },
+  "Himeji": {
+   "name": "Himeji Station",
+   "lat": 34.8264,
+   "lon": 134.6908,
+   "osm": "node/265895565"
+  },
+  "Wakayama": {
+   "name": "Wakayama Station",
+   "lat": 34.23221,
+   "lon": 135.19158,
+   "osm": "node/2277099389"
+  },
+  "Koyasan": {
+   "name": "Koyasan Station",
+   "lat": 34.22768,
+   "lon": 135.57735,
+   "osm": "node/360076795"
+  },
+  "Karuizawa": {
+   "name": "Karuizawa Station",
+   "lat": 36.34307,
+   "lon": 138.6363,
+   "osm": "node/1451328166"
+  },
+  "Yufuin": {
+   "name": "Yufuin Station",
+   "lat": 33.26245,
+   "lon": 131.355,
+   "osm": "node/11889150036"
+  },
+  "Toyama": {
+   "name": "Toyama Station",
+   "lat": 36.70054,
+   "lon": 137.21309,
+   "osm": "node/5068099004"
+  },
+  "Furano": {
+   "name": "Furano Station",
+   "lat": 43.3469,
+   "lon": 142.39166,
+   "osm": "node/264430570"
+  },
+  "Biei": {
+   "name": "Biei Station",
+   "lat": 43.59096,
+   "lon": 142.46123,
+   "osm": "node/264430307"
+  },
+  "Noboribetsu": {
+   "name": "Noboribetsu Station",
+   "lat": 42.45201,
+   "lon": 141.1808,
+   "osm": "node/7354956522"
+  },
+  "Niseko": {
+   "name": "Niseko Station",
+   "lat": 42.80893,
+   "lon": 140.68476,
+   "osm": "node/264423856"
+  },
+  "Kushiro": {
+   "name": "Kushiro Station",
+   "lat": 42.99046,
+   "lon": 144.38203,
+   "osm": "way/284006303"
+  },
+  "Abashiri": {
+   "name": "Abashiri Station",
+   "lat": 44.01994,
+   "lon": 144.25411,
+   "osm": "node/4837965683"
+  },
+  "Obihiro": {
+   "name": "Obihiro Station",
+   "lat": 42.9181,
+   "lon": 143.20202,
+   "osm": "node/8463602402"
+  },
+  "Toya": {
+   "name": "Toyako Onsen Bus Terminal",
+   "lat": 42.56436,
+   "lon": 140.81767,
+   "osm": "node/3079580188"
+  },
+  "Wakkanai": {
+   "name": "Wakkanai Station",
+   "lat": 45.41662,
+   "lon": 141.6772,
+   "osm": "node/264455577"
+  },
+  "Morioka": {
+   "name": "Morioka Station",
+   "lat": 39.70059,
+   "lon": 141.13669,
+   "osm": "node/3647437876"
+  },
+  "Hiraizumi": {
+   "name": "Hiraizumi Station",
+   "lat": 38.98809,
+   "lon": 141.11764,
+   "osm": "node/264170614"
+  },
+  "Akita": {
+   "name": "Akita Station",
+   "lat": 39.71688,
+   "lon": 140.12967,
+   "osm": "node/5643841222"
+  },
+  "Kakunodate": {
+   "name": "Kakunodate Station",
+   "lat": 39.5917,
+   "lon": 140.57103,
+   "osm": "way/253970108"
+  },
+  "Hirosaki": {
+   "name": "Hirosaki Station",
+   "lat": 40.5986,
+   "lon": 140.48577,
+   "osm": "node/264462308"
+  },
+  "Yamagata": {
+   "name": "Yamagata Station",
+   "lat": 38.24847,
+   "lon": 140.3278,
+   "osm": "node/3585108748"
+  },
+  "Tsuruoka": {
+   "name": "Tsuruoka Station",
+   "lat": 38.73929,
+   "lon": 139.83634,
+   "osm": "node/4102502782"
+  },
+  "Matsushima": {
+   "name": "Matsushima-Kaigan Station",
+   "lat": 38.36785,
+   "lon": 141.059,
+   "osm": "node/3570916495"
+  },
+  "Aizuwakamatsu": {
+   "name": "Aizuwakamatsu Station",
+   "lat": 37.50611,
+   "lon": 139.93427,
+   "osm": "way/216818883"
+  },
+  "Fukushima": {
+   "name": "Fukushima Station",
+   "lat": 37.75454,
+   "lon": 140.45921,
+   "osm": "node/206431759"
+  },
+  "Kawagoe": {
+   "name": "Kawagoe Station",
+   "lat": 35.90699,
+   "lon": 139.48295,
+   "osm": "node/7864238138"
+  },
+  "Chichibu": {
+   "name": "Chichibu Station",
+   "lat": 35.99859,
+   "lon": 139.08595,
+   "osm": "node/503885134"
+  },
+  "Minakami": {
+   "name": "Minakami Station",
+   "lat": 36.77905,
+   "lon": 138.96881,
+   "osm": "node/13946459054"
+  },
+  "Mito": {
+   "name": "Mito Station",
+   "lat": 36.3721,
+   "lon": 140.47565,
+   "osm": "node/702601517"
+  },
+  "Narita": {
+   "name": "Narita Station",
+   "lat": 35.77784,
+   "lon": 140.31408,
+   "osm": "way/149192544"
+  },
+  "Utsunomiya": {
+   "name": "Utsunomiya Station",
+   "lat": 36.55963,
+   "lon": 139.89831,
+   "osm": "way/100588858"
+  },
+  "Niigata": {
+   "name": "Niigata Station",
+   "lat": 37.91197,
+   "lon": 139.0614,
+   "osm": "way/154083968"
+  },
+  "Sado": {
+   "name": "Ryotsu Port",
+   "lat": 38.08108,
+   "lon": 138.4377,
+   "osm": "way/1062036567"
+  },
+  "Kofu": {
+   "name": "Kofu Station",
+   "lat": 35.66738,
+   "lon": 138.56907,
+   "osm": "way/226739377"
+  },
+  "Gifu": {
+   "name": "Gifu Station",
+   "lat": 35.40949,
+   "lon": 136.75698,
+   "osm": "node/4079317249"
+  },
+  "Gujo Hachiman": {
+   "name": "Gujo-Hachiman Station",
+   "lat": 35.74189,
+   "lon": 136.94736,
+   "osm": "node/452816029"
+  },
+  "Shirakawa-go": {
+   "name": "Shirakawa-go Bus Terminal",
+   "lat": 36.262,
+   "lon": 136.90688,
+   "osm": "node/13830174871"
+  },
+  "Gero": {
+   "name": "Gero Station",
+   "lat": 35.80582,
+   "lon": 137.23955,
+   "osm": "node/265832445"
+  },
+  "Fukui": {
+   "name": "Fukui Station",
+   "lat": 36.06214,
+   "lon": 136.22219,
+   "osm": "node/4164240968"
+  },
+  "Hamamatsu": {
+   "name": "Hamamatsu Station",
+   "lat": 34.70401,
+   "lon": 137.73481,
+   "osm": "node/3999193759"
+  },
+  "Tsumago": {
+   "name": "Nagiso Station",
+   "lat": 35.59881,
+   "lon": 137.60865,
+   "osm": "node/6034012565"
+  },
+  "Hakuba": {
+   "name": "Hakuba Station",
+   "lat": 36.69568,
+   "lon": 137.86327,
+   "osm": "node/2524974929"
+  },
+  "Kurobe": {
+   "name": "Unazuki-Onsen Station",
+   "lat": 36.87432,
+   "lon": 137.48144,
+   "osm": "node/11733499148"
+  },
+  "Gotemba": {
+   "name": "Gotemba Station",
+   "lat": 35.29997,
+   "lon": 138.93418,
+   "osm": "node/8244028141"
+  },
+  "Ise": {
+   "name": "Iseshi Station",
+   "lat": 34.49104,
+   "lon": 136.70962,
+   "osm": "way/182504191"
+  },
+  "Hikone": {
+   "name": "Hikone Station",
+   "lat": 35.27216,
+   "lon": 136.26392,
+   "osm": "way/265187813"
+  },
+  "Amanohashidate": {
+   "name": "Amanohashidate Station",
+   "lat": 35.55758,
+   "lon": 135.18243,
+   "osm": "node/8233956606"
+  },
+  "Kinosaki": {
+   "name": "Kinosaki Onsen Station",
+   "lat": 35.6237,
+   "lon": 134.81366,
+   "osm": "node/8018662107"
+  },
+  "Shirahama": {
+   "name": "Shirahama Station",
+   "lat": 33.6757,
+   "lon": 135.38698,
+   "osm": "node/4837830989"
+  },
+  "Nachikatsuura": {
+   "name": "Kii-Katsuura Station",
+   "lat": 33.62807,
+   "lon": 135.94156,
+   "osm": "node/9678998637"
+  },
+  "Hongu": {
+   "name": "Hongu Taisha-mae Bus Stop",
+   "lat": 33.83863,
+   "lon": 135.77536,
+   "osm": "node/5115823424"
+  },
+  "Asuka": {
+   "name": "Asuka Station",
+   "lat": 34.46494,
+   "lon": 135.79816,
+   "osm": "node/413348804"
+  },
+  "Tottori": {
+   "name": "Tottori Station",
+   "lat": 35.51921,
+   "lon": 134.20042,
+   "osm": "way/932010123"
+  },
+  "Matsue": {
+   "name": "Matsue Station",
+   "lat": 35.46428,
+   "lon": 133.06322,
+   "osm": "node/9416853924"
+  },
+  "Izumo": {
+   "name": "Izumo Station",
+   "lat": 35.33484,
+   "lon": 132.72169,
+   "osm": "node/265970361"
+  },
+  "Tsuwano": {
+   "name": "Tsuwano Station",
+   "lat": 34.47308,
+   "lon": 131.77423,
+   "osm": "way/251722770"
+  },
+  "Hagi": {
+   "name": "Hagi Station",
+   "lat": 34.39389,
+   "lon": 131.40106,
+   "osm": "way/624302102"
+  },
+  "Shimonoseki": {
+   "name": "Shimonoseki Station",
+   "lat": 33.94939,
+   "lon": 130.92179,
+   "osm": "node/6872871854"
+  },
+  "Yamaguchi": {
+   "name": "Yamaguchi Station",
+   "lat": 34.17261,
+   "lon": 131.48083,
+   "osm": "node/12903226333"
+  },
+  "Iwakuni": {
+   "name": "Iwakuni Station",
+   "lat": 34.17192,
+   "lon": 132.22543,
+   "osm": "way/661710561"
+  },
+  "Onomichi": {
+   "name": "Onomichi Station",
+   "lat": 34.40482,
+   "lon": 133.19311,
+   "osm": "node/8122138840"
+  },
+  "Kure": {
+   "name": "Kure Station",
+   "lat": 34.24508,
+   "lon": 132.55897,
+   "osm": "node/9412086959"
+  },
+  "Yonago": {
+   "name": "Yonago Station",
+   "lat": 35.42278,
+   "lon": 133.3351,
+   "osm": "node/9416853784"
+  },
+  "Tokushima": {
+   "name": "Tokushima Station",
+   "lat": 34.07467,
+   "lon": 134.55139,
+   "osm": "node/9502180752"
+  },
+  "Kochi": {
+   "name": "Kochi Station",
+   "lat": 33.56721,
+   "lon": 133.54349,
+   "osm": "node/11576325257"
+  },
+  "Kotohira": {
+   "name": "Kotohira Station",
+   "lat": 34.19167,
+   "lon": 133.82123,
+   "osm": "node/8328655695"
+  },
+  "Iya Valley": {
+   "name": "Oboke Station",
+   "lat": 33.87654,
+   "lon": 133.76721,
+   "osm": "node/8873488621"
+  },
+  "Uchiko": {
+   "name": "Uchiko Station",
+   "lat": 33.54921,
+   "lon": 132.64628,
+   "osm": "node/8687385146"
+  },
+  "Nagasaki": {
+   "name": "Nagasaki Station",
+   "lat": 32.75263,
+   "lon": 129.8718,
+   "osm": "node/1424080346"
+  },
+  "Sasebo": {
+   "name": "Sasebo Station",
+   "lat": 33.16371,
+   "lon": 129.7261,
+   "osm": "node/7341733984"
+  },
+  "Saga": {
+   "name": "Saga Station",
+   "lat": 33.26418,
+   "lon": 130.29747,
+   "osm": "way/1167993847"
+  },
+  "Karatsu": {
+   "name": "Karatsu Station",
+   "lat": 33.44627,
+   "lon": 129.96775,
+   "osm": "node/778185118"
+  },
+  "Ureshino": {
+   "name": "Ureshino Station",
+   "lat": 33.10667,
+   "lon": 129.99894,
+   "osm": "node/8168035527"
+  },
+  "Aso": {
+   "name": "Aso Station",
+   "lat": 32.9374,
+   "lon": 131.08006,
+   "osm": "node/265861915"
+  },
+  "Takachiho": {
+   "name": "Takachiho Bus Center",
+   "lat": 32.7097,
+   "lon": 131.30914,
+   "osm": "way/754636309"
+  },
+  "Miyazaki": {
+   "name": "Miyazaki Station",
+   "lat": 31.91575,
+   "lon": 131.43195,
+   "osm": "node/5726627473"
+  },
+  "Ibusuki": {
+   "name": "Ibusuki Station",
+   "lat": 31.23683,
+   "lon": 130.64266,
+   "osm": "node/265857292"
+  },
+  "Yakushima": {
+   "name": "Miyanoura Port",
+   "lat": 30.43268,
+   "lon": 130.57138,
+   "osm": "node/4423100446"
+  },
+  "Nago": {
+   "name": "Nago Bus Terminal",
+   "lat": 26.59649,
+   "lon": 127.96546,
+   "osm": "node/3090451166"
+  },
+  "Zamami": {
+   "name": "Zamami Port",
+   "lat": 26.22569,
+   "lon": 127.29933,
+   "osm": "way/1226194312"
+  },
+  "Iriomote": {
+   "name": "Uehara Port",
+   "lat": 24.41796,
+   "lon": 123.79979,
+   "osm": "node/5336868916"
+  }
+ }
+}

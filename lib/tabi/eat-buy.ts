@@ -6,6 +6,7 @@
 
 import eatBuyData from "@/data/places/eat-buy.json";
 import eatGoogle from "@/data/places/eat-google.json";
+import stationsData from "@/data/transport/stations.json";
 import { CITY_BY_NAME, km } from "./cities";
 import type { PlaceCard } from "./types";
 import { stationFor } from "./transport";
@@ -104,11 +105,19 @@ export type EatBuyAnswer = { bubbles: string[]; links: { label: string; url: str
 const TAG_TH = Object.fromEntries([...EAT_TH, ...BUY_TH, ...SLEEP_TH].map(([, key, th]) => [key, th]));
 /** Google's category ("Unagi restaurant") → a Thai dish tag ("อาหารทะเล"), or "" */
 export const cuisineTh = (cat: string) => TAG_TH[G_TAGS.find(([re]) => re.test(cat))?.[1] ?? ""] ?? "";
-const card = (l: Listing, area: string): PlaceCard => ({
+// where travellers arrive in each city (OpenStreetMap; scripts/build-stations.mjs) — the city points are too rough for distances
+const STATIONS = (stationsData as { stations: Record<string, { name: string; lat: number; lon: number }> }).stations;
+/** "how far from the station" for a place in `city`, one decimal; none when that city has no station point */
+export const fromStop = (city: string, lat?: number, lon?: number): PlaceCard["fromStop"] => {
+  const s = STATIONS[city];
+  return s && lat && lon ? { name: s.name, km: Math.round(km({ lat, lon }, s) * 10) / 10 } : undefined;
+};
+
+const card = (l: Listing, area: string, city: string): PlaceCard => ({
   kind: l.k, name: `${l.n}${l.a ? ` ${l.a}` : ""}`, url: mapsLink(l, area),
   rating: l.g?.r, reviews: l.g?.rc, tag: TAG_TH[l.t.find((t) => TAG_TH[t]) ?? ""], area: l.d,
   price: l.p ? (l.k === "sleep" ? SLEEP_PRICE_LABEL : PRICE)[l.p] : undefined,
-  lat: l.la, lon: l.lo,
+  lat: l.la, lon: l.lo, fromStop: fromStop(city, l.la, l.lo),
 });
 
 /** The place and dish in a restaurant question, as the live-search worker takes them. */
@@ -128,8 +137,8 @@ export function eatQuery(message: string, focus: string[]) {
 }
 
 /** Live look-up results as cards, same shape as the snapshot ones. */
-export function livePlaceCards(places: { n: string; r: number; rc: number; url: string; cat: string; la: number; lo: number }[]): PlaceCard[] {
-  return places.slice(0, 6).map((p) => ({ kind: "eat", name: p.n, url: p.url, rating: p.r, reviews: p.rc, tag: cuisineTh(p.cat) || undefined, lat: p.la, lon: p.lo }));
+export function livePlaceCards(places: { n: string; r: number; rc: number; url: string; cat: string; la: number; lo: number }[], city: string): PlaceCard[] {
+  return places.slice(0, 6).map((p) => ({ kind: "eat", name: p.n, url: p.url, rating: p.r, reviews: p.rc, tag: cuisineTh(p.cat) || undefined, lat: p.la, lon: p.lo, fromStop: fromStop(city, p.la, p.lo) }));
 }
 
 export function findEatBuy(message: string, focus: string[]): EatBuyAnswer {
@@ -168,7 +177,8 @@ export function findEatBuy(message: string, focus: string[]): EatBuyAnswer {
   const picks = [...pickFrom].sort((a, b) => Number(Boolean(b.la)) - Number(Boolean(a.la))).slice(0, 5);
   const searchWord = tag ? (tag[1] === "souvenir" ? "souvenir shop" : tag[1].replace(/_/g, " ")) : kind === "eat" ? "restaurant" : "shopping";
   const area = district ? `${district[2]} ${city}` : city;
-  const places = picks.map((l) => ({ ...card(l, area), area: district ? undefined : l.d }));
+  // a district answer ("ร้านแถวชินจูกุ") is already "where": no distance from the city's main station
+  const places = picks.map((l) => ({ ...card(l, area, district ? "" : city), area: district ? undefined : l.d }));
   const links: { label: string; url: string }[] = [];
   const search = { label: `ค้น ${searchWord} แถว ${area} ใน Google Maps (มีรีวิว)`, url: maps(`${searchWord} ${area} Japan`) };
   // restaurants: Japan's own review site too (scores from Japanese diners)
@@ -255,7 +265,7 @@ export function findStay(message: string, focus: string[]): EatBuyAnswer {
       links: [search, ...(tip.length ? [{ label: `ที่พักใกล้ ${station} ใน Google Maps`, url: maps(`hotels near ${station}`) }] : [])],
     };
   }
-  const places = picks.map((l) => ({ ...card(l, area), area: district && !widened ? undefined : l.d }));
+  const places = picks.map((l) => ({ ...card(l, area, district ? "" : city), area: district && !widened ? undefined : l.d }));
   const links = [search];
   return {
     bubbles: [

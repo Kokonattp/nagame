@@ -441,6 +441,12 @@ function SeasonFx() {
 }
 const PLACE_ICON = { eat: "🍜", buy: "🛍️", sleep: "🛏️" } as const;
 
+/** Straight line ×1.3 at 80 m/min for a walk; beyond ~1.5 km just the distance (a bus or train is likelier). */
+function stopDistance({ name, km }: { name: string; km: number }) {
+  if (km <= 1.5) return `เดิน ~${Math.max(5, Math.round((km * 1300) / 80 / 5) * 5)} นาทีจาก ${name}`;
+  return `~${km} กม. จาก ${name}`;
+}
+
 /** Restaurants / shops / stays in an answer: one card each, rating first, the whole card opens Google Maps. */
 function PlaceCards({ places }: { places: PlaceCard[] }) {
   // one small overview map of all of them (the cards are what you tap)
@@ -463,6 +469,7 @@ function PlaceCards({ places }: { places: PlaceCard[] }) {
                 {p.tag && <span className="tabi-place-tag">{p.tag}</span>}
                 {p.price && <span className="tabi-muted">{p.price}</span>}
                 {p.area && <span className="tabi-muted">· {p.area}</span>}
+                {p.fromStop && <span className="tabi-muted basis-full">📍 {stopDistance(p.fromStop)}</span>}
               </span>
             </span>
             <span className="tabi-muted shrink-0 text-xs" aria-hidden>แผนที่ ↗</span>
