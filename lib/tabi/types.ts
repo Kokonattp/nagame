@@ -122,6 +122,21 @@ export type FlightLink = {
   returnUrl?: string;
 };
 
+export type PlaceCard = {
+  kind: "eat" | "buy" | "sleep";
+  name: string;
+  url: string;
+  /** Google Maps rating + review count (snapshot or live), when known */
+  rating?: number;
+  reviews?: number;
+  /** "ราเมน", "อาหารทะเล", "เรียวกัง"… */
+  tag?: string;
+  /** "ราคาประหยัด" etc. from the guide */
+  price?: string;
+  /** district within the city, from the guide */
+  area?: string;
+};
+
 export type TabiReply = {
   bubbles: string[];
   action: TabiAction;
@@ -135,6 +150,8 @@ export type TabiReply = {
   chips?: string[];
   /** official pages behind an answer (practical questions) */
   links?: { label: string; url: string }[];
+  /** restaurants / shops / stays in an answer, drawn as cards (each opens in Google Maps) */
+  places?: PlaceCard[];
   /** cheapest departure dates in the asked month (flight calendar); `dateOptionsDays` = trip length used */
   dateOptions?: { depart: string; back: string; price: number }[];
   dateOptionsDays?: number;

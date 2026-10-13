@@ -43,9 +43,9 @@ const CASES = [
   { id: "greeting", msg: "สวัสดีทาบิ", action: "chat" },
   { id: "booking-refused", msg: "ช่วยจองโรงแรมให้หน่อย", action: "answer", check: (r) => r.bubbles.join(" ").includes("จองหรือจ่ายเงินให้ไม่ได้") },
   // where to stay: guide listings + Google Hotels, never a booking
-  { id: "stay-city", msg: "แนะนำที่พักเกียวโตหน่อย", action: "answer", check: (r) => r.links?.some((l) => l.url.includes("google.com/travel/hotels")) && r.links.length > 1 },
+  { id: "stay-city", msg: "แนะนำที่พักเกียวโตหน่อย", action: "answer", check: (r) => r.links?.some((l) => l.url.includes("google.com/travel/hotels")) && (r.places?.length ?? 0) > 0 },
   { id: "stay-ryokan", msg: "เรียวกังที่ฮาโกเนะดีๆ", action: "answer", check: (r) => r.links?.some((l) => l.url.includes("ryokan")) },
-  { id: "stay-cheap", msg: "ที่พักถูกๆแถวชินจูกุ", action: "answer", check: (r) => r.links?.filter((l) => l.url.includes("/maps/")).every((l) => l.label.includes("ราคาประหยัด")) },
+  { id: "stay-cheap", msg: "ที่พักถูกๆแถวชินจูกุ", action: "answer", check: (r) => (r.places?.length ?? 0) > 0 && r.places.every((p) => p.price === "ราคาประหยัด") },
   // sights: a list, unless a trip length is given; spellings people actually type
   { id: "sights-city", msg: "ที่เที่ยวเกียวโตมีอะไรบ้าง", action: "answer", check: (r) => r.links?.length >= 4 && r.links.some((l) => /Kiyomizu|Fushimi|Kinkaku/.test(decodeURIComponent(l.url))) },
   { id: "sights-region", msg: "ฮอกไกโดมีที่เที่ยวอะไรบ้าง", action: "answer", check: (r) => r.links?.length >= 4 },

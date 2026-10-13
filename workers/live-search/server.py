@@ -20,6 +20,7 @@ import os
 import re
 import threading
 import time
+import urllib.request
 from datetime import date, datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import quote, quote_plus
@@ -122,6 +123,15 @@ def url_for(kind, q):
     return f"https://www.google.com/maps/search/{quote_plus(words)}?hl=en"
 
 
+def chrome_up():
+    """The browser harness waits 30 s for a dead Chrome; check in 2 s so Tabi can fall back at once."""
+    try:
+        urllib.request.urlopen(f"{os.environ['BU_CDP_URL'].rstrip('/')}/json/version", timeout=2)
+        return True
+    except OSError:
+        return False
+
+
 def run_search(kind, q):
     url = url_for(kind, q)
     agent = Agent(url, GOALS[kind])
@@ -198,6 +208,9 @@ class Handler(BaseHTTPRequestHandler):
         if not State.lock.acquire(timeout=QUEUE_S):
             return self._send(429, {"error": "busy"})
         try:
+            if not chrome_up():
+                print("Chrome is not reachable — answering from snapshots", flush=True)
+                return self._send(503, {"error": "browser down"})
             State.used += 1
             t0 = time.monotonic()
             result = run_search(kind, q)

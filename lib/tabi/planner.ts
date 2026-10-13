@@ -188,15 +188,22 @@ function buildCandidates(intent: TripIntent): Candidate[] {
   // At most one city per night; order: the one nearest an airport first, then nearest-next.
   const named = cityFocus.map((f) => CITY_BY_NAME.get(f)).filter((c): c is BaseCity => Boolean(c)).slice(0, Math.max(days - 1, 1));
   if (named.length >= 2) {
-    const ordered = [named.sort((a, b) => nearestGateway(a).d - nearestGateway(b).d)[0]];
-    const rest = named.slice(1);
-    while (rest.length) {
-      const last = ordered[ordered.length - 1];
-      rest.sort((a, b) => km(last, a) - km(last, b));
-      ordered.push(rest.shift()!);
+    const all = scoreRoute(orderFromGateway(named), intent);
+    const top = Math.max(all.score, ...candidates.map((c) => c.score)) + 1;
+    candidates.push({ ...all, score: top });
+    // Those cities alone left one option ("เกียวโต โอซาก้า 5 วัน"). When there are nights to spare,
+    // also offer them plus one city close to any of them (Nara, Kobe…) — always below the asked-for set.
+    if (named.length < Math.max(days - 1, 1)) {
+      const extra = BASE_CITIES
+        .filter((c) => !named.some((n) => n.name === c.name) && named.every((n) => km(n, c) > 25))
+        .map((c) => ({ c, d: Math.min(...named.map((n) => km(n, c))) }))
+        .filter((x) => x.d <= 100)
+        .map((x) => ({ c: x.c, s: cityScore(x.c.name, intent) - x.d / 80 }))
+        .filter((x) => x.s > 0)
+        .sort((a, b) => b.s - a.s)
+        .slice(0, 2);
+      extra.forEach((x, i) => candidates.push({ ...scoreRoute(orderFromGateway([...named, x.c]), intent), score: top - 0.5 - i * 0.1 }));
     }
-    const all = scoreRoute(ordered, intent);
-    candidates.push({ ...all, score: Math.max(all.score, ...candidates.map((c) => c.score)) + 1 });
   }
   // de-duplicate by stop set, keeping the best-scored copy
   const seen = new Set<string>();
@@ -208,6 +215,18 @@ function buildCandidates(intent: TripIntent): Candidate[] {
       seen.add(key);
       return true;
     });
+}
+
+/** Start from the stop nearest an international gateway, then always the nearest next stop. */
+function orderFromGateway(stops: BaseCity[]): BaseCity[] {
+  const rest = [...stops].sort((a, b) => nearestGateway(a).d - nearestGateway(b).d);
+  const ordered = [rest.shift()!];
+  while (rest.length) {
+    const last = ordered[ordered.length - 1];
+    rest.sort((a, b) => km(last, a) - km(last, b));
+    ordered.push(rest.shift()!);
+  }
+  return ordered;
 }
 
 function scoreRoute(stops: BaseCity[], intent: TripIntent): Candidate {
@@ -290,7 +309,12 @@ export async function suggestRoutes(message: string, intent: TripIntent, avoidId
   const candidates = buildCandidates(intent).slice(0, 8).map((c) => toOption(c, intent));
   const fresh = candidates.filter((o) => !avoidIds.includes(o.id));
   const pool = (fresh.length >= 3 ? fresh : candidates).slice(0, 6);
-  const ranked = (await rerank(message, pool)).slice(0, 3);
+  const reranked = await rerank(message, pool);
+  // the exact cities the traveller named stay the first ("แนะนำสุด") option; Jev orders the variations
+  const named = intent.focus.filter((f) => CITY_BY_NAME.has(f));
+  const exact = named.length >= 2 ? reranked.findIndex((o) => o.stops.length === named.length && o.stops.every((s) => named.includes(s.city))) : -1;
+  if (exact > 0) reranked.unshift(...reranked.splice(exact, 1));
+  const ranked = reranked.slice(0, 3);
   if (ranked[0]) ranked[0].recommended = true;
   return ranked;
 }

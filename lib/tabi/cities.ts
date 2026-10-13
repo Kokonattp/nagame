@@ -41,7 +41,7 @@ export const GATEWAYS: { city: string; airport: string; searchName: string }[] =
   { city: "Naha", airport: "OKA", searchName: "Okinawa" },
 ];
 
-export type BaseCity = { name: string; th: string; lat: number; lon: number; region: Region };
+export type BaseCity = { name: string; th: string; lat: number; lon: number; region: Region; /** English prefecture name, e.g. "Hyogo" */ prefecture?: string };
 
 /**
  * Extra bases Tabi needs that the /city pages don't have (kept here so the older
@@ -149,8 +149,9 @@ export const BASE_CITIES: BaseCity[] = [
     lat: c.lat,
     lon: c.lon,
     region: PREFECTURE_REGION[c.prefecture] ?? "kanto",
+    prefecture: c.prefecture,
   })),
-  ...TABI_EXTRA_BASES.map((c) => ({ name: c.name, th: c.th, lat: c.lat, lon: c.lon, region: PREFECTURE_REGION[c.prefecture] ?? "chubu" })),
+  ...TABI_EXTRA_BASES.map((c) => ({ name: c.name, th: c.th, lat: c.lat, lon: c.lon, region: PREFECTURE_REGION[c.prefecture] ?? "chubu", prefecture: c.prefecture })),
 ];
 
 export const CITY_BY_NAME = new Map(BASE_CITIES.map((c) => [c.name, c]));

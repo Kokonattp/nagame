@@ -2,6 +2,7 @@
 // every answer below is written and checked by people, with an official link where one exists.
 // Short on purpose (owner rule: say what helps, link the source for the rest).
 
+import { JNTO_HOTLINE, SAFETY_LINKS } from "./safety-links";
 import { durationTh, travelTime } from "./rail-times";
 import { AIRPORTS, jrPassWorthIt, legLinks } from "./transport";
 import type { RouteOption, TripIntent } from "./types";
@@ -37,7 +38,7 @@ export const FAQ_KEYWORDS: [FaqTopic, RegExp][] = [
   ["jr_pass", /jr ?pass|เจอาร์พาส|เจอาร์ พาส|พาสรถไฟ/i],
   ["luggage", /กระเป๋า|สัมภาระ|ล็อกเกอร์|locker|ส่งของ/i],
   ["manners", /มารยาท|ทิป|ข้อห้าม|ควรระวัง/i],
-  ["emergency", /ฉุกเฉิน|ตำรวจ|โรงพยาบาล|แผ่นดินไหว|ป่วย|ของหาย/i],
+  ["emergency", /ฉุกเฉิน|ตำรวจ|โรงพยาบาล|แผ่นดินไหว|ป่วย|ของหาย|เตือนภัย|ภัยพิบัติ|สึนามิ|ภูเขาไฟ|ปลอดภัย|สถานทูต/i],
   ["weather", /อากาศ|หนาวไหม|ร้อนไหม|ใส่ชุด|เสื้อผ้า|แต่งตัว/i],
   ["plug", /ปลั๊ก|ชาร์จ|แรงดันไฟ|volt/i],
 ];
@@ -120,11 +121,11 @@ export function faqAnswer(topic: FaqTopic, ctx: { route?: RouteOption; intent?: 
       };
     case "emergency":
       return {
-        bubbles: ["เบอร์ฉุกเฉิน: ตำรวจ 110 · รถพยาบาลและดับเพลิง 119", "สายด่วนนักท่องเที่ยว JNTO 050-3816-2787 ตลอด 24 ชม. (อังกฤษ จีน เกาหลี) และดูประกาศเตือนภัยล่าสุดที่กรมอุตุฯ ญี่ปุ่น"],
-        links: [
-          { label: "Japan Visitor Hotline (JNTO)", url: "https://www.japan.travel/en/plan/hotline/" },
-          { label: "ประกาศเตือนภัย 気象庁", url: "https://www.jma.go.jp/bosai/warning/" },
+        bubbles: [
+          "เบอร์ฉุกเฉิน: ตำรวจ 110 · รถพยาบาลและดับเพลิง 119",
+          "สายด่วนนักท่องเที่ยว JNTO 050-3816-2787 ตลอด 24 ชม. (อังกฤษ จีน เกาหลี) ลงแอป Safety tips ไว้ก่อนไป จะได้รับแจ้งเตือนแผ่นดินไหว สึนามิ ภูเขาไฟเป็นภาษาไทย",
         ],
+        links: [{ label: "Japan Visitor Hotline (JNTO)", url: JNTO_HOTLINE.url }, ...SAFETY_LINKS],
       };
     case "weather": {
       const m = ctx.intent?.month;

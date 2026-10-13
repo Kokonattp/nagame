@@ -9,7 +9,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { createPortal } from "react-dom";
 import { ArrowRight, ArrowUp, CalendarDays, ChevronLeft, CircleHelp, Heart, Home, Map as MapIcon, Pencil, Plane, Plus, Send, User } from "lucide-react";
 import type { HazardAlert } from "@/lib/tabi/alerts";
-import { nearestGateway } from "@/lib/tabi/cities";
+import type { SafetyEvent } from "@/lib/tabi/safety";
+import { dayWeather } from "@/lib/tabi/day-weather";
+import { FujiMark } from "./fuji-mark";
+import { EMERGENCY_TEL, JNTO_HOTLINE, SAFETY_LINKS } from "@/lib/tabi/safety-links";
+import { CITY_BY_NAME, nearestGateway } from "@/lib/tabi/cities";
 import { TABI_ART, TABI_DANCE, type TabiMood } from "@/lib/tabi/mascot";
 import { encodeShare, shareRef, tripTitle } from "@/lib/tabi/share";
 import type { SharedTrip } from "@/lib/tabi/share-server";
@@ -22,7 +26,7 @@ import { FLIGHTS_CHECKED_AT, flightSnapFor, type FlightSnap } from "@/lib/tabi/f
 import { durationTh, travelTime } from "@/lib/tabi/rail-times";
 import { STAY_AREA } from "@/lib/tabi/stay";
 import { AIRPORTS, jrPassWorthIt, legLinks, stayNear, type LegLink } from "@/lib/tabi/transport";
-import type { DaySlot, Highlight, ItineraryDay, ItineraryItem, RouteOption, TabiReply, TripIntent } from "@/lib/tabi/types";
+import type { DaySlot, Highlight, ItineraryDay, ItineraryItem, PlaceCard, RouteOption, TabiReply, TripIntent } from "@/lib/tabi/types";
 import type { MapPin, MapPoint } from "./tabi-map";
 import { renderShareImage } from "./share-image";
 import "./tabi.css";
@@ -84,8 +88,9 @@ function fromShared(shared: SharedTrip): SavedTrip {
   return { ...newTrip(shared.intent), title: shared.title, route: shared.route, itinerary: shared.itinerary, savedStops: shared.savedStops, status: "draft" };
 }
 
-export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; initialAsk?: string; source?: string } = {}) {
-  const [screen, setScreen] = useState<Screen>(shared ? "itinerary" : "home");
+export function TabiApp({ shared, initialAsk, source, initialTab, liveSearch }: { shared?: SharedTrip; initialAsk?: string; source?: string; initialTab?: "trips" | "profile"; /** the live-search worker is configured (fares/restaurants checked live) */ liveSearch?: boolean } = {}) {
+  // ?tab=trips / ?tab=profile (links from the month guides) open that tab directly
+  const [screen, setScreen] = useState<Screen>(shared ? "itinerary" : initialTab === "trips" ? "trips" : initialTab === "profile" ? "soon" : "home");
   // Each screen root carries .tabi-rise, so a screen change already slides in.
   // (View Transitions were tried and dropped: with React state they left the old screen in place.)
   const go = setScreen;
@@ -284,7 +289,7 @@ export function TabiApp({ shared, initialAsk, source }: { shared?: SharedTrip; i
         {!online && <p role="status" className="mb-3 rounded-2xl bg-[#fff4d6] px-4 py-2 text-sm text-[#7a5a00]">📴 ออฟไลน์อยู่ ทริปที่เก็บไว้ยังเปิดดูได้</p>}
         {screen === "home" && <HomeScreen onAsk={send} />}
         {screen === "chat" && (
-          <ChatScreen turns={turns} loading={loading} error={error} routes={routes} onAsk={send} onPick={openRoute} onBack={nav("home")} />
+          <ChatScreen turns={turns} loading={loading} error={error} routes={routes} onAsk={send} onPick={openRoute} onBack={nav("home")} liveSearch={liveSearch} />
         )}
         {screen === "route" && selected && (
           <RouteScreen
@@ -434,6 +439,33 @@ function SeasonFx() {
     </div>
   );
 }
+const PLACE_ICON = { eat: "🍜", buy: "🛍️", sleep: "🛏️" } as const;
+
+/** Restaurants / shops / stays in an answer: one card each, rating first, the whole card opens Google Maps. */
+function PlaceCards({ places }: { places: PlaceCard[] }) {
+  return (
+    <ul className="grid w-full gap-2 pt-1 sm:grid-cols-2" aria-label="รายชื่อสถานที่">
+      {places.map((p) => (
+        <li key={p.url} className="min-w-0">
+          <a href={p.url} target="_blank" rel="noopener noreferrer" className="tabi-card tabi-place-card">
+            <span className="tabi-place-icon" aria-hidden>{PLACE_ICON[p.kind]}</span>
+            <span className="min-w-0 flex-1">
+              <span className="tabi-title block truncate font-bold leading-snug">{p.name}</span>
+              <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                {p.rating !== undefined && <span className="font-semibold text-[var(--t-navy)]"><span aria-hidden>⭐</span> {p.rating.toFixed(1)}<span className="tabi-muted font-normal"> ({p.reviews?.toLocaleString("en-US")} รีวิว)</span></span>}
+                {p.tag && <span className="tabi-place-tag">{p.tag}</span>}
+                {p.price && <span className="tabi-muted">{p.price}</span>}
+                {p.area && <span className="tabi-muted">· {p.area}</span>}
+              </span>
+            </span>
+            <span className="tabi-muted shrink-0 text-xs" aria-hidden>แผนที่ ↗</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /* ── Squishy Tabi (soft-toy feel): leans away from the pointer, squashes when pressed,
    springs back with a wobble when let go. One under-damped spring per axis. ── */
 type Pose = { x: number; y: number; r: number; sx: number; sy: number };
@@ -649,15 +681,6 @@ function HelpButton() {
 }
 
 /** Brand mark (mockup header): snow-capped Fuji with a sakura sun. Decorative. */
-function FujiMark() {
-  return (
-    <svg width="40" height="28" viewBox="0 0 40 28" aria-hidden className="shrink-0">
-      <circle cx="29" cy="8" r="6" fill="#ffc6db" />
-      <path d="M2 27 L16 6 Q20 2 24 6 L38 27 Z" fill="#2d7ff9" />
-      <path d="M12 12 L16 6 Q20 2 24 6 L28 12 L25 10.5 L22 13 L20 10.5 L17 13 L15 10.5 Z" fill="#fff" />
-    </svg>
-  );
-}
 
 /** Thai tag → small icon, as on the mockup's route cards. */
 /** Day markers, as on the mockup timeline (decorative; the "Day N" label carries meaning). */
@@ -788,10 +811,27 @@ function HomeScreen({ onAsk }: { onAsk: (m: string) => void }) {
 }
 
 // ── 2. Conversation + route options ──
-function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack }: {
+/** Tabi's face follows the answer: pleased when it found routes or places, unsure when it has to ask back. */
+function replyMood(reply?: TabiReply): TabiMood {
+  if (!reply) return "idle";
+  if (reply.action === "ask") return "worried";
+  if (reply.action === "suggest_routes" || reply.places?.length || reply.itinerary?.length || reply.dateOptions?.length) return "happy";
+  return "idle";
+}
+
+/** While Tabi looks something up live (fares, restaurants), say where — a few seconds feel shorter with a reason. */
+function waitingText(message: string | undefined, live: boolean) {
+  if (!live || !message) return null;
+  if (/ตั๋ว|เครื่องบิน|เที่ยวบิน|ราคาบิน|flight/i.test(message)) return "ทาบิกำลังเช็กราคาตั๋วใน Google Flights…";
+  if (!/ของฝาก|ช้อป|ช็อป|ที่พัก|โรงแรม/.test(message) && /ร้าน|กิน|อาหาร|ราเม|ซูชิ|คาเฟ่|อิซากายะ|ยากินิกุ|ซีฟู้ด/.test(message)) return "ทาบิกำลังหาร้านใน Google Maps…";
+  return null;
+}
+
+function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack, liveSearch = false }: {
   turns: Turn[]; loading: boolean; error: string | null; routes: RouteOption[];
-  onAsk: (m: string) => void; onPick: (r: RouteOption) => void; onBack: () => void;
+  onAsk: (m: string) => void; onPick: (r: RouteOption) => void; onBack: () => void; liveSearch?: boolean;
 }) {
+  const waiting = loading ? waitingText([...turns].reverse().find((t) => t.role === "user")?.text, liveSearch) : null;
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [turns.length, loading]);
   const last = [...turns].reverse().find((t) => t.reply)?.reply;
@@ -823,12 +863,13 @@ function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack }: {
           ) : (
             <li key={i} className="tabi-rise flex items-start gap-2">
               {/* only the newest reply moves: a column of moving cats is noisy and costly on phones */}
-              <Avatar size={38} mood={t.reply?.action === "ask" ? "worried" : "idle"} animated={i === lastTabi && !loading} />
+              <Avatar size={38} mood={replyMood(t.reply)} animated={i === lastTabi && !loading} />
               <div className="max-w-[82%] space-y-1">
                 <p className="text-xs font-semibold text-[var(--t-pink-ink)]">ทาบิ</p>
                 {t.text.split("\n").map((b, j) => (
                   <p key={j} className="tabi-card rounded-tl-md px-4 py-2.5">{b}</p>
                 ))}
+                {t.reply?.places?.length ? <PlaceCards places={t.reply.places} /> : null}
                 {t.reply?.links?.length ? (
                   <span className="flex flex-wrap gap-1 pt-1">
                     {t.reply.links.map((l) => (
@@ -843,7 +884,8 @@ function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack }: {
         {loading && (
           <li className="flex items-center gap-2">
             <Avatar size={38} animated />
-            <span className="tabi-card tabi-typing px-4 py-3" aria-label="ทาบิกำลังคิด"><span /><span /><span /></span>
+            <span className="tabi-card tabi-typing px-4 py-3" aria-label={waiting ?? "ทาบิกำลังคิด"}><span /><span /><span /></span>
+            {waiting && <span className="tabi-muted text-sm" aria-hidden>{waiting}</span>}
           </li>
         )}
       </ol>
@@ -1086,19 +1128,22 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
   const month = trip.intent.month;
   const start = trip.intent.startDate;
   const countdown = start ? Math.round((isoDay(start).getTime() - isoDay(todayIso()).getTime()) / 86_400_000) : null;
-  // live hazard warnings matter only when the trip is close: from a week before until the last day
+  // weather warnings, quakes and tsunami matter only when the trip is close (a week before until the
+  // last day); a volcano warning lasts for months, so it shows whenever the route passes one
   const nearTrip = countdown !== null && countdown <= 7 && countdown > -days.length;
   const alertCities = trip.route?.stops.map((s) => s.city).join(",") ?? "";
-  const [alerts, setAlerts] = useState<HazardAlert[]>([]);
+  const [safety, setSafety] = useState<{ alerts: HazardAlert[]; events: SafetyEvent[] }>({ alerts: [], events: [] });
   useEffect(() => {
-    if (!nearTrip || !alertCities) return;
+    if (!alertCities) return;
     let live = true;
     fetch(`/api/tabi/alerts?cities=${encodeURIComponent(alertCities)}`)
-      .then((r) => (r.ok ? r.json() : { alerts: [] }))
-      .then((d: { alerts?: HazardAlert[] }) => { if (live) setAlerts(d.alerts ?? []); })
-      .catch(() => { /* no alert shown is the safe failure: JMA stays one tap away for the traveller */ });
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d: { alerts?: HazardAlert[]; events?: SafetyEvent[] }) => { if (live) setSafety({ alerts: d.alerts ?? [], events: d.events ?? [] }); })
+      .catch(() => { /* nothing shown is the safe failure: JMA and the numbers stay on the card */ });
     return () => { live = false; };
-  }, [nearTrip, alertCities]);
+  }, [alertCities]);
+  const alerts = nearTrip ? safety.alerts : [];
+  const events = safety.events.filter((e) => nearTrip || e.kind === "volcano");
   return (
     <div className="tabi-rise space-y-4">
       <TopBar onBack={onBack} />
@@ -1137,7 +1182,7 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
           </label>
         </div>
       </section>
-      {nearTrip && alerts.length > 0 && <HazardCard alerts={alerts} />}
+      {(alerts.length > 0 || events.length > 0) && <HazardCard alerts={alerts} events={events} />}
       {sharedState !== "none" && (
         <section className="tabi-card tabi-pop flex flex-wrap items-center gap-3 bg-[var(--t-sakura)] p-4">
           <span className="text-2xl" aria-hidden>💌</span>
@@ -1198,7 +1243,13 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={img(d.photo ?? d.city)} alt="" loading="lazy" onError={hideBroken} className="tabi-img h-[56px] w-[72px] shrink-0 rounded-[12px]" />
                   <span className="min-w-0 flex-1">
-                    <span className="tabi-title block font-bold leading-snug">{d.title}</span>
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span className="tabi-title font-bold leading-snug">{d.title}</span>
+                      {(() => {
+                        const w = dayWeather(d.city, start ? isoDay(start, i).getMonth() + 1 : month);
+                        return w && <span className="tabi-day-weather" title={w.label} aria-label={w.label}><span aria-hidden>{w.icon}</span> {w.hi}°/{w.lo}°</span>;
+                      })()}
+                    </span>
                     <span className="tabi-muted block truncate text-xs">{sights.length ? sights.join(" · ") : d.items[0]?.text}</span>
                   </span>
                   <ChevronLeft size={18} className={`shrink-0 text-[var(--t-muted)] transition-transform ${open ? "-rotate-90" : "rotate-180"}`} aria-hidden />
@@ -1258,6 +1309,7 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
         <Avatar size={44} mood="happy" />
         <p className="text-sm"><b className="text-[var(--t-pink-ink)]">นี่คือร่างทริปคร่าว ๆ</b> เวลาเดินทางเป็นค่าประมาณ บอกทาบิให้ปรับได้ตลอดนะ</p>
       </section>
+      <BudgetCard trip={trip} />
       {trip.route && <TransportCard route={trip.route} onAsk={onAsk} />}
       <section className="tabi-card p-4">
         <h2 className="tabi-petal mb-2 font-bold">เตรียมก่อนเดินทาง</h2>
@@ -1272,6 +1324,7 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
           ))}
         </ul>
       </section>
+      <SafetyCard />
 
       <div className="grid grid-cols-3 gap-2">
         <button type="button" className="tabi-btn tabi-btn--soft whitespace-nowrap px-2 text-sm" onClick={onMap}><MapIcon size={18} />แผนที่</button>
@@ -1377,16 +1430,68 @@ function TransportCard({ route, onAsk }: { route: RouteOption; onAsk?: (m: strin
   );
 }
 
+/**
+ * Rough cost per person, only from numbers Tabi actually has: the fare it checked on Google Flights,
+ * the train fares between cities, and the nights — whose price is a live Google Hotels search, not a guess.
+ */
+function BudgetCard({ trip }: { trip: SavedTrip }) {
+  const route = trip.route;
+  if (!route) return null;
+  const month = trip.intent.startDate ? Number(trip.intent.startDate.slice(5, 7)) : trip.intent.month;
+  const fare = flightSnapFor(route.gateway.airport, month);
+  const rail = route.stops.slice(1).map((s, i) => legFare(route.stops[i].city, s.city)).filter((f): f is LegFare => !!f);
+  const nights = route.stops.reduce((a, s) => a + s.nights, 0);
+  const first = route.stops[0];
+  const hotels = `https://www.google.com/travel/hotels?q=${encodeURIComponent(`hotels in ${first.city}${trip.intent.startDate ? ` ${trip.intent.startDate}` : ""}`)}`;
+  return (
+    <section className="tabi-card p-4" aria-labelledby="tabi-budget-title">
+      <h2 id="tabi-budget-title" className="mb-2 flex items-center gap-2 font-bold"><span aria-hidden>💰</span>งบคร่าว ๆ ต่อคน</h2>
+      <ul className="space-y-2 text-sm">
+        <li className="flex items-baseline justify-between gap-3">
+          <span>✈️ ตั๋วไป-กลับ{CITY_BY_NAME.get(route.gateway.city) ? ` ${CITY_BY_NAME.get(route.gateway.city)!.th}` : ""}{fare && !fare.exact ? ` (ตัวอย่าง ${MONTH_SHORT[Number(fare.snap.month.slice(5, 7))]})` : ""}</span>
+          {fare ? <b className="whitespace-nowrap">~฿{fare.snap.cheapest!.toLocaleString("en-US")}</b> : <span className="tabi-muted">ดูในหน้าตั๋ว</span>}
+        </li>
+        <li className="flex items-baseline justify-between gap-3">
+          <span>🚃 รถไฟระหว่างเมือง</span>
+          {rail.length ? <b className="whitespace-nowrap">~{yenRange({ min: rail.reduce((a, f) => a + f.min, 0), max: rail.reduce((a, f) => a + f.max, 0) })}</b> : <span className="tabi-muted">{route.stops.length > 1 ? "ดูในปุ่มดูทาง" : "ไม่ต้องย้ายเมือง"}</span>}
+        </li>
+        <li className="flex items-baseline justify-between gap-3">
+          <span>🛏️ ที่พัก {nights} คืน</span>
+          <a href={hotels} target="_blank" rel="noopener noreferrer" className="whitespace-nowrap font-semibold text-[var(--t-blue)] underline underline-offset-2">ดูราคาจริง ↗</a>
+        </li>
+      </ul>
+      <p className="tabi-muted mt-2 text-[11px]">ไม่รวมอาหาร ค่าเข้าชม และรถไฟในเมือง{fare ? ` · ตั๋วเช็กเมื่อ ${thaiDate(isoDay(FLIGHTS_CHECKED_AT.slice(0, 10)))}` : ""}</p>
+    </section>
+  );
+}
+
 const LEVEL_JA = { 30: "警報", 40: "危険警報", 50: "特別警報" } as const;
 const LEVEL_TH = { 30: "เตือนภัย", 40: "อันตราย", 50: "อันตรายสูงสุด" } as const;
 
-/** JMA warnings (警報+) near the travel dates. Links straight to 気象庁, the page people in Japan use. */
-function HazardCard({ alerts }: { alerts: HazardAlert[] }) {
+/** What each live event means for a traveller, in one line. */
+function eventLine(e: SafetyEvent): { badge: string; level: 30 | 40 | 50; text: string } {
+  if (e.kind === "quake") return { badge: `震度${e.shindo.replace(" บน", "強").replace(" ล่าง", "弱")}`, level: 40, text: `แผ่นดินไหวแรงระดับ ${e.shindo} ${e.prefsTh} ภายใน 24 ชม. ระวังอาฟเตอร์ช็อก รถไฟอาจหยุดตรวจราง` };
+  if (e.kind === "tsunami") return { badge: e.level, level: e.level === "大津波警報" ? 50 : 40, text: `เตือนสึนามิ (${e.areaJa}) ถ้าอยู่ใกล้ทะเล ให้ขึ้นที่สูงทันที อย่ากลับไปชายฝั่งจนกว่าจะยกเลิกประกาศ` };
+  return { badge: e.level, level: 30, text: `ภูเขาไฟ ${e.volcano} ใกล้${e.cityTh} ห้ามเข้าเขตปากปล่อง เส้นทางบางจุดอาจปิด` };
+}
+
+/** Live warnings for the route (JMA). Links straight to 気象庁, the pages people in Japan use. */
+function HazardCard({ alerts, events }: { alerts: HazardAlert[]; events: SafetyEvent[] }) {
   return (
     <section role="alert" className="tabi-hazard tabi-pop">
       <p className="flex items-center gap-2 font-bold"><span aria-hidden>⚠️</span>ประกาศเตือนภัยจากกรมอุตุฯ ญี่ปุ่นตอนนี้</p>
-      <p className="mt-1 text-sm">รถไฟอาจหยุดหรือล่าช้า เช็กประกาศก่อนออกจากที่พักนะ</p>
+      {alerts.length > 0 && <p className="mt-1 text-sm">รถไฟอาจหยุดหรือล่าช้า เช็กประกาศก่อนออกจากที่พักนะ</p>}
       <ul className="mt-2 space-y-2">
+        {events.map((e, i) => {
+          const l = eventLine(e);
+          return (
+            <li key={`e${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              <span className={`tabi-hazard-level tabi-hazard-level--${l.level}`}>{l.badge}</span>
+              <span>{l.text}</span>
+              <a href={e.url} target="_blank" rel="noopener noreferrer" className="ml-auto font-semibold underline underline-offset-2">ดูประกาศ 気象庁 ↗</a>
+            </li>
+          );
+        })}
         {alerts.map((a) => (
           <li key={`${a.city}-${a.hazard}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
             <span className={`tabi-hazard-level tabi-hazard-level--${a.level}`}>{LEVEL_JA[a.level]} · {LEVEL_TH[a.level]}</span>
@@ -1395,6 +1500,29 @@ function HazardCard({ alerts }: { alerts: HazardAlert[] }) {
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+/** Always on the trip: who to call, the alert app in Thai, the embassy — kept short (numbers first). */
+function SafetyCard() {
+  return (
+    <section className="tabi-card p-4" aria-labelledby="tabi-safety-title">
+      <h2 id="tabi-safety-title" className="flex items-center gap-2 font-bold"><span aria-hidden>🛟</span>ความปลอดภัย</h2>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {EMERGENCY_TEL.map((t) => (
+          <a key={t.number} href={`tel:${t.number}`} className="tabi-leg-link"><b>{t.number}</b>&nbsp;{t.label}</a>
+        ))}
+        <a href={`tel:${JNTO_HOTLINE.number.replace(/-/g, "")}`} className="tabi-leg-link">{JNTO_HOTLINE.label} {JNTO_HOTLINE.number}</a>
+      </div>
+      <details className="mt-2 text-sm">
+        <summary className="cursor-pointer py-2 font-semibold text-[var(--t-blue)]">แอปเตือนภัยภาษาไทย และสถานทูตไทย</summary>
+        <ul className="space-y-1">
+          {SAFETY_LINKS.map((l) => (
+            <li key={l.url}><a href={l.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[36px] items-center underline underline-offset-2">{l.label} ↗</a></li>
+          ))}
+        </ul>
+      </details>
     </section>
   );
 }

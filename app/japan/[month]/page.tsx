@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { SiteHeader, SiteNav } from "@/components/tabi/site-nav";
 import { prompt } from "@/components/tabi/fonts";
 import "@/components/tabi/tabi.css";
 import { closuresIn, monthHighlights, suggestRoutes } from "@/lib/tabi/planner";
@@ -41,11 +42,11 @@ export default async function MonthPage({ params }: Props) {
 
   return (
     <div className={`${prompt.variable} tabi`}>
-      <main className="tabi-shell space-y-6 lg:!pt-10">
-        <nav className="flex items-center justify-between text-sm">
-          <Link href="/" className="tabi-title text-xl font-bold">Nagame</Link>
-          <Link href="/japan" className="text-[var(--t-blue)] underline underline-offset-2">ทุกเดือน</Link>
-        </nav>
+      <main className="tabi-shell space-y-6">
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <SiteHeader />
+          <Link href="/japan" className="tabi-btn tabi-btn--soft min-h-[44px] px-4 lg:ml-auto">← ทุกเดือน</Link>
+        </div>
 
         <header className="space-y-3">
           <p className="text-4xl" aria-hidden>{m.emoji}</p>
@@ -106,6 +107,7 @@ export default async function MonthPage({ params }: Props) {
           <Link href={`/japan/${next.slug}`} className="text-[var(--t-blue)]">{next.th} {next.emoji} →</Link>
         </nav>
       </main>
+      <SiteNav />
     </div>
   );
 }

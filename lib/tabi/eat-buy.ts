@@ -7,6 +7,7 @@
 import eatBuyData from "@/data/places/eat-buy.json";
 import eatGoogle from "@/data/places/eat-google.json";
 import { CITY_BY_NAME, km } from "./cities";
+import type { PlaceCard } from "./types";
 import { stationFor } from "./transport";
 
 type Listing = {
@@ -40,8 +41,6 @@ if (G_FRESH) {
   }
 }
 const thDate = (iso: string) => new Date(iso).toLocaleDateString("th-TH", { day: "numeric", month: "short", timeZone: "Asia/Bangkok" });
-/** " · ⭐ 4.9 (156 รีวิว)" for Google listings */
-const stars = (l: Listing) => (l.g ? ` · ⭐ ${l.g.r.toFixed(1)} (${l.g.rc.toLocaleString("en-US")} รีวิว)` : "");
 
 /** Thai and English district names → the guide's district for that city */
 const DISTRICTS: [RegExp, string, string][] = [
@@ -100,7 +99,16 @@ export const tabelog = (q: string) => `https://tabelog.com/en/rstLst/?sw=${encod
 const maps = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 const mapsLink = (l: Listing, area: string) => l.g?.url ?? (l.la && l.lo ? maps(`${l.n} ${l.la},${l.lo}`) : maps(`${l.n} ${area} Japan`));
 
-export type EatBuyAnswer = { bubbles: string[]; links: { label: string; url: string }[] };
+export type EatBuyAnswer = { bubbles: string[]; links: { label: string; url: string }[]; places?: PlaceCard[] };
+
+const TAG_TH = Object.fromEntries([...EAT_TH, ...BUY_TH, ...SLEEP_TH].map(([, key, th]) => [key, th]));
+/** Google's category ("Unagi restaurant") → a Thai dish tag ("อาหารทะเล"), or "" */
+export const cuisineTh = (cat: string) => TAG_TH[G_TAGS.find(([re]) => re.test(cat))?.[1] ?? ""] ?? "";
+const card = (l: Listing, area: string): PlaceCard => ({
+  kind: l.k, name: `${l.n}${l.a ? ` ${l.a}` : ""}`, url: mapsLink(l, area),
+  rating: l.g?.r, reviews: l.g?.rc, tag: TAG_TH[l.t.find((t) => TAG_TH[t]) ?? ""], area: l.d,
+  price: l.p ? (l.k === "sleep" ? SLEEP_PRICE_LABEL : PRICE)[l.p] : undefined,
+});
 
 /** The place and dish in a restaurant question, as the live-search worker takes them. */
 export function eatQuery(message: string, focus: string[]) {
@@ -117,9 +125,9 @@ export function eatQuery(message: string, focus: string[]) {
   };
 }
 
-/** Live look-up results as answer links, same shape as the snapshot ones. */
-export function livePlaceLinks(places: { n: string; r: number; rc: number; url: string }[]) {
-  return places.slice(0, 6).map((p) => ({ label: `${p.n} · ⭐ ${p.r.toFixed(1)} (${p.rc.toLocaleString("en-US")} รีวิว)`, url: p.url }));
+/** Live look-up results as cards, same shape as the snapshot ones. */
+export function livePlaceCards(places: { n: string; r: number; rc: number; url: string; cat: string }[]): PlaceCard[] {
+  return places.slice(0, 6).map((p) => ({ kind: "eat", name: p.n, url: p.url, rating: p.r, reviews: p.rc, tag: cuisineTh(p.cat) || undefined }));
 }
 
 export function findEatBuy(message: string, focus: string[]): EatBuyAnswer {
@@ -158,10 +166,8 @@ export function findEatBuy(message: string, focus: string[]): EatBuyAnswer {
   const picks = [...pickFrom].sort((a, b) => Number(Boolean(b.la)) - Number(Boolean(a.la))).slice(0, 5);
   const searchWord = tag ? (tag[1] === "souvenir" ? "souvenir shop" : tag[1].replace(/_/g, " ")) : kind === "eat" ? "restaurant" : "shopping";
   const area = district ? `${district[2]} ${city}` : city;
-  const links = picks.map((l) => ({
-    label: `${l.n}${l.a ? ` ${l.a}` : ""}${l.d && !district ? ` · ${l.d}` : ""}${l.p ? ` · ${PRICE[l.p]}` : ""}${stars(l)}`,
-    url: mapsLink(l, area),
-  }));
+  const places = picks.map((l) => ({ ...card(l, area), area: district ? undefined : l.d }));
+  const links: { label: string; url: string }[] = [];
   const search = { label: `ค้น ${searchWord} แถว ${area} ใน Google Maps (มีรีวิว)`, url: maps(`${searchWord} ${area} Japan`) };
   // restaurants: Japan's own review site too (scores from Japanese diners)
   const tabelogLink = kind === "eat" ? [{ label: `ดูคะแนนร้าน${tag ? tag[2] : ""}แถว ${area} ใน Tabelog`, url: tabelog(`${area} ${tag ? searchWord : ""}`.trim()) }] : [];
@@ -170,10 +176,10 @@ export function findEatBuy(message: string, focus: string[]): EatBuyAnswer {
   else links.push(search, ...tabelogLink);
 
   if (!picks.length) {
-    return { bubbles: [`${what}แถว${/^[A-Za-z]/.test(place) ? " " : ""}${place} ทาบิยังไม่มีข้อมูลจากไกด์ กดค้นใน Google Maps ได้เลย ดูรีวิวกับเวลาเปิดประกอบได้`], links };
+    return { bubbles: [`${what}แถว${/^[A-Za-z]/.test(place) ? " " : ""}${place} ทาบิยังไม่มีข้อมูลจากไกด์ กดค้นใน Google Maps ได้เลย ดูรีวิวกับเวลาเปิดประกอบได้`], links, places };
   }
   const credit = fromGoogle ? `คะแนนจาก Google Maps ทาบิเช็กเมื่อ ${thDate(G_SNAP.checkedAt)}` : "ข้อมูล: Wikivoyage";
-  return { bubbles: [...lead, `ร้านอาจปิดหรือย้ายได้ เช็กเวลาเปิดใน Google Maps ก่อนไปนะ · ${credit}`], links };
+  return { bubbles: [...lead, `ร้านอาจปิดหรือย้ายได้ เช็กเวลาเปิดใน Google Maps ก่อนไปนะ · ${credit}`], links, places };
 }
 
 // dinner in a day plan: places a traveller sits down for in the evening, from the guide
@@ -247,11 +253,8 @@ export function findStay(message: string, focus: string[]): EatBuyAnswer {
       links: [search, ...(tip.length ? [{ label: `ที่พักใกล้ ${station} ใน Google Maps`, url: maps(`hotels near ${station}`) }] : [])],
     };
   }
-  const links = picks.map((l) => ({
-    label: `${l.n}${l.a ? ` ${l.a}` : ""}${l.d && (!district || widened) ? ` · ${l.d}` : ""}${l.p ? ` · ${SLEEP_PRICE_LABEL[l.p]}` : ""}`,
-    url: l.la && l.lo ? maps(`${l.n} ${l.la},${l.lo}`) : maps(`${l.n} ${area} Japan`),
-  }));
-  links.push(search);
+  const places = picks.map((l) => ({ ...card(l, area), area: district && !widened ? undefined : l.d }));
+  const links = [search];
   return {
     bubbles: [
       widened
@@ -261,5 +264,6 @@ export function findStay(message: string, focus: string[]): EatBuyAnswer {
       "ทาบิจองให้ไม่ได้ ราคากับห้องว่างของวันที่พี่ไปดูใน Google Hotels ได้เลย · ข้อมูล: Wikivoyage",
     ],
     links,
+    places,
   };
 }

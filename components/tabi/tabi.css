@@ -116,12 +116,12 @@
   border-top: 1px solid var(--t-line);
 }
 .tabi-nav-inner { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; max-width: 480px; }
-.tabi-nav button { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 52px; font-size: 12px; color: var(--t-muted); }
-.tabi-nav button[aria-current="page"] { color: var(--t-blue); font-weight: 600; }
+.tabi-nav :is(button, a) { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 52px; font-size: 12px; color: var(--t-muted); }
+.tabi-nav :is(button, a)[aria-current="page"] { color: var(--t-blue); font-weight: 600; }
 /* Tailwind's preflight gives buttons the arrow cursor; everything clickable here shows the hand */
-.tabi :is(button, [role="button"], summary, label[for], select):not(:disabled), .tabi-nav button { cursor: pointer; }
-.tabi-nav button { transition: color 150ms ease, background-color 150ms ease; }
-.tabi-nav button:hover { color: var(--t-blue); }
+.tabi :is(button, [role="button"], summary, label[for], select):not(:disabled), .tabi-nav :is(button, a) { cursor: pointer; }
+.tabi-nav :is(button, a) { transition: color 150ms ease, background-color 150ms ease; }
+.tabi-nav :is(button, a):hover { color: var(--t-blue); }
 
 .tabi-img {
   background: linear-gradient(135deg, var(--t-blue-soft), var(--t-sakura));
@@ -231,7 +231,7 @@ html[data-tabi-traveler="on"] [data-tabi-dock] > * { visibility: hidden; }
   .tabi-chip:hover .tabi-emoji { animation: tabi-wiggle 520ms ease-in-out; }
   .tabi :is(button.tabi-card, a.tabi-card):hover { translate: 0 -4px; box-shadow: var(--t-shadow); }
   .tabi :is(button.tabi-card, a.tabi-card):hover .tabi-img { scale: 1.06; }
-  .tabi-nav button:hover svg { animation: tabi-hop 520ms ease-in-out; }
+  .tabi-nav :is(button, a):hover svg { animation: tabi-hop 520ms ease-in-out; }
   /* Tabi beside the home composer looks up and hops when you are about to ask */
   .tabi-ask-row:is(:hover, :focus-within) .tabi-avatar { animation: tabi-hop 620ms ease-in-out; }
   .tabi-avatar:hover { animation: tabi-hop 620ms ease-in-out; }
@@ -309,15 +309,15 @@ html[data-tabi-traveler="on"] [data-tabi-dock] > * { visibility: hidden; }
 .tabi-tip-ok:focus-visible, .tabi-tip-skip:focus-visible { outline: 3px solid #ffd166; outline-offset: 2px; }
 
 /* ── desktop (≥1024px): wider canvas, the bottom nav becomes a top bar ── */
-.tabi-nav .tabi-nav-brand, .tabi-nav .tabi-nav-help { display: none; } /* beats ".tabi-nav button { display: flex }" */
+.tabi-nav .tabi-nav-brand, .tabi-nav .tabi-nav-help { display: none; } /* beats ".tabi-nav :is(button, a) { display: flex }" */
 @media (min-width: 1024px) {
   .tabi-shell { max-width: 1160px; padding: 92px 32px 56px; }
   .tabi-nav { inset: 0 0 auto 0; padding: 10px 32px; border-top: 0; border-bottom: 1px solid var(--t-line); }
   .tabi-nav-inner { display: flex; align-items: center; gap: 8px; max-width: 1160px; }
   .tabi-nav .tabi-nav-brand { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-right: auto; min-height: 48px; }
-  .tabi-nav button:not(.tabi-nav-brand) { flex-direction: row; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; font-size: 15px; }
-  .tabi-nav button[aria-current="page"] { background: var(--t-blue-soft); }
-  .tabi-nav button:not(.tabi-nav-brand):not([aria-current="page"]):hover { background: color-mix(in srgb, var(--t-blue-soft) 60%, transparent); }
+  .tabi-nav :is(button, a):not(.tabi-nav-brand) { flex-direction: row; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; font-size: 15px; }
+  .tabi-nav :is(button, a)[aria-current="page"] { background: var(--t-blue-soft); }
+  .tabi-nav :is(button, a):not(.tabi-nav-brand):not([aria-current="page"]):hover { background: color-mix(in srgb, var(--t-blue-soft) 60%, transparent); }
   .tabi-nav .tabi-nav-help { display: flex; }
   .tabi-sticky { position: sticky; top: 92px; }
   /* .tabi-scroll-x sets display:flex outside Tailwind's layers, so the grid lives here */
@@ -385,3 +385,11 @@ html[data-tabi-traveler="on"] [data-tabi-dock] > * { visibility: hidden; }
 .tabi-flip-back { transform: rotateY(180deg); }
 .tabi-flip-btn { min-height: 32px; padding: 0 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.75); font-size: 12px; font-weight: 700; }
 .tabi-flip-btn:focus-visible { outline: 3px solid rgba(45, 127, 249, 0.45); outline-offset: 2px; }
+
+/* average weather beside a day's title: small, never wraps the title away */
+.tabi-day-weather { flex-shrink: 0; padding: 1px 8px; border-radius: 999px; background: var(--t-blue-soft); color: var(--t-navy); font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+/* restaurant / shop / stay cards in a chat answer */
+.tabi-place-card { width: 100%; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 12px; border-radius: 16px; }
+.tabi-place-icon { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; background: var(--t-sakura); font-size: 18px; }
+.tabi-place-tag { padding: 0 8px; border-radius: 999px; background: var(--t-green); color: var(--t-green-ink); font-weight: 600; }

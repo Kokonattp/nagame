@@ -55,6 +55,8 @@ const JMA_AREAS: Record<string, { office: string; areas: string[] }> = {
 };
 
 export const ALERT_CITIES = new Set(Object.keys(JMA_AREAS));
+/** The JMA municipality codes for a base city (volcano warnings are issued by these too). */
+export const jmaAreasFor = (city: string) => JMA_AREAS[city]?.areas ?? [];
 
 /** Hazards a traveller must act on, at 警報 (30) / 危険警報 (40) / 特別警報 (50). Wave/tide only when severe. */
 const KINDS: Record<string, { hazard: string; level: 30 | 40 | 50 }> = {

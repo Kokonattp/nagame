@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ALERT_CITIES, fetchAlerts } from "@/lib/tabi/alerts";
+import { CITY_BY_NAME } from "@/lib/tabi/cities";
+import { fetchSafety } from "@/lib/tabi/safety";
 
-// /api/tabi/alerts?cities=Kyoto,Toyama → current JMA warnings (警報 or higher) for those base cities.
-// Only known base cities are looked up, and JMA responses are cached 10 min server-side.
+// /api/tabi/alerts?cities=Kyoto,Toyama → what a traveller on those base cities must know now:
+// JMA weather warnings (警報+), shindo 5-+ quakes in their prefectures (24 h), tsunami warnings
+// (24 h) and volcano warnings for their towns. Only known base cities; JMA cached 5–10 min.
 
 export async function GET(request: NextRequest) {
   const cities = (request.nextUrl.searchParams.get("cities") ?? "")
     .split(",")
     .map((c) => c.trim())
-    .filter((c) => ALERT_CITIES.has(c))
-    .slice(0, 6);
-  if (!cities.length) return NextResponse.json({ alerts: [] });
-  const alerts = await fetchAlerts(cities);
-  return NextResponse.json({ alerts, checkedAt: new Date().toISOString() }, { headers: { "Cache-Control": "public, max-age=300" } });
+    .filter((c) => CITY_BY_NAME.has(c))
+    .slice(0, 8);
+  if (!cities.length) return NextResponse.json({ alerts: [], events: [] });
+  const { alerts, events } = await fetchSafety(cities);
+  return NextResponse.json({ alerts, events, checkedAt: new Date().toISOString() }, { headers: { "Cache-Control": "public, max-age=300" } });
 }

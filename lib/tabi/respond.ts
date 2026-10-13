@@ -5,14 +5,15 @@ import { buildOutbound } from "@/lib/outbound";
 import { CITY_BY_NAME, GATEWAYS, nearestGateway, REGION_TH, type Region } from "./cities";
 import { closedIn, draftItinerary, findPlaceByText, fitRouteToDays, partlyOpenIn, PREF_TH, seasonOf, suggestRoutes, suggestStops } from "./planner";
 import { faqAnswer } from "./faq";
-import { eatQuery, findEatBuy, findStay, livePlaceLinks, STAY_WORDS, tabelog } from "./eat-buy";
+import { eatQuery, findEatBuy, findStay, livePlaceCards, STAY_WORDS, tabelog } from "./eat-buy";
 import { liveConfigured, liveEat, liveFlight } from "./live-search";
+import { fetchSafety } from "./safety";
 import { findSights } from "./sights";
 import { chatReply } from "./chat-llm";
 import { REGION_CITY, weatherAnswer, weatherCities } from "./weather";
 import { cheapestDates } from "./flight-calendar";
 import { FLIGHTS_CHECKED_AT, flightSnapFor } from "./flight-snapshot";
-import type { FlightLink, Place, Preference, TabiContext, TabiReply, TripIntent } from "./types";
+import type { FlightLink, Place, PlaceCard, Preference, TabiContext, TabiReply, TripIntent } from "./types";
 import { mergeIntent, understand } from "./understand";
 
 const MONTH_TH = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
@@ -123,7 +124,7 @@ async function liveFlightBubbles(arrive: string, depart: string, back: string, s
 }
 
 /** Live restaurant list for a food question, or null so the guide / snapshot answer is used. */
-async function liveEatAnswer(message: string, places: string[]): Promise<{ bubbles: string[]; links: { label: string; url: string }[] } | null> {
+async function liveEatAnswer(message: string, places: string[]): Promise<{ bubbles: string[]; links: { label: string; url: string }[]; places: PlaceCard[] } | null> {
   if (!liveConfigured()) return null;
   const q = eatQuery(message, places);
   if (!q) return null;
@@ -132,8 +133,23 @@ async function liveEatAnswer(message: string, places: string[]): Promise<{ bubbl
   const search = { label: `ค้น ${q.what} แถว ${q.area} ใน Google Maps (มีรีวิว)`, url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${q.what} ${q.area} Japan`)}` };
   return {
     bubbles: [`${q.whatTh}แถว${/^[A-Za-z]/.test(q.placeTh) ? " " : ""}${q.placeTh} ที่คะแนนดีใน Google Maps ตอนนี้ ${Math.min(res.places.length, 6)} ที่ กดดูรีวิวกับเวลาเปิดได้เลย`, "ร้านอาจปิดหรือย้ายได้ เช็กเวลาเปิดก่อนไปนะ · ทาบิเพิ่งเช็กใน Google Maps"],
-    links: [...livePlaceLinks(res.places), search, { label: `ดูคะแนนร้าน${q.whatTh === "ร้านอาหาร" ? "" : q.whatTh}แถว ${q.area} ใน Tabelog`, url: tabelog(q.what === "restaurant" ? q.area : `${q.area} ${q.what}`) }],
+    places: livePlaceCards(res.places),
+    links: [search, { label: `ดูคะแนนร้าน${q.whatTh === "ร้านอาหาร" ? "" : q.whatTh}แถว ${q.area} ใน Tabelog`, url: tabelog(q.what === "restaurant" ? q.area : `${q.area} ${q.what}`) }],
   };
+}
+
+/** One line per live JMA warning/event for these cities, or "nothing now" — never a guess. */
+async function safetyNow(cities: string[]): Promise<string[]> {
+  if (!cities.length) return [];
+  const { alerts, events } = await fetchSafety(cities);
+  const where = cities.map((c) => CITY_BY_NAME.get(c)?.th ?? c).join(", ");
+  const lines = [
+    ...events.map((e) => (e.kind === "quake" ? `⚠️ แผ่นดินไหวแรงระดับ ${e.shindo} ${e.prefsTh} ใน 24 ชม. ระวังอาฟเตอร์ช็อก`
+      : e.kind === "tsunami" ? `⚠️ ${e.level} (${e.areaJa}) ถ้าอยู่ใกล้ทะเลให้ขึ้นที่สูงทันที`
+      : `⚠️ ภูเขาไฟ ${e.volcano} ใกล้${e.cityTh}: ${e.level} ห้ามเข้าเขตปากปล่อง`)),
+    ...alerts.map((a) => `⚠️ ${a.cityTh}: ${a.hazard} (${a.level >= 50 ? "特別警報" : a.level >= 40 ? "危険警報" : "警報"})`),
+  ];
+  return lines.length ? [`ประกาศจากกรมอุตุฯ ญี่ปุ่นตอนนี้ แถว${where}`, ...lines] : [`ตอนนี้แถว${where}ไม่มีประกาศเตือนภัยระดับที่ต้องระวังจากกรมอุตุฯ ญี่ปุ่น`];
 }
 
 export async function respond(message: string, ctx: TabiContext): Promise<TabiReply> {
@@ -168,7 +184,7 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
     // restaurants: checked live in Google Maps when the worker is up, else the guide / snapshot list
     const found = stayAsked ? findStay(message, places) : (await liveEatAnswer(message, places)) ?? findEatBuy(message, places);
     const refuse = u.intent === "booking" ? ["ทาบิจองหรือจ่ายเงินให้ไม่ได้นะ แต่ช่วยหาที่พักให้เลือกได้"] : [];
-    return { ...base, action: "answer", bubbles: [...refuse, ...found.bubbles.filter((b) => !refuse.length || !b.includes("จองให้ไม่ได้"))], links: found.links, chips: chipsAfter };
+    return { ...base, action: "answer", bubbles: [...refuse, ...found.bubbles.filter((b) => !refuse.length || !b.includes("จองให้ไม่ได้"))], links: found.links, places: found.places, chips: chipsAfter };
   }
 
   // "ที่เที่ยวเกียวโตมีอะไรบ้าง" / "วัดในนารา": the best-known sights there (a region keeps its whole area)
@@ -181,7 +197,9 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
   // A practical question ("ต้องขอวีซ่าไหม") gets a checked answer, whatever stage the trip is at.
   if (u.faqTopic && (u.intent === "practical_question" || u.intent === "ask_detail" || u.intent === "other" || u.confidence < 0.5)) {
     const a = faqAnswer(u.faqTopic, { route: ctx.selectedRoute, intent });
-    return { ...base, action: "answer", bubbles: a.bubbles, links: a.links, chips: ctx.selectedRoute ? ["จัดแผนรายวัน", "ดูตั๋วเครื่องบิน"] : START_CHIPS };
+    // safety: what JMA says right now for the places being talked about comes first
+    const live = u.faqTopic === "emergency" ? await safetyNow(asked.filter((c) => CITY_BY_NAME.has(c))) : [];
+    return { ...base, action: "answer", bubbles: [...live, ...a.bubbles], links: a.links, chips: ctx.selectedRoute ? ["จัดแผนรายวัน", "ดูตั๋วเครื่องบิน"] : START_CHIPS };
   }
   if (u.intent === "practical_question") {
     return { ...base, action: "answer", bubbles: ["เรื่องนี้ทาบิยังไม่มีคำตอบที่แน่ใจ ตอนนี้ตอบได้เรื่องวีซ่า ซิม เงิน บัตร IC กระเป๋า มารยาท เหตุฉุกเฉิน อากาศ ปลั๊กไฟ และการเดินทางจากสนามบิน"], chips: ["ต้องขอวีซ่าไหม", "ซื้อซิมยังไงดี", "ต้องพกเงินสดไหม"] };
