@@ -12,6 +12,8 @@ const RATE_MAX_CALLS = 12;
 const rateBuckets = new Map<string, number[]>();
 
 export const dynamic = "force-dynamic";
+// a "🔎 เช็กสด: …" look-up waits for the live-search worker (≤ 50 s)
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   let body: { message?: unknown; context?: unknown };

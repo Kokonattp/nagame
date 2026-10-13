@@ -5,7 +5,9 @@ import { buildOutbound } from "@/lib/outbound";
 import { CITY_BY_NAME, GATEWAYS, nearestGateway, REGION_TH, type Region } from "./cities";
 import { closedIn, draftItinerary, findPlaceByText, fitRouteToDays, partlyOpenIn, PREF_TH, seasonOf, suggestRoutes, suggestStops } from "./planner";
 import { faqAnswer } from "./faq";
-import { findEatBuy, findStay, STAY_WORDS } from "./eat-buy";
+import { eatQuery, findEatBuy, findStay, livePlaceLinks, STAY_WORDS } from "./eat-buy";
+import { LIVE_EAT_CHIP, LIVE_FLIGHT_CHIP, liveConfigured, liveEat, liveFailureTh, liveFlight } from "./live-search";
+import { findFocus } from "./cities";
 import { findSights } from "./sights";
 import { chatReply } from "./chat-llm";
 import { REGION_CITY, weatherAnswer, weatherCities } from "./weather";
@@ -97,7 +99,49 @@ function describePlace(p: Place, month?: number): string[] {
   return lines;
 }
 
+/**
+ * "🔎 เช็กสด: …" chips: Tabi looks it up now (live-search worker) instead of answering from snapshots.
+ * Only offered when the worker is configured; the chip text carries everything needed.
+ */
+async function liveAnswer(message: string, ctx: TabiContext): Promise<TabiReply | null> {
+  const intent = ctx.intent;
+  if (message === LIVE_FLIGHT_CHIP && intent?.startDate && intent.durationDays && liveConfigured()) {
+    const arrive = ctx.selectedRoute?.gateway.city ?? focusGateway(intent);
+    const g = GATEWAYS.find((x) => x.city === arrive) ?? GATEWAYS[0];
+    const back = addDays(intent.startDate, Math.max(intent.durationDays - 1, 0));
+    const flight = flightLink(intent, g.city);
+    const res = await liveFlight(g.searchName, intent.startDate, back);
+    if ("error" in res) return { intent, source: "fallback", action: "flights", flight, bubbles: [liveFailureTh(res.error)] };
+    const th = CITY_BY_NAME.get(g.city)?.th ?? g.city;
+    const bubbles = res.cheapest
+      ? [
+          `ทาบิเพิ่งเช็กใน Google Flights: ไป-กลับ${th} ไป ${thaiDay(intent.startDate)} กลับ ${thaiDay(back)} เริ่ม ~฿${res.cheapest.toLocaleString("en-US")}${res.nonstop ? ` · บินตรง ~฿${res.nonstop.price.toLocaleString("en-US")} (${res.nonstop.airline})` : " · วันนั้นไม่เจอบินตรง"} ✈️`,
+          "ราคาขยับได้ทุกชั่วโมง กดดูเที่ยวบินทั้งหมดก่อนจองนะ",
+        ]
+      : ["ทาบิเช็กแล้วแต่ยังไม่เห็นราคาของวันนั้น กดดูใน Google Flights ได้เลย"];
+    return { intent, source: "fallback", action: "flights", flight, bubbles };
+  }
+  const m = message.match(LIVE_EAT_CHIP);
+  if (m && liveConfigured()) {
+    const q = eatQuery(message, findFocus(message));
+    if (!q) return null;
+    const res = await liveEat(q.area, q.what);
+    const search = { label: `ค้น ${q.what} แถว ${q.area} ใน Google Maps (มีรีวิว)`, url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${q.what} ${q.area} Japan`)}` };
+    const base = { intent: intent ?? { preferences: [], focus: [] }, source: "fallback" as const };
+    if ("error" in res) return { ...base, action: "answer", bubbles: [liveFailureTh(res.error)], links: [search] };
+    if (!res.places.length) return { ...base, action: "answer", bubbles: [`ทาบิเช็กแล้ว ยังไม่เจอ${q.whatTh}ที่${q.placeTh}ที่มีรีวิวพอให้แนะนำ ลองกดค้นเองใน Google Maps ได้เลย`], links: [search] };
+    return {
+      ...base, action: "answer",
+      bubbles: [`${q.whatTh}แถว${q.placeTh} ที่คะแนนดีใน Google Maps ตอนนี้ ${Math.min(res.places.length, 6)} ที่ กดดูรีวิวกับเวลาเปิดได้เลย`, "ร้านอาจปิดหรือย้ายได้ เช็กเวลาเปิดก่อนไปนะ · ทาบิเพิ่งเช็กใน Google Maps"],
+      links: [...livePlaceLinks(res.places), search],
+    };
+  }
+  return null;
+}
+
 export async function respond(message: string, ctx: TabiContext): Promise<TabiReply> {
+  const live = await liveAnswer(message, ctx);
+  if (live) return live;
   const u = await understand(message, ctx);
   // "เที่ยวเกียวโต 5 วัน ไปไหนดี" names a trip length: that is a trip to plan, not a list of sights
   // (a place and a length are a clear enough request: no "not sure what you mean" question, even when
@@ -128,7 +172,8 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
     const places = asked;
     const found = stayAsked ? findStay(message, places) : findEatBuy(message, places);
     const refuse = u.intent === "booking" ? ["ทาบิจองหรือจ่ายเงินให้ไม่ได้นะ แต่ช่วยหาที่พักให้เลือกได้"] : [];
-    return { ...base, action: "answer", bubbles: [...refuse, ...found.bubbles.filter((b) => !refuse.length || !b.includes("จองให้ไม่ได้"))], links: found.links, chips: chipsAfter };
+    const liveChip = "live" in found && found.live && liveConfigured() ? [found.live] : [];
+    return { ...base, action: "answer", bubbles: [...refuse, ...found.bubbles.filter((b) => !refuse.length || !b.includes("จองให้ไม่ได้"))], links: found.links, chips: [...liveChip, ...chipsAfter] };
   }
 
   // "ที่เที่ยวเกียวโตมีอะไรบ้าง" / "วัดในนารา": the best-known sights there (a region keeps its whole area)
@@ -197,7 +242,9 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
             "ราคาเปลี่ยนทุกวัน กดดูราคาจริงตามวันของพี่ใน Google Flights ได้เลย",
           ]
         : [pick(["ทาบิเปิดหน้าค้นหาที่ตรงกับทริปไว้ให้แล้ว กดดูราคาจริงได้เลย ✈️", "ราคาตั๋วเปลี่ยนทุกวัน ทาบิพาไปหน้าค้นหาที่ตั้งเส้นทางไว้ให้แล้วนะ"], message)];
-      return { ...base, action: "flights", flight, bubbles };
+      // exact dates: Tabi can look up the real price for those days (the snapshot only samples the 10th–15th)
+      const chips = intent.startDate && intent.durationDays && liveConfigured() ? [LIVE_FLIGHT_CHIP] : undefined;
+      return { ...base, action: "flights", flight, bubbles, chips };
     }
 
     case "pick_option": {
