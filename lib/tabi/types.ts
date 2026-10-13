@@ -135,6 +135,9 @@ export type PlaceCard = {
   price?: string;
   /** district within the city, from the guide */
   area?: string;
+  /** where it is (pin on the answer's overview map) */
+  lat?: number;
+  lon?: number;
 };
 
 export type TabiReply = {

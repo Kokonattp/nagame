@@ -2,7 +2,7 @@
 // every answer below is written and checked by people, with an official link where one exists.
 // Short on purpose (owner rule: say what helps, link the source for the rest).
 
-import { JNTO_HOTLINE, SAFETY_LINKS } from "./safety-links";
+import { JNTO_HOTLINE, SAFETY_LINKS, THAI_MISSION_TEL } from "./safety-links";
 import { durationTh, travelTime } from "./rail-times";
 import { AIRPORTS, jrPassWorthIt, legLinks } from "./transport";
 import type { RouteOption, TripIntent } from "./types";
@@ -124,6 +124,7 @@ export function faqAnswer(topic: FaqTopic, ctx: { route?: RouteOption; intent?: 
         bubbles: [
           "เบอร์ฉุกเฉิน: ตำรวจ 110 · รถพยาบาลและดับเพลิง 119",
           "สายด่วนนักท่องเที่ยว JNTO 050-3816-2787 ตลอด 24 ชม. (อังกฤษ จีน เกาหลี) ลงแอป Safety tips ไว้ก่อนไป จะได้รับแจ้งเตือนแผ่นดินไหว สึนามิ ภูเขาไฟเป็นภาษาไทย",
+          `คนไทยต้องการความช่วยเหลือเร่งด่วน: สายด่วนสถานทูตไทย ${THAI_MISSION_TEL[0].number} · กรมการกงสุล 24 ชม. ${THAI_MISSION_TEL[3].number}`,
         ],
         links: [{ label: "Japan Visitor Hotline (JNTO)", url: JNTO_HOTLINE.url }, ...SAFETY_LINKS],
       };

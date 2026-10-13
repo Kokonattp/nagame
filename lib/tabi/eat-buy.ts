@@ -108,6 +108,7 @@ const card = (l: Listing, area: string): PlaceCard => ({
   kind: l.k, name: `${l.n}${l.a ? ` ${l.a}` : ""}`, url: mapsLink(l, area),
   rating: l.g?.r, reviews: l.g?.rc, tag: TAG_TH[l.t.find((t) => TAG_TH[t]) ?? ""], area: l.d,
   price: l.p ? (l.k === "sleep" ? SLEEP_PRICE_LABEL : PRICE)[l.p] : undefined,
+  lat: l.la, lon: l.lo,
 });
 
 /** The place and dish in a restaurant question, as the live-search worker takes them. */
@@ -118,6 +119,7 @@ export function eatQuery(message: string, focus: string[]) {
   if (!city) return undefined;
   const tag = EAT_TH.find(([re]) => re.test(message));
   return {
+    city,
     area: district ? `${district[2]} ${city}` : city,
     what: tag ? tag[1].replace(/_/g, " ") : "restaurant",
     whatTh: tag?.[2] ?? "ร้านอาหาร",
@@ -126,8 +128,8 @@ export function eatQuery(message: string, focus: string[]) {
 }
 
 /** Live look-up results as cards, same shape as the snapshot ones. */
-export function livePlaceCards(places: { n: string; r: number; rc: number; url: string; cat: string }[]): PlaceCard[] {
-  return places.slice(0, 6).map((p) => ({ kind: "eat", name: p.n, url: p.url, rating: p.r, reviews: p.rc, tag: cuisineTh(p.cat) || undefined }));
+export function livePlaceCards(places: { n: string; r: number; rc: number; url: string; cat: string; la: number; lo: number }[]): PlaceCard[] {
+  return places.slice(0, 6).map((p) => ({ kind: "eat", name: p.n, url: p.url, rating: p.r, reviews: p.rc, tag: cuisineTh(p.cat) || undefined, lat: p.la, lon: p.lo }));
 }
 
 export function findEatBuy(message: string, focus: string[]): EatBuyAnswer {

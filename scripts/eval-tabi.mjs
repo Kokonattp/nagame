@@ -62,6 +62,13 @@ const CASES = [
   { id: "stay-no-guide", msg: "ที่พักที่คิโนะซากิ", action: "answer", check: (r) => r.links?.[0]?.url.includes("google.com/travel/hotels") },
   // weather and food answers come from data (normals / guide listings), never a canned reply
   { id: "weather-snow", msg: "ซัปโปโร ธ.ค. หิมะตกไหม", action: "answer", month: 12, check: (r) => /ซัปโปโร ธ\.ค\.: กลางวัน/.test(r.bubbles.join(" ")) && r.bubbles.join(" ").includes("หิมะ") },
+  // several named cities: 2–3 options, the asked-for set first ("แนะนำสุด")
+  { id: "routes-variety", msg: "เกียวโต โอซาก้า 5 วัน", action: "suggest_routes", check: (r) => r.routes?.length >= 2 && r.routes[0].stops.map((s) => s.city).sort().join() === "Kyoto,Osaka" },
+  // a place + a length + "หิมะ" is a trip to plan, not a weather question
+  { id: "trip-snow-not-weather", msg: "ฮอกไกโด 6 วัน หิมะ", action: "suggest_routes", check: (r) => r.routes?.length >= 2 },
+  { id: "snow-question-stays-weather", msg: "ซัปโปโร ม.ค. หิมะตกไหม", action: "answer", check: (r) => r.bubbles.join(" ").includes("หิมะ") },
+  // safety: emergency numbers always, the Thai embassy hotline included
+  { id: "safety-numbers", msg: "ไปคาโกชิม่าปลอดภัยไหม", action: "answer", check: (r) => r.bubbles.join(" ").includes("110") && r.bubbles.join(" ").includes("090-4435-7812") },
   { id: "food-district", msg: "ร้านราเมนแถวชินจูกุแนะนำหน่อย", action: "answer", check: (r) => r.links?.some((l) => l.url.includes("google.com/maps")) && !r.bubbles.join(" ").includes("จอง") },
   { id: "off-topic-honest", msg: "ใครชนะฟุตบอลเมื่อคืน", action: "chat", check: (r) => r.bubbles.join(" ").includes("ตอบไม่ได้") && !r.bubbles.join(" ").includes("จอง") },
   // a price may appear only as one Tabi checked itself, with the check date (workers/flight-prices)

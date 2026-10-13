@@ -43,7 +43,8 @@ async function pastelStyle(): Promise<StyleSpecification> {
 
 let styleCache: Promise<StyleSpecification> | null = null;
 
-export function TabiMap({ points, pins = [], height = 220, interactive = true }: { points: MapPoint[]; pins?: MapPin[]; height?: number; interactive?: boolean }) {
+/** `maxZoom`: 10 frames a route between cities; places inside one town (restaurant answers) need ~14. */
+export function TabiMap({ points, pins = [], height = 220, interactive = true, maxZoom = 10 }: { points: MapPoint[]; pins?: MapPin[]; height?: number; interactive?: boolean; maxZoom?: number }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MlMap | null>(null);
   const [ready, setReady] = useState(0); // bumps each time a map is built, so pins re-attach to it
@@ -128,7 +129,7 @@ export function TabiMap({ points, pins = [], height = 220, interactive = true }:
       if (points.length > 1) {
         const lons = points.map((p) => p.lon);
         const lats = points.map((p) => p.lat);
-        m.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: { top: 44, bottom: 56, left: 44, right: 120 }, maxZoom: 10, duration: 0 });
+        m.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: { top: 44, bottom: 56, left: 44, right: 120 }, maxZoom, duration: 0 });
       }
     })();
     return () => {
@@ -137,7 +138,7 @@ export function TabiMap({ points, pins = [], height = 220, interactive = true }:
       map.current?.remove();
       map.current = null;
     };
-  }, [points, interactive]);
+  }, [points, interactive, maxZoom]);
 
   // stay / eat pins: a small emoji badge; tapping opens the place in Google Maps
   useEffect(() => {

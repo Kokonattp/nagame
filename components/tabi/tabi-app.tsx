@@ -12,7 +12,7 @@ import type { HazardAlert } from "@/lib/tabi/alerts";
 import type { SafetyEvent } from "@/lib/tabi/safety";
 import { dayWeather } from "@/lib/tabi/day-weather";
 import { FujiMark } from "./fuji-mark";
-import { EMERGENCY_TEL, JNTO_HOTLINE, SAFETY_LINKS } from "@/lib/tabi/safety-links";
+import { EMERGENCY_TEL, JNTO_HOTLINE, SAFETY_LINKS, THAI_MISSION_TEL } from "@/lib/tabi/safety-links";
 import { CITY_BY_NAME, nearestGateway } from "@/lib/tabi/cities";
 import { TABI_ART, TABI_DANCE, type TabiMood } from "@/lib/tabi/mascot";
 import { encodeShare, shareRef, tripTitle } from "@/lib/tabi/share";
@@ -443,7 +443,14 @@ const PLACE_ICON = { eat: "🍜", buy: "🛍️", sleep: "🛏️" } as const;
 
 /** Restaurants / shops / stays in an answer: one card each, rating first, the whole card opens Google Maps. */
 function PlaceCards({ places }: { places: PlaceCard[] }) {
+  // one small overview map of all of them (the cards are what you tap)
+  const points: MapPoint[] = useMemo(
+    () => places.filter((p) => p.lat && p.lon).map((p) => ({ lat: p.lat!, lon: p.lon!, label: p.name, kind: "place" as const })),
+    [places],
+  );
   return (
+    <>
+    {points.length >= 2 && <div className="w-full pt-1"><TabiMap points={points} height={150} interactive={false} maxZoom={14} /></div>}
     <ul className="grid w-full gap-2 pt-1 sm:grid-cols-2" aria-label="รายชื่อสถานที่">
       {places.map((p) => (
         <li key={p.url} className="min-w-0">
@@ -463,6 +470,7 @@ function PlaceCards({ places }: { places: PlaceCard[] }) {
         </li>
       ))}
     </ul>
+    </>
   );
 }
 
@@ -1431,36 +1439,71 @@ function TransportCard({ route, onAsk }: { route: RouteOption; onAsk?: (m: strin
 }
 
 /**
- * Rough cost per person, only from numbers Tabi actually has: the fare it checked on Google Flights,
- * the train fares between cities, and the nights — whose price is a live Google Hotels search, not a guess.
+ * Rough cost per person, in baht. Every figure has a source: the fare Tabi checked on Google Flights,
+ * the train fares between cities, and for stays and food the Japan Tourism Agency's average for
+ * foreign visitors (インバウンド消費動向調査, Jan–Mar 2025: lodging ¥74,370 over 6.9 nights, food
+ * ¥50,138 per trip ≈ ¥10,800 a night and ¥6,300 a day). Yen → baht at today's ECB rate; without a rate
+ * the yen figures stay.
  */
+const STAY_YEN_NIGHT = 10_800;
+const FOOD_YEN_DAY = 6_300;
+
 function BudgetCard({ trip }: { trip: SavedTrip }) {
+  const [fx, setFx] = useState<{ rate: number; date: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/tabi/fx").then((r) => r.json()).then((d: { rate?: number | null; date?: string }) => { if (live && d.rate) setFx({ rate: d.rate, date: d.date ?? "" }); }).catch(() => {});
+    return () => { live = false; };
+  }, []);
   const route = trip.route;
   if (!route) return null;
   const month = trip.intent.startDate ? Number(trip.intent.startDate.slice(5, 7)) : trip.intent.month;
   const fare = flightSnapFor(route.gateway.airport, month);
   const rail = route.stops.slice(1).map((s, i) => legFare(route.stops[i].city, s.city)).filter((f): f is LegFare => !!f);
+  const railYen = rail.length ? { min: rail.reduce((a, f) => a + f.min, 0), max: rail.reduce((a, f) => a + f.max, 0) } : null;
   const nights = route.stops.reduce((a, s) => a + s.nights, 0);
+  const days = nights + 1;
+  const stayYen = STAY_YEN_NIGHT * nights;
+  const foodYen = FOOD_YEN_DAY * days;
+  // round to ฿10 for small amounts, ฿100 above ฿1,000 (these are estimates, not prices)
+  const baht = (yen: number) => { const b = yen * fx!.rate; const step = b < 1000 ? 10 : 100; return Math.round(b / step) * step; };
+  const money = (yen: number) => (fx ? `~฿${baht(yen).toLocaleString("en-US")}` : `~¥${yen.toLocaleString("en-US")}`);
+  const total = fx && fare ? fare.snap.cheapest! + baht(stayYen) + baht(foodYen) + (railYen ? baht((railYen.min + railYen.max) / 2) : 0) : null;
   const first = route.stops[0];
   const hotels = `https://www.google.com/travel/hotels?q=${encodeURIComponent(`hotels in ${first.city}${trip.intent.startDate ? ` ${trip.intent.startDate}` : ""}`)}`;
+  const row = "flex items-baseline justify-between gap-3";
   return (
     <section className="tabi-card p-4" aria-labelledby="tabi-budget-title">
       <h2 id="tabi-budget-title" className="mb-2 flex items-center gap-2 font-bold"><span aria-hidden>💰</span>งบคร่าว ๆ ต่อคน</h2>
       <ul className="space-y-2 text-sm">
-        <li className="flex items-baseline justify-between gap-3">
+        <li className={row}>
           <span>✈️ ตั๋วไป-กลับ{CITY_BY_NAME.get(route.gateway.city) ? ` ${CITY_BY_NAME.get(route.gateway.city)!.th}` : ""}{fare && !fare.exact ? ` (ตัวอย่าง ${MONTH_SHORT[Number(fare.snap.month.slice(5, 7))]})` : ""}</span>
           {fare ? <b className="whitespace-nowrap">~฿{fare.snap.cheapest!.toLocaleString("en-US")}</b> : <span className="tabi-muted">ดูในหน้าตั๋ว</span>}
         </li>
-        <li className="flex items-baseline justify-between gap-3">
+        <li className={row}>
           <span>🚃 รถไฟระหว่างเมือง</span>
-          {rail.length ? <b className="whitespace-nowrap">~{yenRange({ min: rail.reduce((a, f) => a + f.min, 0), max: rail.reduce((a, f) => a + f.max, 0) })}</b> : <span className="tabi-muted">{route.stops.length > 1 ? "ดูในปุ่มดูทาง" : "ไม่ต้องย้ายเมือง"}</span>}
+          {railYen ? <b className="whitespace-nowrap">{fx ? (baht(railYen.min) === baht(railYen.max) ? `~฿${baht(railYen.min).toLocaleString("en-US")}` : `~฿${baht(railYen.min).toLocaleString("en-US")}–${baht(railYen.max).toLocaleString("en-US")}`) : `~${yenRange(railYen)}`}</b> : <span className="tabi-muted">{route.stops.length > 1 ? "ดูในปุ่มดูทาง" : "ไม่ต้องย้ายเมือง"}</span>}
         </li>
-        <li className="flex items-baseline justify-between gap-3">
-          <span>🛏️ ที่พัก {nights} คืน</span>
-          <a href={hotels} target="_blank" rel="noopener noreferrer" className="whitespace-nowrap font-semibold text-[var(--t-blue)] underline underline-offset-2">ดูราคาจริง ↗</a>
+        <li className={row}>
+          <span>🛏️ ที่พัก {nights} คืน <a href={hotels} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-[var(--t-blue)] underline underline-offset-2">ดูราคาจริง ↗</a></span>
+          <b className="whitespace-nowrap">{money(stayYen)}</b>
         </li>
+        <li className={row}>
+          <span>🍜 อาหาร {days} วัน</span>
+          <b className="whitespace-nowrap">{money(foodYen)}</b>
+        </li>
+        {total && (
+          <li className={`${row} border-t border-[var(--t-line)] pt-2`}>
+            <span className="font-bold">รวมประมาณ</span>
+            <b className="whitespace-nowrap text-base text-[var(--t-blue)]">~฿{total.toLocaleString("en-US")}</b>
+          </li>
+        )}
       </ul>
-      <p className="tabi-muted mt-2 text-[11px]">ไม่รวมอาหาร ค่าเข้าชม และรถไฟในเมือง{fare ? ` · ตั๋วเช็กเมื่อ ${thaiDate(isoDay(FLIGHTS_CHECKED_AT.slice(0, 10)))}` : ""}</p>
+      <p className="tabi-muted mt-2 text-[11px] leading-snug">
+        ตัวเลขประมาณทั้งหมด · ที่พักและอาหารใช้ค่าเฉลี่ยนักท่องเที่ยวต่างชาติ (สำนักงานการท่องเที่ยวญี่ปุ่น ม.ค.–มี.ค. 2025) · ไม่รวมค่าเข้าชมและรถไฟในเมือง
+        {fare ? ` · ตั๋วเช็กเมื่อ ${thaiDate(isoDay(FLIGHTS_CHECKED_AT.slice(0, 10)))}` : ""}
+        {fx ? ` · ¥1 = ฿${fx.rate.toFixed(3)}` : ""}
+      </p>
     </section>
   );
 }
@@ -1516,8 +1559,11 @@ function SafetyCard() {
         <a href={`tel:${JNTO_HOTLINE.number.replace(/-/g, "")}`} className="tabi-leg-link">{JNTO_HOTLINE.label} {JNTO_HOTLINE.number}</a>
       </div>
       <details className="mt-2 text-sm">
-        <summary className="cursor-pointer py-2 font-semibold text-[var(--t-blue)]">แอปเตือนภัยภาษาไทย และสถานทูตไทย</summary>
+        <summary className="cursor-pointer py-2 font-semibold text-[var(--t-blue)]">เบอร์สถานทูตไทย และแอปเตือนภัยภาษาไทย</summary>
         <ul className="space-y-1">
+          {THAI_MISSION_TEL.map((t) => (
+            <li key={t.number}><a href={`tel:${t.number.replace(/-/g, "")}`} className="inline-flex min-h-[36px] flex-wrap items-center gap-x-2"><b className="text-[var(--t-navy)]">{t.number}</b><span>{t.label}</span></a></li>
+          ))}
           {SAFETY_LINKS.map((l) => (
             <li key={l.url}><a href={l.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[36px] items-center underline underline-offset-2">{l.label} ↗</a></li>
           ))}

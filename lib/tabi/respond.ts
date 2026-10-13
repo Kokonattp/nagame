@@ -159,6 +159,11 @@ export async function respond(message: string, ctx: TabiContext): Promise<TabiRe
   // Jev is split between planning a trip and listing sights)
   if ((u.intent === "find_sights" || u.intent === "start_trip") && u.durationDays && u.focus.length)
     Object.assign(u, { intent: "start_trip", confidence: Math.max(u.confidence, 0.5) });
+  // "ฮอกไกโด 6 วัน หิมะ": snow is what they want to see on a 6-day trip, not a weather question —
+  // a place + a length without a question word plans the trip ("ซัปโปโร 5 วัน หิมะตกไหม" still asks)
+  const tripNotQuestion = Boolean(u.durationDays && u.focus.length) && !/ไหม|มั้ย|หรือเปล่า|รึเปล่า|ยังไง|กี่องศา|เท่าไหร่|\?/.test(message);
+  if (tripNotQuestion && (u.intent === "ask_weather" || u.faqTopic === "weather"))
+    Object.assign(u, { intent: "start_trip", faqTopic: undefined, confidence: Math.max(u.confidence, 0.5) });
   const intent = mergeIntent(ctx.intent, u);
   const source = u.source;
   const base = { intent, source } as const;
