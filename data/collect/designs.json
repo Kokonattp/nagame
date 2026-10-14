@@ -1,0 +1,39 @@
+{
+  "note": "Omamori and manhole-cover collectibles. Art is original (three.js renders in scripts/tabi-collect) — never copied from real covers, マンホールカード or shrine charms. Motifs are generic symbols of each place.",
+  "omamori": [
+    { "id": "kaiun", "ja": "開運守", "th": "เครื่องรางเปิดดวง", "meaning": "ขอให้ทริปแรกเริ่มต้นดี", "how": "จัดแผนรายวันครั้งแรก", "fabric": "#b3202a", "thread": "#e3c46a", "cord": "#e8c35a", "pattern": "kikko", "mon": "sakura" },
+    { "id": "ryoko", "ja": "旅行安全", "th": "เครื่องรางเดินทางปลอดภัย", "meaning": "ขอให้เดินทางไปกลับปลอดภัย", "how": "ตั้งวันเดินทาง", "fabric": "#1d3570", "thread": "#e3c46a", "cord": "#d4a93e", "pattern": "seigaiha", "mon": "tomoe" },
+    { "id": "kinun", "ja": "金運守", "th": "เครื่องรางโชคลาภ", "meaning": "ขอให้งบพอและเหลือกลับบ้าน", "how": "ขูดดูยอดงบรวม", "fabric": "#c48a12", "thread": "#fff0b8", "cord": "#b3202a", "pattern": "asanoha", "mon": "plum" },
+    { "id": "enmusubi", "ja": "縁結び", "th": "เครื่องรางผูกสัมพันธ์", "meaning": "ขอให้เจอเพื่อนร่วมทางดี ๆ", "how": "แชร์ทริปให้เพื่อน", "fabric": "#e8789e", "thread": "#fff6f9", "cord": "#c2185b", "pattern": "sakura", "mon": "sakura" },
+    { "id": "gakugyo", "ja": "学業成就", "th": "เครื่องรางความรู้", "meaning": "ขอให้รู้ทันทุกเรื่องที่ญี่ปุ่น", "how": "ถามทาบิเรื่องเที่ยวแล้วได้คำตอบ", "fabric": "#2e6b45", "thread": "#e3c46a", "cord": "#e3c46a", "pattern": "asanoha", "mon": "plum" },
+    { "id": "shingan", "ja": "心願成就", "th": "เครื่องรางสมหวัง", "meaning": "ฝันที่จะไปญี่ปุ่นเป็นจริงแล้ว", "how": "เปิดทริปในวันที่ออกเดินทาง", "fabric": "#5b3a8c", "thread": "#f1d58a", "cord": "#f1d58a", "pattern": "kikko", "mon": "tomoe" }
+  ],
+  "manholes": [
+    { "city": "Tokyo", "ja": "東京都", "motif": "radiotower", "accent": "sakura", "bgPattern": "lattice", "paint": { "bg": "#4a8fd4", "motif": "#d8452f", "accent": "#f4a6c0" } },
+    { "city": "Osaka", "ja": "大阪市", "motif": "castle", "accent": "sakura", "bgPattern": "seigaiha", "paint": { "bg": "#2f6b9a", "motif": "#f2f0e6", "accent": "#f4a6c0", "roof": "#3f8f6e" } },
+    { "city": "Kyoto", "ja": "京都市", "motif": "pagoda", "accent": "maple", "bgPattern": "lattice", "paint": { "bg": "#22406e", "motif": "#5a3a2a", "accent": "#d9452b" } },
+    { "city": "Nara", "ja": "奈良市", "motif": "deer", "accent": "sakura", "bgPattern": "dots", "paint": { "bg": "#5f8f4a", "motif": "#b4773f", "accent": "#f4b6c8" } },
+    { "city": "Sapporo", "ja": "札幌市", "motif": "clocktower", "accent": "snowflake", "bgPattern": "dots", "paint": { "bg": "#3e6fb0", "motif": "#f4f1ea", "accent": "#ffffff", "roof": "#c0392b" } },
+    { "city": "Hakodate", "ja": "函館市", "motif": "star5", "accent": "snowflake", "bgPattern": "seigaiha", "paint": { "bg": "#1f4f7a", "motif": "#6fae5a", "accent": "#ffffff" } },
+    { "city": "Otaru", "ja": "小樽市", "motif": "anchor", "accent": "snowflake", "bgPattern": "seigaiha", "paint": { "bg": "#2a5c8a", "motif": "#e8d9b0", "accent": "#ffffff" } },
+    { "city": "Fukuoka", "ja": "福岡市", "motif": "plum", "accent": "plum", "bgPattern": "seigaiha", "paint": { "bg": "#3a74b5", "motif": "#e98aa8", "accent": "#f7d1dc" } },
+    { "city": "Hiroshima", "ja": "広島市", "motif": "crane", "accent": "sakura", "bgPattern": "lattice", "paint": { "bg": "#2d7a8a", "motif": "#f3f0e8", "accent": "#f4a6c0" } },
+    { "city": "Miyajima", "ja": "廿日市市", "motif": "torii", "accent": "maple", "bgPattern": "seigaiha", "paint": { "bg": "#2c6aa0", "motif": "#d9452b", "accent": "#e8892b" } },
+    { "city": "Kanazawa", "ja": "金沢市", "motif": "plum", "accent": "ginkgo", "bgPattern": "lattice", "paint": { "bg": "#1f3e66", "motif": "#d9b24a", "accent": "#e8c35a" } },
+    { "city": "Takayama", "ja": "高山市", "motif": "gassho", "accent": "snowflake", "bgPattern": "dots", "paint": { "bg": "#3b5f86", "motif": "#8a6a3e", "accent": "#ffffff" } },
+    { "city": "Kawaguchiko", "ja": "富士河口湖町", "motif": "fuji", "accent": "sakura", "bgPattern": "seigaiha", "paint": { "bg": "#4b86c4", "motif": "#eef3f8", "accent": "#f4a6c0" } },
+    { "city": "Hakone", "ja": "箱根町", "motif": "torii", "accent": "cedar", "bgPattern": "dots", "paint": { "bg": "#3f7a5a", "motif": "#d9452b", "accent": "#2f5a3a" } },
+    { "city": "Nikko", "ja": "日光市", "motif": "cedar", "accent": "maple", "bgPattern": "lattice", "paint": { "bg": "#2f5a3a", "motif": "#4f8a4a", "accent": "#d9452b" } },
+    { "city": "Kamakura", "ja": "鎌倉市", "motif": "hydrangea", "accent": "hydrangea", "bgPattern": "seigaiha", "paint": { "bg": "#3b6ea8", "motif": "#8f7ad1", "accent": "#b8a8ea" } },
+    { "city": "Yokohama", "ja": "横浜市", "motif": "anchor", "accent": "star5", "bgPattern": "seigaiha", "paint": { "bg": "#1f4a80", "motif": "#d9b24a", "accent": "#f0e2a8" } },
+    { "city": "Kobe", "ja": "神戸市", "motif": "radiotower", "accent": "star5", "bgPattern": "seigaiha", "paint": { "bg": "#1f3e66", "motif": "#d8452f", "accent": "#e8c35a" } },
+    { "city": "Nagoya", "ja": "名古屋市", "motif": "castle", "accent": "koi", "bgPattern": "lattice", "paint": { "bg": "#2a4f7a", "motif": "#f2f0e6", "accent": "#e3b33a", "roof": "#3f8f6e" } },
+    { "city": "Himeji", "ja": "姫路市", "motif": "castle", "accent": "crane", "bgPattern": "dots", "paint": { "bg": "#4a7fb5", "motif": "#ffffff", "accent": "#f3f0e8", "roof": "#8a9aa8" } },
+    { "city": "Sendai", "ja": "仙台市", "motif": "moon", "accent": "star5", "bgPattern": "lattice", "paint": { "bg": "#1c2f5a", "motif": "#e8c35a", "accent": "#f3e6b0" } },
+    { "city": "Kagoshima", "ja": "鹿児島市", "motif": "volcano", "accent": "hibiscus", "bgPattern": "seigaiha", "paint": { "bg": "#3a78b0", "motif": "#6a5a52", "accent": "#e2453a" } },
+    { "city": "Naha", "ja": "那覇市", "motif": "hibiscus", "accent": "hibiscus", "bgPattern": "seigaiha", "paint": { "bg": "#2a9ab0", "motif": "#e2453a", "accent": "#f2a03a" } },
+    { "city": "Beppu", "ja": "別府市", "motif": "onsen", "accent": "maple", "bgPattern": "dots", "paint": { "bg": "#5a7fa8", "motif": "#e2453a", "accent": "#e8892b" } },
+    { "city": "Kumamoto", "ja": "熊本市", "motif": "castle", "accent": "ginkgo", "bgPattern": "lattice", "paint": { "bg": "#2a4a3a", "motif": "#2a2a2a", "accent": "#e8c35a", "roof": "#3a3a3a" } },
+    { "city": "Matsumoto", "ja": "松本市", "motif": "castle", "accent": "fuji", "bgPattern": "dots", "paint": { "bg": "#3f6a96", "motif": "#262626", "accent": "#e8eef5", "roof": "#3a3a3a" } }
+  ]
+}

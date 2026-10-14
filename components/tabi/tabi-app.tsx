@@ -20,6 +20,7 @@ import type { SharedTrip } from "@/lib/tabi/share-server";
 import { listTrips, newTrip, saveTrip, type SavedTrip } from "@/lib/tabi/store";
 import { deleteEverything, fetchMe, forgetAccountTrips, pullAndMerge, pushTrip, visibleTo, type Me } from "@/lib/tabi/sync";
 import { track } from "@/lib/tabi/track";
+import { EARNED_EVENT, MANHOLES, OMAMORI, earnOmamori, manholeImg, omamoriImg, readCollection, stampManhole, travellingNow, tripCities, type Collection, type Earned } from "@/lib/tabi/collect";
 import { signIn, signOut } from "next-auth/react";
 import { FARES_CHECKED, legFare, yenRange, type LegFare } from "@/lib/tabi/fares";
 import { FLIGHTS_CHECKED_AT, flightMonths, flightSnapFor, type FlightSnap } from "@/lib/tabi/flight-snapshot";
@@ -195,7 +196,7 @@ export function TabiApp({ shared, initialAsk, source, initialTab, liveSearch }: 
       const reply = data.reply;
       setLastReply(reply);
       setTurns((t) => [...t, { role: "tabi", text: reply.bubbles.join("\n"), reply }]);
-      if (reply.action === "answer") track("question_answered", { method: reply.links?.length ? "with_link" : "text" });
+      if (reply.action === "answer") { track("question_answered", { method: reply.links?.length ? "with_link" : "text" }); earnOmamori("gakugyo"); }
 
       if (reply.action === "suggest_routes" && reply.routes) {
         track("routes_shown", { refine: routes.length > 0, month: reply.intent.month ?? 0, days: reply.intent.durationDays ?? 0 });
@@ -214,6 +215,7 @@ export function TabiApp({ shared, initialAsk, source, initialTab, liveSearch }: 
         await persist({ ...base, intent: reply.intent, route: fitted, itinerary: reply.itinerary, status: "draft", title: tripTitle(fitted, reply.itinerary.length) });
         track("itinerary_drafted", { days: reply.itinerary.length, stops: fitted?.stops.length ?? 0 });
         cheer("จัดแผนรายวันเสร็จแล้ว!");
+        earnOmamori("kaiun");
         go("itinerary");
       } else if (reply.action === "flights") {
         track("flights_opened");
@@ -269,10 +271,12 @@ export function TabiApp({ shared, initialAsk, source, initialTab, liveSearch }: 
     const intent: TripIntent = { ...base, startDate: depart, month: Number(depart.slice(5, 7)), durationDays: (sameTrip ? trip?.itinerary?.length : undefined) ?? base.durationDays ?? days };
     if (trip && sameTrip) void persist({ ...trip, intent, status: trip.itinerary ? "planned" : trip.status });
     track("date_set", { month: intent.month ?? 0, source: "cheap_dates" });
+    earnOmamori("ryoko");
     void send("ดูตั๋วเครื่องบินให้หน่อย", intent);
   }
 
   function openTrip(t: SavedTrip) {
+    if (travellingNow(t)) earnOmamori("shingan");
     setTrip(t);
     setSelected(t.route ?? null);
     setRoutes(t.route ? [t.route] : []);
@@ -313,12 +317,13 @@ export function TabiApp({ shared, initialAsk, source, initialTab, liveSearch }: 
             onKeep={() => { track("shared_trip_saved", { ref: shared?.ref ?? "" }); void persist(trip); cheer("เก็บไว้ในทริปของฉันแล้ว"); }}
             onShare={async () => {
               const r = await shareTrip(trip);
-              if (r !== "failed") cheer(r === "shared" ? "ส่งให้เพื่อนแล้ว!" : "คัดลอกลิงก์แล้ว!");
+              if (r !== "failed") { cheer(r === "shared" ? "ส่งให้เพื่อนแล้ว!" : "คัดลอกลิงก์แล้ว!"); earnOmamori("enmusubi"); }
               return r;
             }}
             onEdit={(itinerary, method) => { track("plan_edited", { method }); void persist({ ...trip, itinerary }); }}
             onSetDate={(iso) => {
               track("date_set", { month: Number(iso.slice(5, 7)) });
+              earnOmamori("ryoko");
               // the date fixes month and length too, so the next turn (e.g. "หาตั๋ว") searches these exact days
               const intent = { ...trip.intent, startDate: iso, month: Number(iso.slice(5, 7)), durationDays: trip.itinerary?.length ?? trip.intent.durationDays };
               void persist({ ...trip, intent, status: "planned" });
@@ -328,6 +333,7 @@ export function TabiApp({ shared, initialAsk, source, initialTab, liveSearch }: 
         )}
         {screen === "flights" && <FlightsScreen reply={lastReply} trip={trip} onPickDates={pickDates} onBack={nav(trip?.itinerary ? "itinerary" : "chat")} onChat={nav("chat")} onPickDate={nav("itinerary")} />}
         {screen === "trips" && <TripsScreen trips={trips} onOpen={openTrip} onNew={nav("home")} />}
+        <EarnToast onOpen={() => { go("trips"); setTimeout(() => document.getElementById("tabi-collection")?.scrollIntoView({ behavior: "smooth", block: "start" }), 120); }} />
         {screen === "soon" && (
           <ProfileScreen
             me={me}
@@ -1549,6 +1555,7 @@ function ScratchReveal({ id, hint, children }: { id: string; hint: string; child
   useEffect(() => { setOpen(scratched().includes(id)); }, [id]);
   const reveal = useCallback(() => {
     setOpen(true);
+    earnOmamori("kinun");
     try { localStorage.setItem(SCRATCH_KEY, JSON.stringify([...scratched().filter((x) => x !== id), id].slice(-30))); } catch { /* private mode: opens for this visit only */ }
   }, [id]);
   useEffect(() => {
@@ -1836,7 +1843,7 @@ ${url}`)}`
         rel="noopener noreferrer"
         className="tabi-btn w-full text-white"
         style={{ background: "#06C755" }}
-        onClick={() => { const code = encodeShare(trip); track("trip_shared", { method: "line", ref: code ? shareRef(code) : "" }); }}
+        onClick={() => { const code = encodeShare(trip); track("trip_shared", { method: "line", ref: code ? shareRef(code) : "" }); earnOmamori("enmusubi"); }}
       >
         ส่งทริปเข้า LINE
       </a>
@@ -2136,7 +2143,157 @@ function TripsScreen({ trips, onOpen, onNew }: { trips: SavedTrip[]; onOpen: (t:
           ))}
         </ul>
       )}
-      <p className="tabi-muted text-xs">ทริปเก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น ถ้าล้างข้อมูลเบราว์เซอร์ ทริปจะหายไป</p>
+      <CollectionBook trips={trips} />
+      <p className="tabi-muted text-xs">ทริปและของสะสมเก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น ถ้าล้างข้อมูลเบราว์เซอร์ จะหายไปด้วย</p>
+    </div>
+  );
+}
+
+/* ── Collectibles: omamori shelf + manhole-cover book (lib/tabi/collect.ts) ── */
+function useCollection(): Collection | null {
+  const [c, setC] = useState<Collection | null>(null);
+  useEffect(() => {
+    const load = () => setC(readCollection());
+    load();
+    window.addEventListener(EARNED_EVENT, load);
+    window.addEventListener("storage", load);
+    return () => { window.removeEventListener(EARNED_EVENT, load); window.removeEventListener("storage", load); };
+  }, []);
+  return c;
+}
+
+type Detail = { kind: "omamori"; id: string } | { kind: "manhole"; id: string };
+
+function CollectionBook({ trips }: { trips: SavedTrip[] }) {
+  const c = useCollection();
+  const [detail, setDetail] = useState<Detail | null>(null);
+  const { planned, here } = useMemo(() => tripCities(trips), [trips]);
+  useEffect(() => { if (trips.some(travellingNow)) earnOmamori("shingan"); }, [trips]);
+  if (!c) return null;
+  const got = OMAMORI.filter((o) => c.omamori[o.id]).length;
+  const stamped = MANHOLES.filter((m) => c.stamped[m.city]).length;
+  const covers = [...MANHOLES].sort((a, b) => rank(a.city) - rank(b.city));
+  function rank(city: string) { return c!.stamped[city] ? 0 : planned.has(city) ? 1 : 2; }
+  const th = (city: string) => CITY_BY_NAME.get(city)?.th ?? city;
+  return (
+    <section id="tabi-collection" className="scroll-mt-24 space-y-4" aria-labelledby="tabi-collection-title">
+      <h2 id="tabi-collection-title" className="flex flex-wrap items-baseline gap-x-3 text-xl font-bold">ของสะสม
+        <span className="tabi-muted text-sm font-normal">เครื่องราง {got}/{OMAMORI.length} · ฝาท่อ {stamped}/{MANHOLES.length}</span>
+      </h2>
+
+      <div className="tabi-card tabi-shelf p-4">
+        <h3 className="mb-1 font-bold">🎐 เครื่องราง (お守り)</h3>
+        <p className="tabi-muted mb-3 text-xs">ได้เมื่อวางแผนทริปไปทีละขั้น กดดูได้ว่าแต่ละอันได้จากอะไร</p>
+        <ul className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          {OMAMORI.map((o) => {
+            const have = !!c.omamori[o.id];
+            return (
+              <li key={o.id}>
+                <button type="button" className={`tabi-charm ${have ? "" : "is-locked"}`} onClick={() => setDetail({ kind: "omamori", id: o.id })} aria-label={have ? `${o.th} ได้แล้ว` : `${o.th} ยังไม่ได้ ${o.how}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={omamoriImg(o.id)} alt="" width={400} height={560} loading="lazy" />
+                  <span className="tabi-charm-name">{have ? o.th.replace("เครื่องราง", "") : "???"}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <div className="tabi-card p-4">
+        <h3 className="mb-1 font-bold">🕳️ สมุดฝาท่อ (マンホール)</h3>
+        <p className="tabi-muted mb-3 text-xs">ใส่เมืองในทริปแล้วฝาท่อจะเปิด พอถึงวันเที่ยวกด “มาถึงแล้ว” เพื่อปั๊มตรา · ลายวาดใหม่โดยทาบิ ไม่ใช่ลายจริงของเมือง</p>
+        <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+          {covers.map((m) => {
+            const done = c.stamped[m.city], open = !!done || planned.has(m.city);
+            return (
+              <li key={m.city}>
+                <button type="button" className={`tabi-cover ${open ? "" : "is-locked"} ${here.has(m.city) && !done ? "is-here" : ""}`} onClick={() => setDetail({ kind: "manhole", id: m.city })} aria-label={`ฝาท่อ${th(m.city)} ${done ? "ปั๊มแล้ว" : open ? "เปิดแล้ว ยังไม่ได้ไป" : "ยังไม่เปิด"}`}>
+                  <span className="tabi-cover-img">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={manholeImg(m.city)} alt="" width={560} height={560} loading="lazy" />
+                    {done && <span className="tabi-hanko" aria-hidden>มาแล้ว</span>}
+                  </span>
+                  <span className="tabi-cover-name">{th(m.city)}</span>
+                  {here.has(m.city) && !done && <span className="tabi-cover-here">📍 ปั๊มได้</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      {detail && <CollectDialog detail={detail} c={c} canStamp={detail.kind === "manhole" && here.has(detail.id)} open={detail.kind === "manhole" && (planned.has(detail.id) || !!c.stamped[detail.id])} onClose={() => setDetail(null)} />}
+    </section>
+  );
+}
+
+function CollectDialog({ detail, c, canStamp, open, onClose }: { detail: Detail; c: Collection; canStamp: boolean; open: boolean; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => { ref.current?.showModal(); }, []);
+  const o = detail.kind === "omamori" ? OMAMORI.find((x) => x.id === detail.id)! : null;
+  const m = detail.kind === "manhole" ? MANHOLES.find((x) => x.city === detail.id)! : null;
+  const have = o ? !!c.omamori[o.id] : !!c.stamped[detail.id];
+  const th = m ? CITY_BY_NAME.get(m.city)?.th ?? m.city : "";
+  return (
+    <dialog ref={ref} className="tabi-collect-dialog" onClose={onClose} onClick={(e) => { if (e.target === e.currentTarget) ref.current?.close(); }}>
+      <div className="p-5 text-center">
+        <div className={`tabi-collect-big ${o ? "is-charm" : "is-cover"} ${(o ? have : open || have) ? "" : "is-locked"}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={o ? omamoriImg(o.id) : manholeImg(m!.city)} alt={o ? o.th : `ฝาท่อ${th}`} />
+          {m && have && <span className="tabi-hanko is-big" aria-hidden>มาแล้ว</span>}
+        </div>
+        {o ? (
+          <>
+            <p className="tabi-title mt-3 text-lg font-bold">{have ? o.th : "เครื่องรางที่ยังไม่ได้"}</p>
+            <p className="text-sm text-[var(--t-pink-ink)]">{o.ja}</p>
+            <p className="mt-2 text-sm">{have ? o.meaning : `ได้เมื่อ: ${o.how}`}</p>
+            {have && <p className="tabi-muted mt-1 text-xs">ได้เมื่อ {thaiDate(isoDay(c.omamori[o.id]))}</p>}
+          </>
+        ) : (
+          <>
+            <p className="tabi-title mt-3 text-lg font-bold">ฝาท่อ{th}</p>
+            <p className="text-sm text-[var(--t-pink-ink)]">{m!.ja}</p>
+            <p className="mt-2 text-sm">
+              {have ? `ปั๊มตราแล้วเมื่อ ${thaiDate(isoDay(c.stamped[m!.city]))}` : canStamp ? "อยู่ที่นี่แล้วใช่ไหม กดปั๊มตราเก็บไว้เลย" : open ? "เมืองนี้อยู่ในทริปแล้ว ถึงวันเที่ยวค่อยกลับมาปั๊มตรานะ" : `ใส่${th}ในทริปเพื่อเปิดฝาท่อนี้`}
+            </p>
+            {canStamp && !have && (
+              <button type="button" className="tabi-btn tabi-btn--primary mt-3 w-full" onClick={() => stampManhole(m!.city)}>📍 มาถึงแล้ว ปั๊มเลย</button>
+            )}
+            <p className="tabi-muted mt-2 text-[11px]">ลายวาดใหม่โดยทาบิ ได้แรงบันดาลใจจากสิ่งที่มีชื่อของเมือง ไม่ใช่ลายฝาท่อจริง</p>
+          </>
+        )}
+        <button type="button" className="tabi-btn tabi-btn--soft mt-4 w-full" onClick={() => ref.current?.close()}>ปิด</button>
+      </div>
+    </dialog>
+  );
+}
+
+/** "ได้เครื่องรางใหม่!" — the charm swings in at the bottom of the screen for a few seconds. */
+function EarnToast({ onOpen }: { onOpen: () => void }) {
+  const [shown, setShown] = useState<(Earned & { key: number }) | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => setShown({ ...(e as CustomEvent<Earned>).detail, key: Date.now() });
+    window.addEventListener(EARNED_EVENT, on);
+    return () => window.removeEventListener(EARNED_EVENT, on);
+  }, []);
+  useEffect(() => {
+    if (!shown) return;
+    const t = setTimeout(() => setShown(null), 6000);
+    return () => clearTimeout(t);
+  }, [shown]);
+  if (!shown) return null;
+  const o = shown.kind === "omamori" ? OMAMORI.find((x) => x.id === shown.id) : null;
+  const th = shown.kind === "manhole" ? CITY_BY_NAME.get(shown.id)?.th ?? shown.id : "";
+  return (
+    <div key={shown.key} className="tabi-earn" role="status">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={o ? omamoriImg(o.id) : manholeImg(shown.id)} alt="" className={o ? "tabi-earn-charm" : "tabi-earn-cover"} />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-bold text-[var(--t-pink-ink)]">{o ? "ได้เครื่องรางใหม่!" : "ปั๊มตราฝาท่อแล้ว!"}</p>
+        <p className="tabi-title font-bold leading-snug">{o ? o.th : `ฝาท่อ${th}`}</p>
+        {o && <p className="tabi-muted text-xs">{o.meaning}</p>}
+      </div>
+      <button type="button" className="tabi-btn tabi-btn--soft min-h-[40px] shrink-0 px-3 text-sm" onClick={() => { setShown(null); onOpen(); }}>ดูของสะสม</button>
     </div>
   );
 }

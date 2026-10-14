@@ -55,3 +55,6 @@ workers/live-search/live-search-cache.json*
 
 # copied from node_modules by scripts/copy-maplibre-worker.mjs (postinstall)
 public/maplibre/
+
+# fonts fetched by scripts/tabi-collect/render.cjs (OFL, kept out of git)
+scripts/tabi-collect/fonts/*.ttf

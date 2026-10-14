@@ -1,0 +1,455 @@
+<!doctype html>
+<!-- Tabi collectibles — omamori (お守り) and manhole covers — modelled in three.js and rendered to
+     WebP by render.cjs. All motifs are original drawings of generic symbols; nothing is copied
+     from real covers, マンホールカード or shrine charms.
+     render.cjs injects window.__design before load; ?kind=omamori|manhole. -->
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    html, body { margin: 0; background: transparent; } canvas { display: block; }
+    /* OFL fonts fetched by render.cjs into ./fonts (not committed) */
+    @font-face { font-family: "Yuji Syuku"; src: url("fonts/YujiSyuku-Regular.ttf"); }
+    @font-face { font-family: "Shippori Mincho"; font-weight: 800; src: url("fonts/ShipporiMincho-ExtraBold.ttf"); }
+  </style>
+  <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from "three";
+import { RoomEnvironment } from "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/environments/RoomEnvironment.js";
+
+const params = new URLSearchParams(location.search);
+const kind = params.get("kind") ?? "manhole";
+const W = Number(params.get("w") ?? 512), H = Number(params.get("h") ?? 512);
+const D = window.__design;
+const MINCHO = '"Shippori Mincho", "Yu Mincho", serif'; // ring lettering on the covers
+const BRUSH = '"Yuji Syuku", "Shippori Mincho", serif'; // embroidered calligraphy on the charms
+
+// deterministic noise so re-renders are identical
+let seed = [...JSON.stringify(D)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+const rand = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H);
+renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+/** Smooth value noise (0..1) as a Float32Array N×N: random cells scaled up with smoothing, two octaves. */
+function smoothNoise(N, cells) {
+  const [c, x] = canvas(N, N);
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high";
+  for (const [n, a] of [[cells, 0.65], [cells * 4, 0.35]]) {
+    const [sc, s] = canvas(n, n); const d = s.createImageData(n, n);
+    for (let i = 0; i < d.data.length; i += 4) { d.data[i] = d.data[i + 1] = d.data[i + 2] = rand() * 255; d.data[i + 3] = 255; }
+    s.putImageData(d, 0, 0); x.globalAlpha = a; x.drawImage(sc, 0, 0, N, N);
+  }
+  const px = x.getImageData(0, 0, N, N).data, out = new Float32Array(N * N);
+  for (let i = 0; i < out.length; i++) out[i] = px[i * 4] / 255;
+  return out;
+}
+function canvas(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return [c, c.getContext("2d")]; }
+function tex(c, color = false) {
+  const t = new THREE.CanvasTexture(c);
+  if (color) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
+}
+
+/* ───────────── motifs: filled shapes centred on 0,0 with size s (≈ radius) ─────────────
+   Each returns nothing; it fills (and for line motifs, strokes) with the current style.
+   `lines(ctx, s)` adds the engraved inner detail (drawn as grooves on the height map). */
+const P = Math.PI;
+function petal(ctx, s, notch = true) {
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(s * 0.42, -s * 0.25, s * 0.38, -s * 0.85, notch ? s * 0.12 : 0, -s);
+  if (notch) { ctx.lineTo(0, -s * 0.86); ctx.lineTo(-s * 0.12, -s); }
+  ctx.bezierCurveTo(-s * 0.38, -s * 0.85, -s * 0.42, -s * 0.25, 0, 0);
+}
+const MOTIF = {
+  sakura(ctx, s) { ctx.beginPath(); for (let k = 0; k < 5; k++) { ctx.save(); ctx.rotate((k * 2 * P) / 5); petal(ctx, s); ctx.restore(); } ctx.fill(); },
+  plum(ctx, s) { ctx.beginPath(); for (let k = 0; k < 5; k++) { const a = (k * 2 * P) / 5 - P / 2; ctx.moveTo(Math.cos(a) * s * 0.55 + s * 0.42, Math.sin(a) * s * 0.55); ctx.arc(Math.cos(a) * s * 0.55, Math.sin(a) * s * 0.55, s * 0.42, 0, 2 * P); } ctx.fill(); },
+  hibiscus(ctx, s) { ctx.beginPath(); for (let k = 0; k < 5; k++) { ctx.save(); ctx.rotate((k * 2 * P) / 5); ctx.moveTo(0, 0); ctx.bezierCurveTo(s * 0.7, -s * 0.2, s * 0.6, -s * 1.05, 0, -s * 0.98); ctx.bezierCurveTo(-s * 0.6, -s * 1.05, -s * 0.7, -s * 0.2, 0, 0); ctx.restore(); } ctx.fill(); },
+  maple(ctx, s) {
+    const lobes = [1, 0.78, 0.6, 0.42, 0.42, 0.6, 0.78];
+    ctx.beginPath();
+    for (let i = 0; i < 7; i++) {
+      const a = -P / 2 + (i - 3) * 0.48 + (i > 3 ? 0 : 0), r = s * lobes[(i + 4) % 7] * 1.0;
+      const tipA = -P / 2 + (i - 3) * (P / 3.6);
+      const len = s * [0.55, 0.75, 0.9, 1, 0.9, 0.75, 0.55][i];
+      const l = tipA - 0.22, rr = tipA + 0.22;
+      if (i === 0) ctx.moveTo(Math.cos(l) * len * 0.35, Math.sin(l) * len * 0.35);
+      ctx.lineTo(Math.cos(l) * len * 0.62, Math.sin(l) * len * 0.62);
+      ctx.lineTo(Math.cos(tipA - 0.12) * len * 0.82, Math.sin(tipA - 0.12) * len * 0.82);
+      ctx.lineTo(Math.cos(tipA) * len, Math.sin(tipA) * len);
+      ctx.lineTo(Math.cos(tipA + 0.12) * len * 0.82, Math.sin(tipA + 0.12) * len * 0.82);
+      ctx.lineTo(Math.cos(rr) * len * 0.62, Math.sin(rr) * len * 0.62);
+      ctx.lineTo(Math.cos(rr + 0.1) * s * 0.3, Math.sin(rr + 0.1) * s * 0.3);
+      void a; void r;
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.fillRect(-s * 0.04, 0, s * 0.08, s * 0.55);
+  },
+  ginkgo(ctx, s) {
+    ctx.beginPath(); ctx.moveTo(0, s * 0.35);
+    ctx.lineTo(Math.cos(-P * 0.85) * s, Math.sin(-P * 0.85) * s + s * 0.25);
+    for (let i = 0; i <= 24; i++) { const a = -P * 0.85 + (i / 24) * P * 0.7; const wob = 1 + 0.03 * Math.sin(i * 2.2) - (Math.abs(i - 12) < 1.5 ? 0.12 : 0); ctx.lineTo(Math.cos(a) * s * wob, Math.sin(a) * s * wob + s * 0.25); }
+    ctx.closePath(); ctx.fill(); ctx.fillRect(-s * 0.035, s * 0.3, s * 0.07, s * 0.6);
+  },
+  snowflake(ctx, s) {
+    ctx.save(); ctx.lineCap = "round"; ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = s * 0.13;
+    for (let k = 0; k < 6; k++) { ctx.save(); ctx.rotate((k * P) / 3); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -s);
+      for (const t of [0.45, 0.72]) { ctx.moveTo(0, -s * t); ctx.lineTo(s * 0.26, -s * (t + 0.2)); ctx.moveTo(0, -s * t); ctx.lineTo(-s * 0.26, -s * (t + 0.2)); }
+      ctx.stroke(); ctx.restore(); }
+    ctx.restore();
+  },
+  fuji(ctx, s) { ctx.beginPath(); ctx.moveTo(-s, s * 0.55); ctx.bezierCurveTo(-s * 0.55, s * 0.2, -s * 0.3, -s * 0.45, -s * 0.18, -s * 0.6); ctx.lineTo(s * 0.18, -s * 0.6); ctx.bezierCurveTo(s * 0.3, -s * 0.45, s * 0.55, s * 0.2, s, s * 0.55); ctx.closePath(); ctx.fill(); },
+  volcano(ctx, s) { MOTIF.fuji(ctx, s); ctx.beginPath(); for (const [x, y, r] of [[0, -0.78, 0.16], [0.18, -0.95, 0.2], [0.42, -1.05, 0.17]]) { ctx.moveTo(s * (x + r), s * y); ctx.arc(s * x, s * y, s * r, 0, 2 * P); } ctx.fill(); },
+  pagoda(ctx, s) {
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) { const y = s * (0.62 - i * 0.3), w = s * (0.82 - i * 0.1); ctx.moveTo(-w, y); ctx.quadraticCurveTo(-w * 0.55, y - s * 0.12, -w * 0.32, y - s * 0.14); ctx.lineTo(w * 0.32, y - s * 0.14); ctx.quadraticCurveTo(w * 0.55, y - s * 0.12, w, y); ctx.lineTo(w * 0.5, y + s * 0.03); ctx.lineTo(w * 0.5, y + s * 0.15); ctx.lineTo(-w * 0.5, y + s * 0.15); ctx.lineTo(-w * 0.5, y + s * 0.03); ctx.closePath(); }
+    ctx.rect(-s * 0.03, -s * 1.02, s * 0.06, s * 0.4); ctx.rect(-s * 0.55, s * 0.76, s * 1.1, s * 0.14);
+    ctx.fill();
+  },
+  castle(ctx, s, paint) {
+    const roof = paint?.roof;
+    ctx.beginPath(); ctx.moveTo(-s * 0.85, s * 0.9); ctx.lineTo(-s * 0.7, s * 0.45); ctx.lineTo(s * 0.7, s * 0.45); ctx.lineTo(s * 0.85, s * 0.9); ctx.closePath(); ctx.fill();
+    const tiers = [[0.62, 0.45, 0.62], [0.48, 0.1, 0.5], [0.34, -0.22, 0.38], [0.22, -0.52, 0.28]];
+    for (const [w, y] of tiers) { ctx.fillRect(-s * w * 0.8, s * y - s * 0.02, s * w * 1.6, s * 0.2); }
+    const base = ctx.fillStyle; if (roof) ctx.fillStyle = roof;
+    ctx.beginPath();
+    for (const [w, y] of tiers) { ctx.moveTo(-s * (w + 0.14), s * y); ctx.quadraticCurveTo(-s * w * 0.6, s * y - s * 0.08, -s * w * 0.4, s * y - s * 0.16); ctx.lineTo(s * w * 0.4, s * y - s * 0.16); ctx.quadraticCurveTo(s * w * 0.6, s * y - s * 0.08, s * (w + 0.14), s * y); ctx.closePath(); ctx.moveTo(-s * 0.12, s * y - s * 0.12); ctx.lineTo(0, s * y - s * 0.26); ctx.lineTo(s * 0.12, s * y - s * 0.12); }
+    ctx.fill(); ctx.fillStyle = base;
+  },
+  torii(ctx, s) {
+    ctx.beginPath(); ctx.moveTo(-s, -s * 0.62); ctx.quadraticCurveTo(0, -s * 0.48, s, -s * 0.62); ctx.lineTo(s * 0.92, -s * 0.46); ctx.quadraticCurveTo(0, -s * 0.34, -s * 0.92, -s * 0.46); ctx.closePath();
+    ctx.rect(-s * 0.78, -s * 0.24, s * 1.56, s * 0.12); ctx.rect(-s * 0.06, -s * 0.38, s * 0.12, s * 0.16);
+    ctx.moveTo(-s * 0.62, -s * 0.42); ctx.lineTo(-s * 0.5, -s * 0.42); ctx.lineTo(-s * 0.44, s * 0.95); ctx.lineTo(-s * 0.6, s * 0.95); ctx.closePath();
+    ctx.moveTo(s * 0.62, -s * 0.42); ctx.lineTo(s * 0.5, -s * 0.42); ctx.lineTo(s * 0.44, s * 0.95); ctx.lineTo(s * 0.6, s * 0.95); ctx.closePath();
+    ctx.fill();
+  },
+  deer(ctx, s) {
+    ctx.beginPath(); ctx.ellipse(-s * 0.05, s * 0.1, s * 0.55, s * 0.28, -0.05, 0, 2 * P);
+    ctx.moveTo(s * 0.32, -s * 0.05); ctx.lineTo(s * 0.5, -s * 0.55); ctx.lineTo(s * 0.66, -s * 0.5); ctx.lineTo(s * 0.5, s * 0.05); ctx.closePath();
+    ctx.ellipse(s * 0.62, -s * 0.58, s * 0.18, s * 0.11, 0.35, 0, 2 * P);
+    for (const x of [-0.45, -0.28, 0.2, 0.36]) ctx.rect(s * x, s * 0.25, s * 0.08, s * 0.65);
+    ctx.fill();
+    ctx.save(); ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = s * 0.05; ctx.lineCap = "round"; ctx.beginPath();
+    ctx.moveTo(s * 0.56, -s * 0.66); ctx.lineTo(s * 0.45, -s * 0.98); ctx.moveTo(s * 0.5, -s * 0.84); ctx.lineTo(s * 0.36, -s * 0.9);
+    ctx.moveTo(s * 0.62, -s * 0.68); ctx.lineTo(s * 0.7, -s * 1.0); ctx.moveTo(s * 0.67, -s * 0.86); ctx.lineTo(s * 0.82, -s * 0.92); ctx.stroke(); ctx.restore();
+  },
+  crane(ctx, s) {
+    ctx.beginPath(); ctx.ellipse(0, s * 0.2, s * 0.45, s * 0.22, 0.15, 0, 2 * P);
+    ctx.moveTo(-s * 0.2, s * 0.05); ctx.quadraticCurveTo(-s * 0.7, -s * 0.6, -s * 1.0, -s * 0.5); ctx.quadraticCurveTo(-s * 0.55, -s * 0.15, -s * 0.1, s * 0.2);
+    ctx.moveTo(s * 0.1, s * 0.05); ctx.quadraticCurveTo(s * 0.4, -s * 0.7, s * 0.85, -s * 0.85); ctx.quadraticCurveTo(s * 0.55, -s * 0.2, s * 0.25, s * 0.2);
+    ctx.fill();
+    ctx.save(); ctx.strokeStyle = ctx.fillStyle; ctx.lineCap = "round"; ctx.lineWidth = s * 0.07; ctx.beginPath();
+    ctx.moveTo(s * 0.35, s * 0.15); ctx.quadraticCurveTo(s * 0.75, s * 0.05, s * 0.8, -s * 0.25); ctx.lineTo(s * 0.98, -s * 0.2);
+    ctx.moveTo(-s * 0.3, s * 0.38); ctx.lineTo(-s * 0.7, s * 0.6); ctx.stroke(); ctx.restore();
+  },
+  koi(ctx, s) {
+    ctx.beginPath(); ctx.moveTo(-s * 0.9, 0); ctx.bezierCurveTo(-s * 0.5, -s * 0.5, s * 0.4, -s * 0.45, s * 0.6, 0); ctx.bezierCurveTo(s * 0.4, s * 0.45, -s * 0.5, s * 0.5, -s * 0.9, 0);
+    ctx.moveTo(s * 0.5, 0); ctx.lineTo(s * 1.0, -s * 0.42); ctx.quadraticCurveTo(s * 0.85, 0, s * 1.0, s * 0.42); ctx.closePath();
+    ctx.moveTo(-s * 0.1, -s * 0.32); ctx.lineTo(s * 0.15, -s * 0.62); ctx.lineTo(s * 0.25, -s * 0.3); ctx.closePath(); ctx.fill();
+  },
+  clocktower(ctx, s, paint) {
+    ctx.fillRect(-s * 0.7, s * 0.05, s * 1.4, s * 0.85); ctx.fillRect(-s * 0.26, -s * 0.6, s * 0.52, s * 0.7);
+    const base = ctx.fillStyle; if (paint?.roof) ctx.fillStyle = paint.roof;
+    ctx.beginPath(); ctx.moveTo(-s * 0.85, s * 0.08); ctx.lineTo(0, -s * 0.18); ctx.lineTo(s * 0.85, s * 0.08); ctx.closePath();
+    ctx.moveTo(-s * 0.34, -s * 0.58); ctx.lineTo(0, -s * 1.0); ctx.lineTo(s * 0.34, -s * 0.58); ctx.closePath(); ctx.fill(); ctx.fillStyle = base;
+  },
+  radiotower(ctx, s) {
+    ctx.beginPath(); ctx.moveTo(-s * 0.6, s * 0.95); ctx.quadraticCurveTo(-s * 0.18, s * 0.1, -s * 0.06, -s * 0.75); ctx.lineTo(-s * 0.02, -s * 1.02); ctx.lineTo(s * 0.02, -s * 1.02); ctx.lineTo(s * 0.06, -s * 0.75); ctx.quadraticCurveTo(s * 0.18, s * 0.1, s * 0.6, s * 0.95);
+    ctx.lineTo(s * 0.4, s * 0.95); ctx.quadraticCurveTo(0, s * 0.45, -s * 0.4, s * 0.95); ctx.closePath(); ctx.fill();
+    ctx.fillRect(-s * 0.3, -s * 0.05, s * 0.6, s * 0.12); ctx.fillRect(-s * 0.18, -s * 0.48, s * 0.36, s * 0.1);
+  },
+  star5(ctx, s) { ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -P / 2 + (i * P) / 5, r = i % 2 ? s * 0.45 : s; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); },
+  anchor(ctx, s) {
+    ctx.save(); ctx.strokeStyle = ctx.fillStyle; ctx.lineCap = "round"; ctx.lineWidth = s * 0.15; ctx.beginPath();
+    ctx.moveTo(0, -s * 0.6); ctx.lineTo(0, s * 0.85); ctx.moveTo(-s * 0.4, -s * 0.38); ctx.lineTo(s * 0.4, -s * 0.38);
+    ctx.moveTo(-s * 0.75, s * 0.35); ctx.quadraticCurveTo(-s * 0.6, s * 0.95, 0, s * 0.88); ctx.quadraticCurveTo(s * 0.6, s * 0.95, s * 0.75, s * 0.35); ctx.stroke();
+    ctx.lineWidth = s * 0.12; ctx.beginPath(); ctx.arc(0, -s * 0.78, s * 0.18, 0, 2 * P); ctx.stroke(); ctx.restore();
+  },
+  gassho(ctx, s) { ctx.beginPath(); ctx.moveTo(-s * 0.95, s * 0.35); ctx.lineTo(0, -s * 0.95); ctx.lineTo(s * 0.95, s * 0.35); ctx.closePath(); ctx.rect(-s * 0.7, s * 0.3, s * 1.4, s * 0.6); ctx.fill(); },
+  cedar(ctx, s) { ctx.beginPath(); for (let i = 0; i < 4; i++) { const y = -s + i * s * 0.42, w = s * (0.3 + i * 0.17); ctx.moveTo(0, y); ctx.lineTo(w, y + s * 0.55); ctx.lineTo(-w, y + s * 0.55); ctx.closePath(); } ctx.rect(-s * 0.08, s * 0.7, s * 0.16, s * 0.3); ctx.fill(); },
+  hydrangea(ctx, s) { ctx.beginPath(); for (let i = 0; i < 13; i++) { const a = i * 2.4, r = s * 0.62 * Math.sqrt(i / 13); const x = Math.cos(a) * r, y = Math.sin(a) * r; for (let k = 0; k < 4; k++) { const b = (k * P) / 2 + a; ctx.moveTo(x, y); ctx.ellipse(x + Math.cos(b) * s * 0.11, y + Math.sin(b) * s * 0.11, s * 0.12, s * 0.08, b, 0, 2 * P); } } ctx.fill(); },
+  moon(ctx, s) { ctx.beginPath(); ctx.arc(0, 0, s, P * 0.35, P * 1.65); ctx.arc(s * 0.38, -s * 0.05, s * 0.78, P * 1.6, P * 0.42, true); ctx.closePath(); ctx.fill(); },
+  onsen(ctx, s) {
+    ctx.beginPath(); ctx.ellipse(0, s * 0.45, s * 0.85, s * 0.42, 0, 0, 2 * P); ctx.fill();
+    ctx.save(); ctx.strokeStyle = ctx.fillStyle; ctx.lineCap = "round"; ctx.lineWidth = s * 0.13; ctx.beginPath();
+    for (const x of [-0.42, 0, 0.42]) { ctx.moveTo(s * x, s * 0.05); ctx.bezierCurveTo(s * (x - 0.22), -s * 0.2, s * (x + 0.22), -s * 0.45, s * x, -s * 0.85); }
+    ctx.stroke(); ctx.restore();
+  },
+};
+function motif(ctx, name, x, y, s, rot = 0, paint) { ctx.save(); ctx.translate(x, y); ctx.rotate(rot); MOTIF[name](ctx, s, paint); ctx.restore(); }
+/** Raised motif on a height map with a cast groove around it (reads as relief even when small). */
+function relief(h, name, x, y, s, rot, top) {
+  const g = (v) => `rgb(${v},${v},${v})`;
+  h.save(); h.filter = "blur(3px)"; h.fillStyle = g(55); motif(h, name, x, y, s * 1.05, rot, { roof: g(55) }); h.restore();
+  h.fillStyle = g(top); motif(h, name, x, y, s, rot, { roof: g(Math.min(255, top + 15)) });
+}
+
+/* ───────────── manhole cover ───────────── */
+function manhole() {
+  const N = 1024, C = N / 2, R = 500, INNER = 418;
+  const [hc, h] = canvas(N, N);   // height (grey = height)
+  const [cc, c] = canvas(N, N);   // paint colour
+  const g = (v) => `rgb(${v},${v},${v})`;
+  const p = D.paint;
+
+  // ring: raised rim with diagonal anti-slip ribs
+  h.fillStyle = g(0); h.fillRect(0, 0, N, N);
+  h.fillStyle = g(150); h.beginPath(); h.arc(C, C, R, 0, 2 * P); h.fill();
+  h.save(); h.beginPath(); h.arc(C, C, R - 8, 0, 2 * P); h.arc(C, C, INNER + 10, 0, 2 * P, true); h.clip();
+  h.strokeStyle = g(205); h.lineWidth = 7;
+  for (let a = 0; a < 2 * P; a += P / 90) { h.beginPath(); h.moveTo(C + Math.cos(a) * (INNER + 8), C + Math.sin(a) * (INNER + 8)); h.lineTo(C + Math.cos(a + 0.05) * R, C + Math.sin(a + 0.05) * R); h.stroke(); }
+  h.restore();
+  // a smooth band for the lettering
+  for (const [a0, a1] of [[-P * 0.82, -P * 0.18], [P * 0.3, P * 0.7]]) { h.strokeStyle = g(150); h.lineWidth = 64; h.beginPath(); h.arc(C, C, (R + INNER) / 2, a0, a1); h.stroke(); }
+  h.strokeStyle = g(220); h.lineWidth = 10; h.beginPath(); h.arc(C, C, INNER + 6, 0, 2 * P); h.stroke(); h.beginPath(); h.arc(C, C, R - 6, 0, 2 * P); h.stroke();
+
+  function arcText(ctx, text, r, mid, size, bottom) {
+    ctx.save(); ctx.font = `800 ${size}px ${MINCHO}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const step = (size * 1.05) / r, n = [...text].length;
+    [...text].forEach((ch, i) => {
+      const a = mid + (bottom ? -1 : 1) * (i - (n - 1) / 2) * step;
+      ctx.save(); ctx.translate(C + Math.cos(a) * r, C + Math.sin(a) * r); ctx.rotate(a + (bottom ? -P / 2 : P / 2)); ctx.fillText(ch, 0, 0); ctx.restore();
+    });
+    ctx.restore();
+  }
+  h.fillStyle = g(235);
+  arcText(h, D.ja, (R + INNER) / 2, -P / 2, D.ja.length > 4 ? 40 : 48, false);
+  arcText(h, "おすい", (R + INNER) / 2, P / 2, 44, true);
+
+  // inner disc background + pattern
+  h.fillStyle = g(95); h.beginPath(); h.arc(C, C, INNER, 0, 2 * P); h.fill();
+  c.fillStyle = p.bg; c.beginPath(); c.arc(C, C, INNER, 0, 2 * P); c.fill();
+  h.save(); h.beginPath(); h.arc(C, C, INNER - 4, 0, 2 * P); h.clip();
+  h.fillStyle = g(150); h.strokeStyle = g(150);
+  if (D.bgPattern === "seigaiha") {
+    h.lineWidth = 7;
+    for (let y = 0; y < N + 60; y += 36) for (let x = (y / 36) % 2 ? 36 : 0; x < N + 72; x += 72) for (const r of [32, 22, 12]) { h.beginPath(); h.arc(x, y, r, P, 2 * P); h.stroke(); }
+  } else if (D.bgPattern === "lattice") {
+    h.lineWidth = 9;
+    for (let k = -N; k < 2 * N; k += 46) { h.beginPath(); h.moveTo(k, 0); h.lineTo(k + N, N); h.stroke(); h.beginPath(); h.moveTo(k, N); h.lineTo(k + N, 0); h.stroke(); }
+  } else {
+    for (let y = 18; y < N; y += 34) for (let x = (y / 34) % 2 ? 35 : 18; x < N; x += 34) { h.beginPath(); h.arc(x, y, 9, 0, 2 * P); h.fill(); }
+  }
+  h.restore();
+
+  // accents: a ring of small motifs, then the large centre motif on a plain medallion
+  const accents = 8;
+  for (let i = 0; i < accents; i++) {
+    const a = (i / accents) * 2 * P + P / accents, r = INNER - 70;
+    relief(h, D.accent, C + Math.cos(a) * r, C + Math.sin(a) * r, 46, a + P / 2, 205);
+    c.fillStyle = p.accent; motif(c, D.accent, C + Math.cos(a) * r, C + Math.sin(a) * r, 46, a + P / 2, p);
+  }
+  h.fillStyle = g(110); h.beginPath(); h.arc(C, C, 300, 0, 2 * P); h.fill();
+  h.strokeStyle = g(210); h.lineWidth = 12; h.beginPath(); h.arc(C, C, 300, 0, 2 * P); h.stroke();
+  c.fillStyle = shade(p.bg, -0.18); c.beginPath(); c.arc(C, C, 300, 0, 2 * P); c.fill();
+  relief(h, D.motif, C, C + 10, 230, 0, 228);
+  // carved hatching inside the big motif (the cast-in shading real covers use)
+  {
+    const [mc2, mk] = canvas(N, N); mk.fillStyle = "#fff"; motif(mk, D.motif, C, C + 10, 222, 0, { roof: "#fff" });
+    const [lc, l] = canvas(N, N); l.strokeStyle = "#000"; l.lineWidth = 4;
+    for (let y = 0; y < N; y += 17) { l.beginPath(); l.moveTo(0, y); l.lineTo(N, y + 60); l.stroke(); }
+    l.globalCompositeOperation = "destination-in"; l.drawImage(mc2, 0, 0);
+    h.save(); h.globalAlpha = 0.35; h.drawImage(lc, 0, 0); h.restore();
+    c.save(); c.globalAlpha = 0.18; c.drawImage(lc, 0, 0); c.restore();
+  }
+  c.fillStyle = p.motif; motif(c, D.motif, C, C + 10, 230, 0, p);
+  // a few accents inside the medallion for depth
+  for (const [x, y, s] of [[-190, -150, 40], [185, -175, 34], [205, 160, 38]]) {
+    relief(h, D.accent, C + x, C + y, s, 0.3, 200);
+    c.fillStyle = p.accent; motif(c, D.accent, C + x, C + y, s, 0.3, p);
+  }
+
+  // engraved outline of the motif: an edge groove makes the relief read at small sizes
+  const [ec, e] = canvas(N, N); e.drawImage(hc, 0, 0);
+  const hp = h.getImageData(0, 0, N, N), hd = hp.data;
+  // soften the relief (cast edges are rounded)
+  const [sc, s2] = canvas(N, N); s2.filter = "blur(2.2px)"; s2.drawImage(ec, 0, 0);
+  const soft = s2.getImageData(0, 0, N, N).data;
+
+  // colour, metalness, roughness from height + paint + wear
+  const cp = c.getImageData(0, 0, N, N), cd = cp.data;
+  const [rc, r] = canvas(N, N); const rp = r.createImageData(N, N), rd = rp.data;
+  const [mc, m] = canvas(N, N); const mp = m.createImageData(N, N), md = mp.data;
+  const iron = [62, 60, 57], bare = [150, 146, 138];
+  const noise = smoothNoise(N, 24), fine = smoothNoise(N, 160);
+  const nAt = (x, y) => noise[y * N + x];
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = (y * N + x) * 4, dx = x - C, dy = y - C, d = Math.hypot(dx, dy);
+    const ht = soft[i] / 255;
+    let col, metal, rough;
+    const painted = d < INNER - 2 && cd[i + 3] > 0;
+    const grain = (fine[y * N + x] - 0.5) * 22;
+    if (painted) {
+      col = [cd[i], cd[i + 1], cd[i + 2]];
+      // paint wears off the high points first; recesses keep grime
+      const wear = ht > 0.74 && nAt(x, y) * 0.7 + fine[y * N + x] * 0.3 > 0.66;
+      if (wear) { col = bare; metal = 0.85; rough = 0.32; }
+      else { metal = 0.05; rough = 0.62; if (ht < 0.42) col = col.map((v) => v * 0.72); }
+    } else {
+      col = ht > 0.75 ? bare : iron; metal = 0.9; rough = ht > 0.75 ? 0.3 : 0.7;
+      if (ht < 0.5) col = col.map((v) => v * 0.8);
+    }
+    // a little rust in the recesses near the rim
+    const rust = d > INNER - 40 && ht < 0.55 ? Math.max(0, (nAt(x, y) - 0.62) * 3) : 0;
+    if (rust > 0) { const k2 = Math.min(1, rust); col = col.map((v, j) => v * (1 - k2) + [116, 66, 40][j] * k2); metal *= 1 - k2; rough = rough * (1 - k2) + 0.9 * k2; }
+    cd[i] = Math.max(0, Math.min(255, col[0] + grain)); cd[i + 1] = Math.max(0, Math.min(255, col[1] + grain)); cd[i + 2] = Math.max(0, Math.min(255, col[2] + grain));
+    cd[i + 3] = d <= R ? 255 : 0;
+    rd[i] = rd[i + 1] = rd[i + 2] = rough * 255 + (fine[y * N + x] - 0.5) * 40; rd[i + 3] = 255;
+    md[i] = md[i + 1] = md[i + 2] = metal * 255; md[i + 3] = 255;
+    hd[i] = hd[i + 1] = hd[i + 2] = soft[i]; // displacement uses the softened relief
+  }
+  c.putImageData(cp, 0, 0); r.putImageData(rp, 0, 0); m.putImageData(mp, 0, 0); h.putImageData(hp, 0, 0);
+  // fine casting grit for the bump map
+  const [bc, b] = canvas(N, N); b.drawImage(hc, 0, 0); const bp = b.getImageData(0, 0, N, N), bd = bp.data;
+  for (let i = 0; i < bd.length; i += 4) { const v = bd[i] + (fine[i / 4] - 0.5) * 30 + (rand() - 0.5) * 8; bd[i] = bd[i + 1] = bd[i + 2] = v; }
+  b.putImageData(bp, 0, 0);
+
+  const geo = new THREE.PlaneGeometry(2, 2, 600, 600);
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex(cc, true), displacementMap: tex(hc), displacementScale: 0.085, bumpMap: tex(bc), bumpScale: 0.6,
+    roughnessMap: tex(rc), metalnessMap: tex(mc), roughness: 1, metalness: 1, transparent: false, alphaTest: 0.5,
+  });
+  const cover = new THREE.Mesh(geo, mat);
+  cover.rotation.x = -P / 2; cover.castShadow = true; cover.receiveShadow = true;
+  scene.add(cover);
+  // the frame the cover sits in
+  const frame = new THREE.Mesh(new THREE.TorusGeometry(1.015, 0.03, 16, 160), new THREE.MeshStandardMaterial({ color: 0x3b3a37, metalness: 0.85, roughness: 0.55 }));
+  frame.rotation.x = -P / 2; frame.position.y = 0.012; scene.add(frame);
+
+  const camera = new THREE.PerspectiveCamera(30, W / H, 0.1, 20);
+  camera.position.set(0, 3.7, 1.75); camera.lookAt(0, 0, 0.04);
+  scene.environmentIntensity = 0.7;
+  scene.add(new THREE.HemisphereLight(0xfff7ee, 0x6b6b70, 0.6));
+  const key = new THREE.DirectionalLight(0xfff0dc, 3.2); key.position.set(-3.4, 1.7, -1.6); key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048); Object.assign(key.shadow.camera, { left: -1.3, right: 1.3, top: 1.3, bottom: -1.3 }); key.shadow.bias = -0.0004;
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xdbe8ff, 0.7); fill.position.set(3, 3, 3); scene.add(fill);
+  return camera;
+}
+function shade(hex, k) { const n = parseInt(hex.slice(1), 16); const f = (v) => Math.max(0, Math.min(255, Math.round(v * (1 + k)))); return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`; }
+
+/* ───────────── omamori ───────────── */
+function omamori() {
+  const TW = 768, TH = 1152; // texture: 1.0 × 1.5 units
+  const [cc, c] = canvas(TW, TH), [hc, h] = canvas(TW, TH), [mc, m] = canvas(TW, TH);
+  const g = (v) => `rgb(${v},${v},${v})`;
+  // fabric + weave
+  c.fillStyle = D.fabric; c.fillRect(0, 0, TW, TH);
+  h.fillStyle = g(110); h.fillRect(0, 0, TW, TH);
+  m.fillStyle = g(0); m.fillRect(0, 0, TW, TH);
+  const cd = c.getImageData(0, 0, TW, TH), hd = h.getImageData(0, 0, TW, TH);
+  for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
+    const i = (y * TW + x) * 4, weave = ((x >> 1) + (y >> 1)) % 2 ? 1 : -1, n = (rand() - 0.5) * 14;
+    for (let k = 0; k < 3; k++) cd.data[i + k] = Math.max(0, Math.min(255, cd.data[i + k] + weave * 6 + n));
+    hd.data[i] = hd.data[i + 1] = hd.data[i + 2] = 110 + weave * 14 + n;
+  }
+  c.putImageData(cd, 0, 0); h.putImageData(hd, 0, 0);
+
+  // brocade pattern woven in metallic thread
+  function brocade(ctx, color) {
+    ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3.2; ctx.globalAlpha = ctx === c ? 0.55 : 1;
+    const t = D.pattern;
+    if (t === "seigaiha") { for (let y = 0; y < TH + 40; y += 30) for (let x = (y / 30) % 2 ? 30 : 0; x < TW + 60; x += 60) for (const r of [27, 19, 11]) { ctx.beginPath(); ctx.arc(x, y, r, P, 2 * P); ctx.stroke(); } }
+    else if (t === "asanoha") { const s = 48; for (let y = 0; y < TH + s; y += s * 0.866) for (let x = ((y / (s * 0.866)) % 2 ? s / 2 : 0); x < TW + s; x += s) { for (let k = 0; k < 6; k++) { const a = (k * P) / 3 + P / 6; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * s * 0.577, y + Math.sin(a) * s * 0.577); ctx.stroke(); } } }
+    else if (t === "kikko") { const s = 34; for (let y = 0; y < TH + s * 2; y += s * 1.732) for (let x = 0; x < TW + s * 3; x += s * 3) for (const [ox, oy] of [[0, 0], [s * 1.5, s * 0.866]]) { ctx.beginPath(); for (let k = 0; k <= 6; k++) { const a = (k * P) / 3; ctx.lineTo(x + ox + Math.cos(a) * s * 0.92, y + oy + Math.sin(a) * s * 0.92); } ctx.stroke(); } }
+    else { for (let y = 30; y < TH; y += 92) for (let x = (y / 92) % 2 ? 76 : 30; x < TW; x += 92) motif(ctx, "sakura", x, y, 22, rand() * P); }
+    ctx.restore();
+  }
+  brocade(c, D.thread); brocade(h, g(170)); brocade(m, g(200));
+
+  // plain panel behind the lettering with a thread border
+  const px = TW * 0.27, pw = TW * 0.46, py = TH * 0.24, ph = TH * 0.66;
+  for (const [ctx, fill, line] of [[c, shade(D.fabric, -0.12), D.thread], [h, g(100), g(190)], [m, g(0), g(220)]]) {
+    ctx.fillStyle = fill; ctx.fillRect(px, py, pw, ph);
+    ctx.strokeStyle = line; ctx.lineWidth = 7; ctx.strokeRect(px + 8, py + 8, pw - 16, ph - 16);
+    ctx.lineWidth = 3; ctx.strokeRect(px + 20, py + 20, pw - 40, ph - 40);
+  }
+
+  // embroidery: satin stitches clipped to the glyphs (and the crest), raised on the height map
+  const [kc, k] = canvas(TW, TH);
+  k.fillStyle = "#fff"; k.font = `400 ${pw * 0.66}px ${BRUSH}`; k.textAlign = "center"; k.textBaseline = "middle";
+  const chars = [...D.ja], step = (ph - 110) / chars.length;
+  chars.forEach((ch, i) => k.fillText(ch, TW / 2, py + 60 + step * (i + 0.5)));
+  motif(k, D.mon === "tomoe" ? "plum" : D.mon, TW / 2, TH * 0.14, 62, 0);
+  if (D.mon === "tomoe") { k.globalCompositeOperation = "destination-out"; k.beginPath(); k.arc(TW / 2, TH * 0.14, 20, 0, 2 * P); k.fill(); k.globalCompositeOperation = "source-over"; }
+  const stitch = (ctx, a, b) => {
+    const [sc2, s] = canvas(TW, TH);
+    s.fillStyle = a; s.fillRect(0, 0, TW, TH);
+    for (let x = -TH; x < TW + TH; x += 5) { s.strokeStyle = b; s.lineWidth = 1.6; s.beginPath(); s.moveTo(x, 0); s.lineTo(x + TH * 0.35, TH); s.stroke(); }
+    s.globalCompositeOperation = "destination-in"; s.drawImage(kc, 0, 0);
+    // a darker edge around each glyph, like the outline stitch
+    const [oc, o] = canvas(TW, TH); o.filter = "blur(1.5px)"; o.drawImage(kc, 0, 0);
+    o.globalCompositeOperation = "source-in"; o.fillStyle = b; o.fillRect(0, 0, TW, TH);
+    ctx.drawImage(oc, 0, 0); ctx.drawImage(sc2, 0, 0);
+  };
+  stitch(c, D.thread, shade(D.thread, -0.25));
+  stitch(h, g(240), g(205));
+  stitch(m, g(235), g(200));
+
+  const geoShape = new THREE.Shape();
+  const sw = 0.5, sb = -0.75, st = 0.75;
+  geoShape.moveTo(-sw + 0.05, sb); geoShape.lineTo(sw - 0.05, sb); geoShape.quadraticCurveTo(sw, sb, sw, sb + 0.05);
+  geoShape.lineTo(sw, st - 0.17); geoShape.lineTo(sw * 0.55, st); geoShape.lineTo(-sw * 0.55, st); geoShape.lineTo(-sw, st - 0.17);
+  geoShape.lineTo(-sw, sb + 0.05); geoShape.quadraticCurveTo(-sw, sb, -sw + 0.05, sb);
+  const geo = new THREE.ExtrudeGeometry(geoShape, { depth: 0.04, bevelEnabled: true, bevelThickness: 0.07, bevelSize: 0.045, bevelSegments: 10, curveSegments: 24 });
+  geo.translate(0, 0, -0.02);
+  // pillow: puff the faces out in the middle like a stuffed pouch
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const puff = Math.max(0, 1 - (x / 0.55) ** 2) * Math.max(0, 1 - ((y + 0.05) / 0.85) ** 2);
+    pos.setZ(i, z + Math.sign(z) * 0.1 * puff);
+  }
+  geo.computeVertexNormals();
+  const mapT = (t) => { t.repeat.set(1 / 1.0, 1 / 1.5); t.offset.set(0.5, 0.5); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; return t; };
+  const mat = new THREE.MeshPhysicalMaterial({
+    map: mapT(tex(cc, true)), bumpMap: mapT(tex(hc)), bumpScale: 1.4, metalnessMap: mapT(tex(mc)), metalness: 0.75,
+    roughness: 0.62, sheen: 1, sheenRoughness: 0.45, sheenColor: new THREE.Color(D.thread).multiplyScalar(0.6),
+  });
+  const pouch = new THREE.Mesh(geo, mat); pouch.castShadow = true;
+
+  // cord: a loop out of the top and a decorative knot, twisted silk
+  const [rc2, rr] = canvas(256, 64);
+  rr.fillStyle = D.cord; rr.fillRect(0, 0, 256, 64);
+  for (let x = -64; x < 256; x += 16) { rr.strokeStyle = shade(D.cord, 0.35); rr.lineWidth = 5; rr.beginPath(); rr.moveTo(x, 64); rr.lineTo(x + 64, 0); rr.stroke(); rr.strokeStyle = shade(D.cord, -0.35); rr.lineWidth = 2; rr.beginPath(); rr.moveTo(x + 8, 64); rr.lineTo(x + 72, 0); rr.stroke(); }
+  const cordTex = tex(rc2, true); cordTex.wrapS = cordTex.wrapT = THREE.RepeatWrapping; cordTex.repeat.set(14, 1);
+  const cordBump = tex(rc2); cordBump.wrapS = cordBump.wrapT = THREE.RepeatWrapping; cordBump.repeat.set(14, 1);
+  const cordMat = new THREE.MeshPhysicalMaterial({ map: cordTex, bumpMap: cordBump, bumpScale: 2, roughness: 0.45, sheen: 1, sheenColor: new THREE.Color(D.cord) });
+  const loop = new THREE.CatmullRomCurve3([[-0.07, 0.72, 0], [-0.1, 0.95, 0.01], [-0.06, 1.28, 0.02], [0.0, 1.36, 0.02], [0.06, 1.28, 0.02], [0.1, 0.95, 0.01], [0.07, 0.72, 0]].map((v) => new THREE.Vector3(...v)));
+  const cordLoop = new THREE.Mesh(new THREE.TubeGeometry(loop, 120, 0.022, 14, false), cordMat); cordLoop.castShadow = true;
+  const knot = new THREE.Mesh(new THREE.TorusKnotGeometry(0.075, 0.024, 160, 14, 2, 3), cordMat);
+  knot.position.set(0, 0.9, 0.03); knot.scale.set(1.1, 0.9, 0.6); knot.castShadow = true;
+  const group = new THREE.Group(); group.add(pouch, cordLoop, knot);
+  group.rotation.set(0.08, -0.32, 0.04);
+  scene.add(group);
+
+  const camera = new THREE.PerspectiveCamera(26, W / H, 0.1, 30);
+  camera.position.set(0, 0.32, 5.4); camera.lookAt(0, 0.28, 0);
+  scene.environmentIntensity = 0.9;
+  scene.add(new THREE.HemisphereLight(0xfff8f0, 0xd8c8c0, 0.8));
+  const key = new THREE.DirectionalLight(0xfff1e2, 2.6); key.position.set(-2.5, 3, 4); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xe6eeff, 1.4); rim.position.set(3, 2, -3); scene.add(rim);
+  return camera;
+}
+
+await Promise.all([document.fonts.load(`800 40px ${MINCHO}`, D.ja ?? "京"), document.fonts.load(`400 40px ${BRUSH}`, D.ja ?? "京")]).catch(() => {});
+const camera = kind === "omamori" ? omamori() : manhole();
+renderer.render(scene, camera);
+window.__done = true;
+</script>
+</body>
+</html>
