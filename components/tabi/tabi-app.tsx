@@ -979,7 +979,8 @@ function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack, live
           ))}
         </div>
       )}
-      <div ref={end} className="h-16" aria-hidden />
+      {/* room to scroll the newest message clear of the composer; before any message it only opened a gap under the quick starts */}
+      {(turns.length > 0 || loading) && <div ref={end} className="h-16" aria-hidden />}
       <div className="sticky bottom-[84px] pt-2 lg:bottom-6"><Composer onAsk={onAsk} loading={loading} placeholder={turns.length ? undefined : "เช่น 5 วัน พ.ค. เน้นธรรมชาติ"} /></div>
     </div>
     {desktop && <aside className="tabi-sticky hidden lg:block">{mapCard || <ChatSideTip />}</aside>}
