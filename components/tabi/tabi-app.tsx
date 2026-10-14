@@ -362,7 +362,7 @@ export function TabiApp({ shared, initialAsk, source, initialTab, liveSearch }: 
             <span className="tabi-title text-[22px] font-bold leading-none tracking-tight text-[var(--t-navy)]">Nagame</span>
           </button>
           <NavButton icon={<Home size={22} />} label="หน้าแรก" active={screen === "home"} onClick={nav("home")} />
-          <NavButton icon={<MapIcon size={22} />} label="วางแผนทริป" active={["chat", "route", "itinerary", "flights"].includes(screen)} onClick={nav(turns.length ? "chat" : "home")} />
+          <NavButton icon={<MapIcon size={22} />} label="วางแผนทริป" active={["chat", "route", "itinerary", "flights"].includes(screen)} onClick={nav("chat")} />
           <NavButton icon={<Heart size={22} />} label="ทริปของฉัน" active={screen === "trips"} onClick={nav("trips")} />
           <NavButton icon={<User size={22} />} label="โปรไฟล์" active={screen === "soon"} onClick={nav("soon")} />
           <button type="button" className="tabi-nav-help" onClick={tour.replay}><CircleHelp size={22} />วิธีใช้</button>
@@ -913,6 +913,16 @@ function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack, live
     <div className="space-y-4">
       <TopBar onBack={onBack} />
       <ol className="space-y-3" aria-live="polite">
+        {/* opened from the "วางแผนทริป" tab before any question: Tabi starts the conversation */}
+        {!turns.length && !loading && (
+          <li className="tabi-rise flex items-start gap-2">
+            <Avatar size={38} mood="happy" />
+            <div className="max-w-[82%] space-y-1">
+              <p className="text-xs font-semibold text-[var(--t-pink-ink)]">ทาบิ</p>
+              <p className="tabi-card rounded-tl-md px-4 py-2.5">อยากไปญี่ปุ่นช่วงไหน กี่วัน ชอบเที่ยวแนวไหน พิมพ์บอกทาบิได้เลย หรือกดเรื่องที่สนใจด้านล่าง</p>
+            </div>
+          </li>
+        )}
         {turns.map((t, i) =>
           t.role === "user" ? (
             <li key={i} className="tabi-rise flex justify-end">
@@ -960,8 +970,17 @@ function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack, live
       {last?.ask && <Chips items={last.ask.chips} onPick={onAsk} />}
       {last?.flight && <FlightCard link={last.flight} />}
       {!last?.ask && last?.chips && <Chips items={last.chips} onPick={onAsk} />}
+      {!turns.length && !loading && (
+        <div className="grid grid-cols-3 gap-2">
+          {INSPIRATION.map((c) => (
+            <button key={c.label} type="button" className="tabi-chip justify-center" onClick={() => onAsk(c.prompt)}>
+              <span aria-hidden className="tabi-emoji">{c.emoji}</span>{c.label}
+            </button>
+          ))}
+        </div>
+      )}
       <div ref={end} className="h-16" aria-hidden />
-      <div className="sticky bottom-[84px] pt-2 lg:bottom-6"><Composer onAsk={onAsk} loading={loading} /></div>
+      <div className="sticky bottom-[84px] pt-2 lg:bottom-6"><Composer onAsk={onAsk} loading={loading} placeholder={turns.length ? undefined : "เช่น 5 วัน พ.ค. เน้นธรรมชาติ"} /></div>
     </div>
     {desktop && <aside className="tabi-sticky hidden lg:block">{mapCard || <ChatSideTip />}</aside>}
     </div>
