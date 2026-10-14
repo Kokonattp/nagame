@@ -1,0 +1,16 @@
+[package]
+name = "laya-agent"
+version = "0.1.0"
+edition = "2021"
+description = "Search-only browser agent for Nagame Tabi: a normal Chrome over CDP, Laya (or Jev) picks each step"
+license = "MIT"
+
+[dependencies]
+serde_json = "1"
+tungstenite = "0.24"
+ureq = { version = "2", features = ["json"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
