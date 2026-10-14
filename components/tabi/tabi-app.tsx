@@ -2167,6 +2167,7 @@ type Detail = { kind: "omamori"; id: string } | { kind: "manhole"; id: string };
 function CollectionBook({ trips }: { trips: SavedTrip[] }) {
   const c = useCollection();
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [all, setAll] = useState(false);
   const { planned, here } = useMemo(() => tripCities(trips), [trips]);
   useEffect(() => { if (trips.some(travellingNow)) earnOmamori("shingan"); }, [trips]);
   if (!c) return null;
@@ -2204,7 +2205,7 @@ function CollectionBook({ trips }: { trips: SavedTrip[] }) {
         <h3 className="mb-1 font-bold">🕳️ สมุดฝาท่อ (マンホール)</h3>
         <p className="tabi-muted mb-3 text-xs">ใส่เมืองในทริปแล้วฝาท่อจะเปิด พอถึงวันเที่ยวกด “มาถึงแล้ว” เพื่อปั๊มตรา · ลายวาดใหม่โดยทาบิ ไม่ใช่ลายจริงของเมือง</p>
         <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-          {covers.map((m) => {
+          {covers.filter((m, i) => all || c.stamped[m.city] || planned.has(m.city) || i < 12).map((m) => {
             const done = c.stamped[m.city], open = !!done || planned.has(m.city);
             return (
               <li key={m.city}>
@@ -2221,6 +2222,11 @@ function CollectionBook({ trips }: { trips: SavedTrip[] }) {
             );
           })}
         </ul>
+        {covers.length > 12 && (
+          <button type="button" className="tabi-btn tabi-btn--soft mt-3 w-full" aria-expanded={all} onClick={() => setAll((v) => !v)}>
+            {all ? "ย่อสมุด" : `ดูฝาท่อทั้งหมด ${covers.length} เมือง`}
+          </button>
+        )}
       </div>
       {detail && <CollectDialog detail={detail} c={c} canStamp={detail.kind === "manhole" && here.has(detail.id)} open={detail.kind === "manhole" && (planned.has(detail.id) || !!c.stamped[detail.id])} onClose={() => setDetail(null)} />}
     </section>

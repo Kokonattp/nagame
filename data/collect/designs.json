@@ -1,39 +1,1632 @@
 {
   "note": "Omamori and manhole-cover collectibles. Art is original (three.js renders in scripts/tabi-collect) — never copied from real covers, マンホールカード or shrine charms. Motifs are generic symbols of each place.",
   "omamori": [
-    { "id": "kaiun", "ja": "開運守", "th": "เครื่องรางเปิดดวง", "meaning": "ขอให้ทริปแรกเริ่มต้นดี", "how": "จัดแผนรายวันครั้งแรก", "fabric": "#b3202a", "thread": "#e3c46a", "cord": "#e8c35a", "pattern": "kikko", "mon": "sakura" },
-    { "id": "ryoko", "ja": "旅行安全", "th": "เครื่องรางเดินทางปลอดภัย", "meaning": "ขอให้เดินทางไปกลับปลอดภัย", "how": "ตั้งวันเดินทาง", "fabric": "#1d3570", "thread": "#e3c46a", "cord": "#d4a93e", "pattern": "seigaiha", "mon": "tomoe" },
-    { "id": "kinun", "ja": "金運守", "th": "เครื่องรางโชคลาภ", "meaning": "ขอให้งบพอและเหลือกลับบ้าน", "how": "ขูดดูยอดงบรวม", "fabric": "#c48a12", "thread": "#fff0b8", "cord": "#b3202a", "pattern": "asanoha", "mon": "plum" },
-    { "id": "enmusubi", "ja": "縁結び", "th": "เครื่องรางผูกสัมพันธ์", "meaning": "ขอให้เจอเพื่อนร่วมทางดี ๆ", "how": "แชร์ทริปให้เพื่อน", "fabric": "#e8789e", "thread": "#fff6f9", "cord": "#c2185b", "pattern": "sakura", "mon": "sakura" },
-    { "id": "gakugyo", "ja": "学業成就", "th": "เครื่องรางความรู้", "meaning": "ขอให้รู้ทันทุกเรื่องที่ญี่ปุ่น", "how": "ถามทาบิเรื่องเที่ยวแล้วได้คำตอบ", "fabric": "#2e6b45", "thread": "#e3c46a", "cord": "#e3c46a", "pattern": "asanoha", "mon": "plum" },
-    { "id": "shingan", "ja": "心願成就", "th": "เครื่องรางสมหวัง", "meaning": "ฝันที่จะไปญี่ปุ่นเป็นจริงแล้ว", "how": "เปิดทริปในวันที่ออกเดินทาง", "fabric": "#5b3a8c", "thread": "#f1d58a", "cord": "#f1d58a", "pattern": "kikko", "mon": "tomoe" }
+    {
+      "id": "kaiun",
+      "ja": "開運守",
+      "th": "เครื่องรางเปิดดวง",
+      "meaning": "ขอให้ทริปแรกเริ่มต้นดี",
+      "how": "จัดแผนรายวันครั้งแรก",
+      "fabric": "#b3202a",
+      "thread": "#e3c46a",
+      "cord": "#e8c35a",
+      "pattern": "kikko",
+      "mon": "sakura"
+    },
+    {
+      "id": "ryoko",
+      "ja": "旅行安全",
+      "th": "เครื่องรางเดินทางปลอดภัย",
+      "meaning": "ขอให้เดินทางไปกลับปลอดภัย",
+      "how": "ตั้งวันเดินทาง",
+      "fabric": "#1d3570",
+      "thread": "#e3c46a",
+      "cord": "#d4a93e",
+      "pattern": "seigaiha",
+      "mon": "tomoe"
+    },
+    {
+      "id": "kinun",
+      "ja": "金運守",
+      "th": "เครื่องรางโชคลาภ",
+      "meaning": "ขอให้งบพอและเหลือกลับบ้าน",
+      "how": "ขูดดูยอดงบรวม",
+      "fabric": "#c48a12",
+      "thread": "#fff0b8",
+      "cord": "#b3202a",
+      "pattern": "asanoha",
+      "mon": "plum"
+    },
+    {
+      "id": "enmusubi",
+      "ja": "縁結び",
+      "th": "เครื่องรางผูกสัมพันธ์",
+      "meaning": "ขอให้เจอเพื่อนร่วมทางดี ๆ",
+      "how": "แชร์ทริปให้เพื่อน",
+      "fabric": "#e8789e",
+      "thread": "#fff6f9",
+      "cord": "#c2185b",
+      "pattern": "sakura",
+      "mon": "sakura"
+    },
+    {
+      "id": "gakugyo",
+      "ja": "学業成就",
+      "th": "เครื่องรางความรู้",
+      "meaning": "ขอให้รู้ทันทุกเรื่องที่ญี่ปุ่น",
+      "how": "ถามทาบิเรื่องเที่ยวแล้วได้คำตอบ",
+      "fabric": "#2e6b45",
+      "thread": "#e3c46a",
+      "cord": "#e3c46a",
+      "pattern": "asanoha",
+      "mon": "plum"
+    },
+    {
+      "id": "shingan",
+      "ja": "心願成就",
+      "th": "เครื่องรางสมหวัง",
+      "meaning": "ฝันที่จะไปญี่ปุ่นเป็นจริงแล้ว",
+      "how": "เปิดทริปในวันที่ออกเดินทาง",
+      "fabric": "#5b3a8c",
+      "thread": "#f1d58a",
+      "cord": "#f1d58a",
+      "pattern": "kikko",
+      "mon": "tomoe"
+    }
   ],
   "manholes": [
-    { "city": "Tokyo", "ja": "東京都", "motif": "radiotower", "accent": "sakura", "bgPattern": "lattice", "paint": { "bg": "#4a8fd4", "motif": "#d8452f", "accent": "#f4a6c0" } },
-    { "city": "Osaka", "ja": "大阪市", "motif": "castle", "accent": "sakura", "bgPattern": "seigaiha", "paint": { "bg": "#2f6b9a", "motif": "#f2f0e6", "accent": "#f4a6c0", "roof": "#3f8f6e" } },
-    { "city": "Kyoto", "ja": "京都市", "motif": "pagoda", "accent": "maple", "bgPattern": "lattice", "paint": { "bg": "#22406e", "motif": "#5a3a2a", "accent": "#d9452b" } },
-    { "city": "Nara", "ja": "奈良市", "motif": "deer", "accent": "sakura", "bgPattern": "dots", "paint": { "bg": "#5f8f4a", "motif": "#b4773f", "accent": "#f4b6c8" } },
-    { "city": "Sapporo", "ja": "札幌市", "motif": "clocktower", "accent": "snowflake", "bgPattern": "dots", "paint": { "bg": "#3e6fb0", "motif": "#f4f1ea", "accent": "#ffffff", "roof": "#c0392b" } },
-    { "city": "Hakodate", "ja": "函館市", "motif": "star5", "accent": "snowflake", "bgPattern": "seigaiha", "paint": { "bg": "#1f4f7a", "motif": "#6fae5a", "accent": "#ffffff" } },
-    { "city": "Otaru", "ja": "小樽市", "motif": "anchor", "accent": "snowflake", "bgPattern": "seigaiha", "paint": { "bg": "#2a5c8a", "motif": "#e8d9b0", "accent": "#ffffff" } },
-    { "city": "Fukuoka", "ja": "福岡市", "motif": "plum", "accent": "plum", "bgPattern": "seigaiha", "paint": { "bg": "#3a74b5", "motif": "#e98aa8", "accent": "#f7d1dc" } },
-    { "city": "Hiroshima", "ja": "広島市", "motif": "crane", "accent": "sakura", "bgPattern": "lattice", "paint": { "bg": "#2d7a8a", "motif": "#f3f0e8", "accent": "#f4a6c0" } },
-    { "city": "Miyajima", "ja": "廿日市市", "motif": "torii", "accent": "maple", "bgPattern": "seigaiha", "paint": { "bg": "#2c6aa0", "motif": "#d9452b", "accent": "#e8892b" } },
-    { "city": "Kanazawa", "ja": "金沢市", "motif": "plum", "accent": "ginkgo", "bgPattern": "lattice", "paint": { "bg": "#1f3e66", "motif": "#d9b24a", "accent": "#e8c35a" } },
-    { "city": "Takayama", "ja": "高山市", "motif": "gassho", "accent": "snowflake", "bgPattern": "dots", "paint": { "bg": "#3b5f86", "motif": "#8a6a3e", "accent": "#ffffff" } },
-    { "city": "Kawaguchiko", "ja": "富士河口湖町", "motif": "fuji", "accent": "sakura", "bgPattern": "seigaiha", "paint": { "bg": "#4b86c4", "motif": "#eef3f8", "accent": "#f4a6c0" } },
-    { "city": "Hakone", "ja": "箱根町", "motif": "torii", "accent": "cedar", "bgPattern": "dots", "paint": { "bg": "#3f7a5a", "motif": "#d9452b", "accent": "#2f5a3a" } },
-    { "city": "Nikko", "ja": "日光市", "motif": "cedar", "accent": "maple", "bgPattern": "lattice", "paint": { "bg": "#2f5a3a", "motif": "#4f8a4a", "accent": "#d9452b" } },
-    { "city": "Kamakura", "ja": "鎌倉市", "motif": "hydrangea", "accent": "hydrangea", "bgPattern": "seigaiha", "paint": { "bg": "#3b6ea8", "motif": "#8f7ad1", "accent": "#b8a8ea" } },
-    { "city": "Yokohama", "ja": "横浜市", "motif": "anchor", "accent": "star5", "bgPattern": "seigaiha", "paint": { "bg": "#1f4a80", "motif": "#d9b24a", "accent": "#f0e2a8" } },
-    { "city": "Kobe", "ja": "神戸市", "motif": "radiotower", "accent": "star5", "bgPattern": "seigaiha", "paint": { "bg": "#1f3e66", "motif": "#d8452f", "accent": "#e8c35a" } },
-    { "city": "Nagoya", "ja": "名古屋市", "motif": "castle", "accent": "koi", "bgPattern": "lattice", "paint": { "bg": "#2a4f7a", "motif": "#f2f0e6", "accent": "#e3b33a", "roof": "#3f8f6e" } },
-    { "city": "Himeji", "ja": "姫路市", "motif": "castle", "accent": "crane", "bgPattern": "dots", "paint": { "bg": "#4a7fb5", "motif": "#ffffff", "accent": "#f3f0e8", "roof": "#8a9aa8" } },
-    { "city": "Sendai", "ja": "仙台市", "motif": "moon", "accent": "star5", "bgPattern": "lattice", "paint": { "bg": "#1c2f5a", "motif": "#e8c35a", "accent": "#f3e6b0" } },
-    { "city": "Kagoshima", "ja": "鹿児島市", "motif": "volcano", "accent": "hibiscus", "bgPattern": "seigaiha", "paint": { "bg": "#3a78b0", "motif": "#6a5a52", "accent": "#e2453a" } },
-    { "city": "Naha", "ja": "那覇市", "motif": "hibiscus", "accent": "hibiscus", "bgPattern": "seigaiha", "paint": { "bg": "#2a9ab0", "motif": "#e2453a", "accent": "#f2a03a" } },
-    { "city": "Beppu", "ja": "別府市", "motif": "onsen", "accent": "maple", "bgPattern": "dots", "paint": { "bg": "#5a7fa8", "motif": "#e2453a", "accent": "#e8892b" } },
-    { "city": "Kumamoto", "ja": "熊本市", "motif": "castle", "accent": "ginkgo", "bgPattern": "lattice", "paint": { "bg": "#2a4a3a", "motif": "#2a2a2a", "accent": "#e8c35a", "roof": "#3a3a3a" } },
-    { "city": "Matsumoto", "ja": "松本市", "motif": "castle", "accent": "fuji", "bgPattern": "dots", "paint": { "bg": "#3f6a96", "motif": "#262626", "accent": "#e8eef5", "roof": "#3a3a3a" } }
+    {
+      "city": "Tokyo",
+      "ja": "東京都",
+      "motif": "radiotower",
+      "accent": "sakura",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#4a8fd4",
+        "motif": "#d8452f",
+        "accent": "#f4a6c0"
+      }
+    },
+    {
+      "city": "Osaka",
+      "ja": "大阪市",
+      "motif": "castle",
+      "accent": "sakura",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2f6b9a",
+        "motif": "#f2f0e6",
+        "accent": "#f4a6c0",
+        "roof": "#3f8f6e"
+      }
+    },
+    {
+      "city": "Kyoto",
+      "ja": "京都市",
+      "motif": "pagoda",
+      "accent": "maple",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#22406e",
+        "motif": "#5a3a2a",
+        "accent": "#d9452b"
+      }
+    },
+    {
+      "city": "Nara",
+      "ja": "奈良市",
+      "motif": "deer",
+      "accent": "sakura",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#5f8f4a",
+        "motif": "#b4773f",
+        "accent": "#f4b6c8"
+      }
+    },
+    {
+      "city": "Sapporo",
+      "ja": "札幌市",
+      "motif": "clocktower",
+      "accent": "snowflake",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#3e6fb0",
+        "motif": "#f4f1ea",
+        "accent": "#ffffff",
+        "roof": "#c0392b"
+      }
+    },
+    {
+      "city": "Hakodate",
+      "ja": "函館市",
+      "motif": "star5",
+      "accent": "snowflake",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#1f4f7a",
+        "motif": "#6fae5a",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Otaru",
+      "ja": "小樽市",
+      "motif": "anchor",
+      "accent": "snowflake",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2a5c8a",
+        "motif": "#e8d9b0",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Fukuoka",
+      "ja": "福岡市",
+      "motif": "plum",
+      "accent": "plum",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#3a74b5",
+        "motif": "#e98aa8",
+        "accent": "#f7d1dc"
+      }
+    },
+    {
+      "city": "Hiroshima",
+      "ja": "広島市",
+      "motif": "crane",
+      "accent": "sakura",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2d7a8a",
+        "motif": "#f3f0e8",
+        "accent": "#f4a6c0"
+      }
+    },
+    {
+      "city": "Miyajima",
+      "ja": "廿日市市",
+      "motif": "torii",
+      "accent": "maple",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2c6aa0",
+        "motif": "#d9452b",
+        "accent": "#e8892b"
+      }
+    },
+    {
+      "city": "Kanazawa",
+      "ja": "金沢市",
+      "motif": "plum",
+      "accent": "ginkgo",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#1f3e66",
+        "motif": "#d9b24a",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Takayama",
+      "ja": "高山市",
+      "motif": "bridge",
+      "accent": "sakura",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#3b5f86",
+        "motif": "#d9452b",
+        "accent": "#f4a6c0"
+      }
+    },
+    {
+      "city": "Kawaguchiko",
+      "ja": "富士河口湖町",
+      "motif": "fuji",
+      "accent": "sakura",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#4b86c4",
+        "motif": "#eef3f8",
+        "accent": "#f4a6c0"
+      }
+    },
+    {
+      "city": "Hakone",
+      "ja": "箱根町",
+      "motif": "torii",
+      "accent": "hydrangea",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#3f7a5a",
+        "motif": "#d9452b",
+        "accent": "#a690e0"
+      }
+    },
+    {
+      "city": "Nikko",
+      "ja": "日光市",
+      "motif": "cedar",
+      "accent": "maple",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2f5a3a",
+        "motif": "#4f8a4a",
+        "accent": "#d9452b"
+      }
+    },
+    {
+      "city": "Kamakura",
+      "ja": "鎌倉市",
+      "motif": "hydrangea",
+      "accent": "hydrangea",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#3b6ea8",
+        "motif": "#8f7ad1",
+        "accent": "#b8a8ea"
+      }
+    },
+    {
+      "city": "Yokohama",
+      "ja": "横浜市",
+      "motif": "anchor",
+      "accent": "star5",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#1f4a80",
+        "motif": "#d9b24a",
+        "accent": "#f0e2a8"
+      }
+    },
+    {
+      "city": "Kobe",
+      "ja": "神戸市",
+      "motif": "radiotower",
+      "accent": "star5",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#1f3e66",
+        "motif": "#d8452f",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Nagoya",
+      "ja": "名古屋市",
+      "motif": "castle",
+      "accent": "koi",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2a4f7a",
+        "motif": "#f2f0e6",
+        "accent": "#e3b33a",
+        "roof": "#3f8f6e"
+      }
+    },
+    {
+      "city": "Himeji",
+      "ja": "姫路市",
+      "motif": "castle",
+      "accent": "crane",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#4a7fb5",
+        "motif": "#ffffff",
+        "accent": "#f3f0e8",
+        "roof": "#8a9aa8"
+      }
+    },
+    {
+      "city": "Sendai",
+      "ja": "仙台市",
+      "motif": "moon",
+      "accent": "star5",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#1c2f5a",
+        "motif": "#e8c35a",
+        "accent": "#f3e6b0"
+      }
+    },
+    {
+      "city": "Kagoshima",
+      "ja": "鹿児島市",
+      "motif": "volcano",
+      "accent": "hibiscus",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#3a78b0",
+        "motif": "#6a5a52",
+        "accent": "#e2453a"
+      }
+    },
+    {
+      "city": "Naha",
+      "ja": "那覇市",
+      "motif": "hibiscus",
+      "accent": "hibiscus",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2a9ab0",
+        "motif": "#e2453a",
+        "accent": "#f2a03a"
+      }
+    },
+    {
+      "city": "Beppu",
+      "ja": "別府市",
+      "motif": "onsen",
+      "accent": "maple",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#5a7fa8",
+        "motif": "#e2453a",
+        "accent": "#e8892b"
+      }
+    },
+    {
+      "city": "Kumamoto",
+      "ja": "熊本市",
+      "motif": "castle",
+      "accent": "ginkgo",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2a4a3a",
+        "motif": "#2a2a2a",
+        "accent": "#e8c35a",
+        "roof": "#3a3a3a"
+      }
+    },
+    {
+      "city": "Matsumoto",
+      "ja": "松本市",
+      "motif": "castle",
+      "accent": "fuji",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#3f6a96",
+        "motif": "#262626",
+        "accent": "#e8eef5",
+        "roof": "#3a3a3a"
+      }
+    },
+    {
+      "city": "Ishigaki",
+      "ja": "石垣市",
+      "motif": "turtle",
+      "accent": "hibiscus",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2a9ab0",
+        "motif": "#6fae5a",
+        "accent": "#e2453a"
+      }
+    },
+    {
+      "city": "Matsuyama",
+      "ja": "松山市",
+      "motif": "castle",
+      "accent": "citrus",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2a6a8a",
+        "motif": "#f2f0e6",
+        "accent": "#f2a03a",
+        "roof": "#3f8f6e"
+      }
+    },
+    {
+      "city": "Okayama",
+      "ja": "岡山市",
+      "motif": "peach",
+      "accent": "sakura",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#2d7a8a",
+        "motif": "#f4a0a8",
+        "accent": "#f4a6c0"
+      }
+    },
+    {
+      "city": "Kurashiki",
+      "ja": "倉敷市",
+      "motif": "boat",
+      "accent": "koi",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2a5c8a",
+        "motif": "#e8d9b0",
+        "accent": "#e8892b"
+      }
+    },
+    {
+      "city": "Takamatsu",
+      "ja": "高松市",
+      "motif": "bridge",
+      "accent": "plum",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#3f7a5a",
+        "motif": "#d9452b",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Aomori",
+      "ja": "青森市",
+      "motif": "apple",
+      "accent": "snowflake",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#2f5a3a",
+        "motif": "#d6362f",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Asahikawa",
+      "ja": "旭川市",
+      "motif": "bear",
+      "accent": "snowflake",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#3e6fb0",
+        "motif": "#7a5236",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Shizuoka",
+      "ja": "静岡市",
+      "motif": "fuji",
+      "accent": "citrus",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#3b6ea8",
+        "motif": "#eef3f8",
+        "accent": "#f2a03a"
+      }
+    },
+    {
+      "city": "Atami",
+      "ja": "熱海市",
+      "motif": "onsen",
+      "accent": "plum",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#2f5a3a",
+        "motif": "#e2453a",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Izu",
+      "ja": "伊豆市",
+      "motif": "lighthouse",
+      "accent": "plum",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#22406e",
+        "motif": "#f4f1ea",
+        "accent": "#e98aa8",
+        "roof": "#c0392b"
+      }
+    },
+    {
+      "city": "Wakayama",
+      "ja": "和歌山市",
+      "motif": "castle",
+      "accent": "citrus",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#22406e",
+        "motif": "#f2f0e6",
+        "accent": "#f2a03a",
+        "roof": "#3f8f6e"
+      }
+    },
+    {
+      "city": "Koyasan",
+      "ja": "高野町",
+      "motif": "pagoda",
+      "accent": "cedar",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#2c6aa0",
+        "motif": "#8a5a3a",
+        "accent": "#6fae5a"
+      }
+    },
+    {
+      "city": "Karuizawa",
+      "ja": "軽井沢町",
+      "motif": "volcano",
+      "accent": "maple",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#5a6a8a",
+        "motif": "#7a6a62",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Yufuin",
+      "ja": "由布市",
+      "motif": "volcano",
+      "accent": "dragonfly",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#3a78b0",
+        "motif": "#7a6a62",
+        "accent": "#e8892b"
+      }
+    },
+    {
+      "city": "Toyama",
+      "ja": "富山市",
+      "motif": "alps",
+      "accent": "snowflake",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#3b6ea8",
+        "motif": "#eef3f8",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Nagano",
+      "ja": "長野市",
+      "motif": "alps",
+      "accent": "apple",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2f5a3a",
+        "motif": "#eef3f8",
+        "accent": "#d6362f"
+      }
+    },
+    {
+      "city": "Furano",
+      "ja": "富良野市",
+      "motif": "lavender",
+      "accent": "dragonfly",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2a5c8a",
+        "motif": "#9a7ad6",
+        "accent": "#e8892b"
+      }
+    },
+    {
+      "city": "Biei",
+      "ja": "美瑛町",
+      "motif": "cedar",
+      "accent": "lavender",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#4a86c4",
+        "motif": "#6fae5a",
+        "accent": "#9a7ad6"
+      }
+    },
+    {
+      "city": "Noboribetsu",
+      "ja": "登別市",
+      "motif": "onsen",
+      "accent": "snowflake",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2f4f86",
+        "motif": "#e2453a",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Niseko",
+      "ja": "ニセコ町",
+      "motif": "fuji",
+      "accent": "snowflake",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#3e6fb0",
+        "motif": "#eef3f8",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Kushiro",
+      "ja": "釧路市",
+      "motif": "crane",
+      "accent": "snowflake",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#2a5c8a",
+        "motif": "#f3f0e8",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Abashiri",
+      "ja": "網走市",
+      "motif": "boat",
+      "accent": "snowflake",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#4a86c4",
+        "motif": "#e8d9b0",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Shiretoko",
+      "ja": "斜里町",
+      "motif": "bear",
+      "accent": "crab",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2f4f86",
+        "motif": "#7a5236",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Obihiro",
+      "ja": "帯広市",
+      "motif": "sunflower",
+      "accent": "star5",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#3e6fb0",
+        "motif": "#f2c12e",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Toya",
+      "ja": "洞爺湖町",
+      "motif": "volcano",
+      "accent": "star5",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2a5c8a",
+        "motif": "#7a6a62",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Sounkyo",
+      "ja": "上川町",
+      "motif": "alps",
+      "accent": "maple",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#4a86c4",
+        "motif": "#eef3f8",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Wakkanai",
+      "ja": "稚内市",
+      "motif": "lighthouse",
+      "accent": "star5",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#2f4f86",
+        "motif": "#f4f1ea",
+        "accent": "#e8c35a",
+        "roof": "#c0392b"
+      }
+    },
+    {
+      "city": "Morioka",
+      "ja": "盛岡市",
+      "motif": "bridge",
+      "accent": "sakura",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#3b5f86",
+        "motif": "#d9452b",
+        "accent": "#f4a6c0"
+      }
+    },
+    {
+      "city": "Hiraizumi",
+      "ja": "平泉町",
+      "motif": "lantern",
+      "accent": "maple",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2a4a6a",
+        "motif": "#e2453a",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Akita",
+      "ja": "秋田市",
+      "motif": "lantern",
+      "accent": "snowflake",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#5a3a5a",
+        "motif": "#e2453a",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Kakunodate",
+      "ja": "仙北市",
+      "motif": "sakura",
+      "accent": "plum",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2f5a3a",
+        "motif": "#f4a6c0",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Hirosaki",
+      "ja": "弘前市",
+      "motif": "castle",
+      "accent": "apple",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#3b5f86",
+        "motif": "#f2f0e6",
+        "accent": "#d6362f",
+        "roof": "#3f8f6e"
+      }
+    },
+    {
+      "city": "Towada",
+      "ja": "十和田市",
+      "motif": "boat",
+      "accent": "maple",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#2a4a6a",
+        "motif": "#e8d9b0",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Yamagata",
+      "ja": "山形市",
+      "motif": "cherry",
+      "accent": "snowflake",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#5a3a5a",
+        "motif": "#d8303a",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Ginzan Onsen",
+      "ja": "尾花沢市",
+      "motif": "lantern",
+      "accent": "snowflake",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2f5a3a",
+        "motif": "#e2453a",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Tsuruoka",
+      "ja": "鶴岡市",
+      "motif": "pagoda",
+      "accent": "cedar",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#3b5f86",
+        "motif": "#8a5a3a",
+        "accent": "#6fae5a"
+      }
+    },
+    {
+      "city": "Matsushima",
+      "ja": "松島町",
+      "motif": "boat",
+      "accent": "cedar",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2a4a6a",
+        "motif": "#e8d9b0",
+        "accent": "#6fae5a"
+      }
+    },
+    {
+      "city": "Aizuwakamatsu",
+      "ja": "会津若松市",
+      "motif": "castle",
+      "accent": "plum",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#5a3a5a",
+        "motif": "#f2f0e6",
+        "accent": "#e98aa8",
+        "roof": "#3f8f6e"
+      }
+    },
+    {
+      "city": "Fukushima",
+      "ja": "福島市",
+      "motif": "peach",
+      "accent": "sakura",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#2f5a3a",
+        "motif": "#f4a0a8",
+        "accent": "#f4a6c0"
+      }
+    },
+    {
+      "city": "Kawagoe",
+      "ja": "川越市",
+      "motif": "clocktower",
+      "accent": "sakura",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2a4f7a",
+        "motif": "#f4f1ea",
+        "accent": "#f4a6c0",
+        "roof": "#c0392b"
+      }
+    },
+    {
+      "city": "Chichibu",
+      "ja": "秩父市",
+      "motif": "lantern",
+      "accent": "maple",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#4a7fb5",
+        "motif": "#e2453a",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Kusatsu",
+      "ja": "草津町",
+      "motif": "onsen",
+      "accent": "snowflake",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#3f7a5a",
+        "motif": "#e2453a",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Minakami",
+      "ja": "みなかみ町",
+      "motif": "boat",
+      "accent": "maple",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2a4f7a",
+        "motif": "#e8d9b0",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Mito",
+      "ja": "水戸市",
+      "motif": "plum",
+      "accent": "plum",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#4a7fb5",
+        "motif": "#e98aa8",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Narita",
+      "ja": "成田市",
+      "motif": "pagoda",
+      "accent": "star5",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#3f7a5a",
+        "motif": "#8a5a3a",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Utsunomiya",
+      "ja": "宇都宮市",
+      "motif": "star5",
+      "accent": "plum",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2a4f7a",
+        "motif": "#e8c35a",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Niigata",
+      "ja": "新潟市",
+      "motif": "koi",
+      "accent": "snowflake",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#22406e",
+        "motif": "#e8892b",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Sado",
+      "ja": "佐渡市",
+      "motif": "boat",
+      "accent": "crane",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#5a6a8a",
+        "motif": "#e8d9b0",
+        "accent": "#f3f0e8"
+      }
+    },
+    {
+      "city": "Kofu",
+      "ja": "甲府市",
+      "motif": "grape",
+      "accent": "plum",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#3b6ea8",
+        "motif": "#8a5ac8",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Gifu",
+      "ja": "岐阜市",
+      "motif": "boat",
+      "accent": "star5",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2f5a3a",
+        "motif": "#e8d9b0",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Gujo Hachiman",
+      "ja": "郡上市",
+      "motif": "koi",
+      "accent": "plum",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#22406e",
+        "motif": "#e8892b",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Shirakawa-go",
+      "ja": "白川村",
+      "motif": "gassho",
+      "accent": "snowflake",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#5a6a8a",
+        "motif": "#a07a46",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Gero",
+      "ja": "下呂市",
+      "motif": "onsen",
+      "accent": "maple",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#3b6ea8",
+        "motif": "#e2453a",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Fukui",
+      "ja": "福井市",
+      "motif": "crab",
+      "accent": "snowflake",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#2f5a3a",
+        "motif": "#e0532f",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Hamamatsu",
+      "ja": "浜松市",
+      "motif": "koi",
+      "accent": "star5",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#22406e",
+        "motif": "#e8892b",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Shimoda",
+      "ja": "下田市",
+      "motif": "boat",
+      "accent": "hydrangea",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#5a6a8a",
+        "motif": "#e8d9b0",
+        "accent": "#a690e0"
+      }
+    },
+    {
+      "city": "Tsumago",
+      "ja": "南木曽町",
+      "motif": "lantern",
+      "accent": "cedar",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#3b6ea8",
+        "motif": "#e2453a",
+        "accent": "#6fae5a"
+      }
+    },
+    {
+      "city": "Hakuba",
+      "ja": "白馬村",
+      "motif": "alps",
+      "accent": "snowflake",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2f5a3a",
+        "motif": "#eef3f8",
+        "accent": "#ffffff"
+      }
+    },
+    {
+      "city": "Nozawa Onsen",
+      "ja": "野沢温泉村",
+      "motif": "onsen",
+      "accent": "star5",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#22406e",
+        "motif": "#e2453a",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Kurobe",
+      "ja": "黒部市",
+      "motif": "bridge",
+      "accent": "maple",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#5a6a8a",
+        "motif": "#d9452b",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Wajima",
+      "ja": "輪島市",
+      "motif": "lantern",
+      "accent": "plum",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#3b6ea8",
+        "motif": "#e2453a",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Gotemba",
+      "ja": "御殿場市",
+      "motif": "fuji",
+      "accent": "star5",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2f5a3a",
+        "motif": "#eef3f8",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Ise",
+      "ja": "伊勢市",
+      "motif": "torii",
+      "accent": "sakura",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#5f8f4a",
+        "motif": "#d9452b",
+        "accent": "#f4a6c0"
+      }
+    },
+    {
+      "city": "Hikone",
+      "ja": "彦根市",
+      "motif": "castle",
+      "accent": "sakura",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#6a3a3a",
+        "motif": "#f2f0e6",
+        "accent": "#f4a6c0",
+        "roof": "#3f8f6e"
+      }
+    },
+    {
+      "city": "Amanohashidate",
+      "ja": "宮津市",
+      "motif": "cedar",
+      "accent": "star5",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#22406e",
+        "motif": "#6fae5a",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Kinosaki",
+      "ja": "豊岡市",
+      "motif": "onsen",
+      "accent": "crab",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#2c6aa0",
+        "motif": "#e2453a",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Shirahama",
+      "ja": "白浜町",
+      "motif": "shell",
+      "accent": "star5",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#5f8f4a",
+        "motif": "#f4d7c2",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Nachikatsuura",
+      "ja": "那智勝浦町",
+      "motif": "pagoda",
+      "accent": "maple",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#6a3a3a",
+        "motif": "#8a5a3a",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Hongu",
+      "ja": "田辺市",
+      "motif": "torii",
+      "accent": "cedar",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#22406e",
+        "motif": "#d9452b",
+        "accent": "#6fae5a"
+      }
+    },
+    {
+      "city": "Asuka",
+      "ja": "明日香村",
+      "motif": "moon",
+      "accent": "dragonfly",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2c6aa0",
+        "motif": "#e8c35a",
+        "accent": "#e8892b"
+      }
+    },
+    {
+      "city": "Tottori",
+      "ja": "鳥取市",
+      "motif": "rabbit",
+      "accent": "star5",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#3a5a3a",
+        "motif": "#f4f1ea",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Matsue",
+      "ja": "松江市",
+      "motif": "castle",
+      "accent": "moon",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#5a4a7a",
+        "motif": "#f2f0e6",
+        "accent": "#e8c35a",
+        "roof": "#3f8f6e"
+      }
+    },
+    {
+      "city": "Izumo",
+      "ja": "出雲市",
+      "motif": "torii",
+      "accent": "plum",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2d7a8a",
+        "motif": "#d9452b",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Tsuwano",
+      "ja": "津和野町",
+      "motif": "koi",
+      "accent": "plum",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2a5c8a",
+        "motif": "#e8892b",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Hagi",
+      "ja": "萩市",
+      "motif": "citrus",
+      "accent": "star5",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#3a5a3a",
+        "motif": "#f2a03a",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Shimonoseki",
+      "ja": "下関市",
+      "motif": "fugu",
+      "accent": "star5",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#5a4a7a",
+        "motif": "#e8d39a",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Yamaguchi",
+      "ja": "山口市",
+      "motif": "pagoda",
+      "accent": "maple",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2d7a8a",
+        "motif": "#8a5a3a",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Iwakuni",
+      "ja": "岩国市",
+      "motif": "bridge",
+      "accent": "sakura",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#2a5c8a",
+        "motif": "#d9452b",
+        "accent": "#f4a6c0"
+      }
+    },
+    {
+      "city": "Onomichi",
+      "ja": "尾道市",
+      "motif": "cat",
+      "accent": "sakura",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#3a5a3a",
+        "motif": "#f4f1ea",
+        "accent": "#f4a6c0"
+      }
+    },
+    {
+      "city": "Kure",
+      "ja": "呉市",
+      "motif": "anchor",
+      "accent": "star5",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#5a4a7a",
+        "motif": "#e8d9b0",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Yonago",
+      "ja": "米子市",
+      "motif": "fuji",
+      "accent": "plum",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#2d7a8a",
+        "motif": "#eef3f8",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Tokushima",
+      "ja": "徳島市",
+      "motif": "whirl",
+      "accent": "star5",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#3b6ea8",
+        "motif": "#e8f3fb",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Kochi",
+      "ja": "高知市",
+      "motif": "castle",
+      "accent": "citrus",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2a6a8a",
+        "motif": "#f2f0e6",
+        "accent": "#f2a03a",
+        "roof": "#3f8f6e"
+      }
+    },
+    {
+      "city": "Kotohira",
+      "ja": "琴平町",
+      "motif": "anchor",
+      "accent": "plum",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#3f7a5a",
+        "motif": "#e8d9b0",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Iya Valley",
+      "ja": "三好市",
+      "motif": "bridge",
+      "accent": "maple",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#3b6ea8",
+        "motif": "#d9452b",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Uchiko",
+      "ja": "内子町",
+      "motif": "lantern",
+      "accent": "plum",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2a6a8a",
+        "motif": "#e2453a",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Nagasaki",
+      "ja": "長崎市",
+      "motif": "bridge",
+      "accent": "hydrangea",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#2a4a3a",
+        "motif": "#d9452b",
+        "accent": "#a690e0"
+      }
+    },
+    {
+      "city": "Sasebo",
+      "ja": "佐世保市",
+      "motif": "boat",
+      "accent": "plum",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#5a7fa8",
+        "motif": "#e8d9b0",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Unzen",
+      "ja": "雲仙市",
+      "motif": "volcano",
+      "accent": "plum",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#6a3a3a",
+        "motif": "#7a6a62",
+        "accent": "#e98aa8"
+      }
+    },
+    {
+      "city": "Saga",
+      "ja": "佐賀市",
+      "motif": "balloon",
+      "accent": "star5",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#3a78b0",
+        "motif": "#e2453a",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Karatsu",
+      "ja": "唐津市",
+      "motif": "castle",
+      "accent": "star5",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2a4a3a",
+        "motif": "#f2f0e6",
+        "accent": "#e8c35a",
+        "roof": "#3f8f6e"
+      }
+    },
+    {
+      "city": "Ureshino",
+      "ja": "嬉野市",
+      "motif": "onsen",
+      "accent": "bamboo",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#5a7fa8",
+        "motif": "#e2453a",
+        "accent": "#6fae5a"
+      }
+    },
+    {
+      "city": "Aso",
+      "ja": "阿蘇市",
+      "motif": "volcano",
+      "accent": "maple",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#6a3a3a",
+        "motif": "#7a6a62",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Kurokawa Onsen",
+      "ja": "南小国町",
+      "motif": "onsen",
+      "accent": "bamboo",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#3a78b0",
+        "motif": "#e2453a",
+        "accent": "#6fae5a"
+      }
+    },
+    {
+      "city": "Takachiho",
+      "ja": "高千穂町",
+      "motif": "boat",
+      "accent": "maple",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2a4a3a",
+        "motif": "#e8d9b0",
+        "accent": "#e0532f"
+      }
+    },
+    {
+      "city": "Miyazaki",
+      "ja": "宮崎市",
+      "motif": "sunflower",
+      "accent": "hibiscus",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#5a7fa8",
+        "motif": "#f2c12e",
+        "accent": "#e2453a"
+      }
+    },
+    {
+      "city": "Ibusuki",
+      "ja": "指宿市",
+      "motif": "fuji",
+      "accent": "hibiscus",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#6a3a3a",
+        "motif": "#eef3f8",
+        "accent": "#e2453a"
+      }
+    },
+    {
+      "city": "Yakushima",
+      "ja": "屋久島町",
+      "motif": "cedar",
+      "accent": "turtle",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#3a78b0",
+        "motif": "#6fae5a",
+        "accent": "#6fae5a"
+      }
+    },
+    {
+      "city": "Nago",
+      "ja": "名護市",
+      "motif": "pineapple",
+      "accent": "hibiscus",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#1f8aa0",
+        "motif": "#e3b33a",
+        "accent": "#e2453a"
+      }
+    },
+    {
+      "city": "Miyakojima",
+      "ja": "宮古島市",
+      "motif": "bridge",
+      "accent": "hibiscus",
+      "bgPattern": "seigaiha",
+      "paint": {
+        "bg": "#2a7fb0",
+        "motif": "#d9452b",
+        "accent": "#e2453a"
+      }
+    },
+    {
+      "city": "Zamami",
+      "ja": "座間味村",
+      "motif": "whale",
+      "accent": "star5",
+      "bgPattern": "lattice",
+      "paint": {
+        "bg": "#2a9ab0",
+        "motif": "#dfe8f3",
+        "accent": "#e8c35a"
+      }
+    },
+    {
+      "city": "Iriomote",
+      "ja": "竹富町",
+      "motif": "cat",
+      "accent": "hibiscus",
+      "bgPattern": "dots",
+      "paint": {
+        "bg": "#1f8aa0",
+        "motif": "#f4f1ea",
+        "accent": "#e2453a"
+      }
+    }
   ]
 }
