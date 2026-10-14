@@ -1924,7 +1924,14 @@ function FlightCard({ link }: { link: NonNullable<TabiReply["flight"]> }) {
   );
 }
 
-/** Boarding-pass style leg (video reference): coloured header, big airport codes, search button. */
+/**
+ * Airports behind a flight code, in Thai. TYO/OSA/BKK are city codes (Google Flights searches every
+ * airport of the city), which read like typos to most people, so the pass and pills name the airports.
+ */
+const BANGKOK_AIRPORTS = "สุวรรณภูมิ / ดอนเมือง";
+const airportLabel = (code: string) => code === "BKK" ? BANGKOK_AIRPORTS : (AIRPORTS[code] ?? []).map((a) => a.th).join(" / ") || code;
+
+/** Boarding-pass style leg (video reference): coloured header, big city names, search button. */
 /** Boarding-pass style leg (video reference). Flips (↻) to show the airport ↔ city leg in Japan. */
 function BoardingPass({ leg, href, index, ground, fare }: {
   leg: NonNullable<NonNullable<TabiReply["flight"]>["legs"]>[number]; href: string; index: number;
@@ -1952,15 +1959,15 @@ function BoardingPass({ leg, href, index, ground, fare }: {
           {header(false)}
           <div className="flex items-center gap-3 px-4 py-4">
             <div className="text-left">
-              <p className="tabi-title text-3xl font-bold leading-none">{leg.fromCode}</p>
-              <p className="tabi-muted mt-1 text-xs">{leg.from}</p>
+              <p className="tabi-title text-2xl font-bold leading-none">{leg.from}</p>
+              <p className="tabi-muted mt-1 text-xs">{airportLabel(leg.fromCode)}</p>
             </div>
             <div className="tabi-pass-path" aria-hidden>
               <span className="tabi-pass-plane" style={{ color }}><Plane size={20} className={out ? "" : "-scale-x-100"} /></span>
             </div>
             <div className="text-right">
-              <p className="tabi-title text-3xl font-bold leading-none">{leg.toCode}</p>
-              <p className="tabi-muted mt-1 text-xs">{leg.to}</p>
+              <p className="tabi-title text-2xl font-bold leading-none">{leg.to}</p>
+              <p className="tabi-muted mt-1 text-xs">{airportLabel(leg.toCode)}</p>
             </div>
           </div>
           {fare?.snap.cheapest && (
@@ -2046,7 +2053,7 @@ function FlightsScreen({ reply, trip, onPickDates, onBack, onChat, onPickDate }:
           <div className="min-w-0 flex-1">
             <p className="tabi-title font-bold leading-snug">{trip.title}</p>
             <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="tabi-hop-pill">🛬 บินเข้า {CITY_BY_NAME.get(trip.route.gateway.city)?.th ?? trip.route.gateway.city} ({trip.route.gateway.airport})</span>
+              <span className="tabi-hop-pill">🛬 บินเข้า {CITY_BY_NAME.get(trip.route.gateway.city)?.th ?? trip.route.gateway.city} ({airportLabel(trip.route.gateway.airport).replaceAll(" / ", "/")})</span>
               {trip.intent.startDate && <span className="tabi-hop-pill tabi-hop-fare">📅 {thaiDate(isoDay(trip.intent.startDate))}</span>}
             </p>
           </div>
