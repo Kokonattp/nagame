@@ -467,6 +467,17 @@ html[data-tabi-traveler="on"] [data-tabi-dock] > * { visibility: hidden; }
 .tabi-earn-charm { width: 54px; height: auto; transform-origin: 50% 4%; animation: tabi-swing 1.6s 300ms ease-in-out; filter: drop-shadow(0 6px 8px rgba(12, 31, 74, 0.2)); }
 .tabi-earn-cover { width: 64px; height: auto; }
 @media (prefers-reduced-motion: reduce) { .tabi-charm img, .tabi-earn, .tabi-earn-charm, .tabi-collect-big img, .tabi-cover-img img, .tabi-hanko { animation: none !important; } }
+/* home teaser for the collection */
+.tabi-teaser { display: flex; align-items: center; gap: 12px; padding: 14px; background: linear-gradient(135deg, #fff, var(--t-sakura)); }
+.tabi-teaser-charms { position: relative; display: flex; align-items: flex-end; flex-shrink: 0; width: 112px; height: 72px; }
+.tabi-teaser-charms img { width: 34px; height: auto; margin-right: -6px; transform-origin: 50% 4%; filter: drop-shadow(0 4px 6px rgba(12, 31, 74, 0.2)); animation: tabi-swing 2.6s ease-in-out infinite; }
+.tabi-teaser-charms img.is-locked { filter: grayscale(0.85) opacity(0.55) drop-shadow(0 4px 6px rgba(12, 31, 74, 0.15)); }
+.tabi-teaser-charms .tabi-teaser-cover { position: absolute; right: -2px; bottom: -6px; width: 52px; margin: 0; animation: none; rotate: -8deg; }
+.tabi-guide-tag { padding: 0 8px; border-radius: 999px; background: var(--t-blue-soft); color: var(--t-navy); font-weight: 600; }
+.tabi-privacy > summary { cursor: pointer; color: var(--t-blue); font-size: 13px; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.tabi-traveller { background: linear-gradient(135deg, #fff 40%, var(--t-blue-soft)); }
+.tabi-traveller-badge { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: #fff; font-size: 28px; box-shadow: var(--t-shadow-sm), 0 0 0 3px var(--t-sakura); }
+@media (prefers-reduced-motion: reduce) { .tabi-teaser-charms img { animation: none; } }
 /* travel card: time and fare of each hop as pills */
 .tabi-hop-pill { padding: 2px 9px; border-radius: 999px; background: var(--t-blue-soft); color: var(--t-navy); font-size: 12px; font-weight: 600; }
 .tabi-hop-fare { background: var(--t-green); color: var(--t-green-ink); }

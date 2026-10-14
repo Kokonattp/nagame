@@ -78,7 +78,8 @@ function useMinWidth(minWidth: number) {
   return match;
 }
 
-const img = (wikiTitle: string) => `/api/tabi/image?title=${encodeURIComponent(wikiTitle)}`;
+/** Wikipedia lead photo; `fallback` (usually the city) is used when the page's image is a logo or a map. */
+const img = (wikiTitle: string, fallback?: string) => `/api/tabi/image?title=${encodeURIComponent(wikiTitle)}${fallback && fallback !== wikiTitle ? `&fallback=${encodeURIComponent(fallback)}` : ""}`;
 /** No Wikipedia image → hide the <img>; the .tabi-img gradient behind it stays as the fallback. */
 const hideBroken = (e: React.SyntheticEvent<HTMLImageElement>) => {
   e.currentTarget.style.visibility = "hidden";
@@ -291,7 +292,7 @@ export function TabiApp({ shared, initialAsk, source, initialTab, liveSearch }: 
     <div className="tabi">
       <div className="tabi-shell">
         {!online && <p role="status" className="mb-3 rounded-2xl bg-[#fff4d6] px-4 py-2 text-sm text-[#7a5a00]">📴 ออฟไลน์อยู่ ทริปที่เก็บไว้ยังเปิดดูได้</p>}
-        {screen === "home" && <HomeScreen onAsk={send} />}
+        {screen === "home" && <HomeScreen onAsk={send} onCollection={() => { go("trips"); setTimeout(() => document.getElementById("tabi-collection")?.scrollIntoView({ behavior: "smooth", block: "start" }), 120); }} />}
         {screen === "chat" && (
           <ChatScreen turns={turns} loading={loading} error={error} routes={routes} onAsk={send} onPick={openRoute} onBack={nav("home")} liveSearch={liveSearch} />
         )}
@@ -504,7 +505,8 @@ function PlaceCards({ places }: { places: PlaceCard[] }) {
             <span className="min-w-0 flex-1">
               <span className="tabi-title block truncate font-bold leading-snug">{p.name}</span>
               <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                {p.rating !== undefined && <span className="font-semibold text-[var(--t-navy)]"><span aria-hidden>⭐</span> {p.rating.toFixed(1)}<span className="tabi-muted font-normal"> ({p.reviews?.toLocaleString("en-US")} รีวิว)</span></span>}
+                {p.rating !== undefined ? <span className="font-semibold text-[var(--t-navy)]"><span aria-hidden>⭐</span> {p.rating.toFixed(1)}<span className="tabi-muted font-normal"> ({p.reviews?.toLocaleString("en-US")} รีวิว)</span></span>
+                  : <span className="tabi-guide-tag"><span aria-hidden>📖</span> ไกด์แนะนำ</span>}
                 {p.tag && <span className="tabi-place-tag">{p.tag}</span>}
                 {p.price && <span className="tabi-muted">{withBaht(p.price, fx?.rate)}</span>}
                 {p.area && <span className="tabi-muted">· {p.area}</span>}
@@ -798,7 +800,7 @@ function Chips({ items, onPick }: { items: string[]; onPick: (s: string) => void
 }
 
 // ── 1. Home ──
-function HomeScreen({ onAsk }: { onAsk: (m: string) => void }) {
+function HomeScreen({ onAsk, onCollection }: { onAsk: (m: string) => void; onCollection: () => void }) {
   return (
     <div className="tabi-rise space-y-6">
       <TopBar />
@@ -853,6 +855,7 @@ function HomeScreen({ onAsk }: { onAsk: (m: string) => void }) {
           <p className="text-sm">ทาบิจะเสนอเส้นทางไม่เกิน 3 แบบ เลือกแล้วจัดเป็นแผนรายวันให้ ปรับได้ด้วยการพิมพ์บอก</p>
         </div>
       </section>
+      <CollectTeaser onOpen={onCollection} />
       <Link href="/japan" className="tabi-card flex items-center gap-3 p-4">
         <span className="text-2xl" aria-hidden>🗓️</span>
         <span className="flex-1"><b className="tabi-title block">ไปญี่ปุ่นเดือนไหนดี?</b><span className="tabi-muted text-sm">ดูที่เที่ยวเด่นและที่ปิดในแต่ละเดือน</span></span>
@@ -982,7 +985,10 @@ function ChatSideTip() {
 
 function RouteCard({ route, index, onPick }: { route: RouteOption; index: number; onPick: () => void }) {
   const [chosen, setChosen] = useState(false);
-  const hero = route.highlights[0];
+  // routes from one region often share their first city; the last city tells them apart at a glance
+  const last = route.stops[route.stops.length - 1];
+  const hero = route.highlights.find((h) => h.city === last.city && h.wikiTitle) ?? (route.stops.length > 1 ? null : route.highlights.find((h) => h.wikiTitle));
+  const heroImg = hero ? img(hero.wikiTitle, hero.city) : img(last.city);
   return (
     <button
       type="button"
@@ -992,7 +998,7 @@ function RouteCard({ route, index, onPick }: { route: RouteOption; index: number
     >
       <div className="relative w-[34%] shrink-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        {hero && <img src={img(hero.wikiTitle)} alt="" loading="lazy" onError={hideBroken} className="tabi-img absolute inset-0 h-full w-full" />}
+        <img src={heroImg} alt="" loading="lazy" onError={hideBroken} className="tabi-img absolute inset-0 h-full w-full" />
         <span className="absolute left-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-white text-sm font-bold text-[var(--t-blue)] shadow">{index + 1}</span>
       </div>
       <div className="min-w-0 flex-1 space-y-1.5 p-3">
@@ -1086,7 +1092,7 @@ function RouteScreen({ route, reply, savedIds, loading, onBack, onAdd, onAsk }: 
           return (
             <article key={h.id} className="tabi-card tabi-rise flex gap-3 overflow-hidden p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img(h.wikiTitle)} alt="" loading="lazy" onError={hideBroken} className="tabi-img h-[88px] w-[96px] shrink-0 rounded-[14px]" />
+              <img src={img(h.wikiTitle, h.city)} alt="" loading="lazy" onError={hideBroken} className="tabi-img h-[88px] w-[96px] shrink-0 rounded-[14px]" />
               <div className="min-w-0 flex-1 py-1">
                 <p className="tabi-title font-bold leading-snug">{h.name}</p>
                 {(h.nameEn || h.nameJa) && <p className="tabi-muted text-xs">{[h.nameEn, h.nameJa].filter(Boolean).join(" · ")}</p>}
@@ -1208,7 +1214,7 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
       <section className="tabi-card overflow-hidden">
         <div className="relative h-[120px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {trip.route?.highlights[0] && <img src={img(trip.route.highlights[0].wikiTitle)} alt="" onError={hideBroken} className="tabi-img absolute inset-0 h-full w-full" />}
+          {trip.route?.highlights[0] && <img src={img(trip.route.highlights[0].wikiTitle, trip.route.highlights[0].city)} alt="" onError={hideBroken} className="tabi-img absolute inset-0 h-full w-full" />}
           <div className="absolute inset-0 bg-gradient-to-t from-[rgba(12,31,74,.75)] to-transparent" />
           <div className="absolute bottom-3 left-4 text-white" data-on-image>
             <p className="tabi-title text-xl font-bold">{trip.title}</p>
@@ -1236,6 +1242,7 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
               className="min-h-[40px] flex-1 rounded-xl border border-[var(--t-line)] bg-white px-2"
             />
           </label>
+          {!start && <DateCharmHint />}
         </div>
       </section>
       {(alerts.length > 0 || events.length > 0) && <HazardCard alerts={alerts} events={events} />}
@@ -2035,7 +2042,7 @@ function FlightsScreen({ reply, trip, onPickDates, onBack, onChat, onPickDate }:
       {trip?.route && (
         <section className="tabi-card tabi-flight-hero">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img(trip.route.highlights[0]?.wikiTitle ?? trip.route.stops[0].city)} alt="" loading="lazy" onError={hideBroken} className="tabi-img" />
+          <img src={img(trip.route.highlights[0]?.wikiTitle ?? trip.route.stops[0].city, trip.route.stops[0].city)} alt="" loading="lazy" onError={hideBroken} className="tabi-img" />
           <div className="min-w-0 flex-1">
             <p className="tabi-title font-bold leading-snug">{trip.title}</p>
             <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
@@ -2116,7 +2123,7 @@ function TripsScreen({ trips, onOpen, onNew }: { trips: SavedTrip[]; onOpen: (t:
               <button type="button" onClick={() => onOpen(t)} className="tabi-card tabi-trip-card">
                 <span className="tabi-trip-photo">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img(t.route?.highlights[0]?.wikiTitle ?? t.route?.stops[0]?.city ?? "Japan")} alt="" loading="lazy" onError={hideBroken} className="tabi-img" />
+                  <img src={img(t.route?.highlights[0]?.wikiTitle ?? t.route?.stops[0]?.city ?? "Japan", t.route?.stops[0]?.city)} alt="" loading="lazy" onError={hideBroken} className="tabi-img" />
                   {t.intent.startDate && <span className="tabi-trip-count">{tripCountdown(t.intent.startDate)}</span>}
                 </span>
                 <span className="block min-w-0 p-3 pt-2.5">
@@ -2274,6 +2281,92 @@ function CollectDialog({ detail, c, canStamp, open, onClose }: { detail: Detail;
   );
 }
 
+/** Home: the collection at a glance, so a first-time visitor knows it exists. */
+function CollectTeaser({ onOpen }: { onOpen: () => void }) {
+  const c = useCollection();
+  const got = c ? OMAMORI.filter((o) => c.omamori[o.id]).length : 0;
+  const stamped = c ? MANHOLES.filter((m) => c.stamped[m.city]).length : 0;
+  return (
+    <button type="button" onClick={onOpen} className="tabi-card tabi-teaser w-full text-left">
+      <span className="tabi-teaser-charms" aria-hidden>
+        {OMAMORI.slice(0, 3).map((o, i) => (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img key={o.id} src={omamoriImg(o.id)} alt="" width={400} height={560} className={c?.omamori[o.id] ? "" : "is-locked"} style={{ rotate: `${(i - 1) * 9}deg`, animationDelay: `${i * 220}ms` }} />
+        ))}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={manholeImg("Kyoto")} alt="" width={560} height={560} className="tabi-teaser-cover" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <b className="tabi-title block">สะสมเครื่องรางและฝาท่อ</b>
+        <span className="tabi-muted block text-sm">วางแผนทริปทีละขั้น ได้เครื่องรางทีละอัน ไปถึงเมืองจริงแล้วปั๊มตราฝาท่อ</span>
+        <span className="mt-1.5 flex flex-wrap gap-1.5">
+          <span className="tabi-hop-pill">🎐 {got}/{OMAMORI.length}</span>
+          <span className="tabi-hop-pill">🕳️ {stamped}/{MANHOLES.length}</span>
+        </span>
+      </span>
+      <ArrowRight size={18} className="shrink-0 text-[var(--t-blue)]" />
+    </button>
+  );
+}
+
+/** Day plan without a date: setting one earns the travel-safety charm. */
+function DateCharmHint() {
+  const c = useCollection();
+  if (!c || c.omamori.ryoko) return null;
+  const o = OMAMORI.find((x) => x.id === "ryoko")!;
+  return (
+    <p className="flex w-full items-center gap-2 rounded-2xl bg-[var(--t-sakura)] px-3 py-1.5 text-xs text-[var(--t-pink-ink)]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={omamoriImg(o.id)} alt="" width={400} height={560} className="h-8 w-auto" />
+      <span>ตั้งวันออกเดินทาง แล้วรับ<b>{o.th}</b></span>
+    </p>
+  );
+}
+
+const TRAVELLER_LEVELS = [
+  { at: 0, name: "นักฝันเที่ยวญี่ปุ่น", icon: "💭" },
+  { at: 3, name: "นักวางแผนตัวจริง", icon: "🗺️" },
+  { at: 6, name: "นักเดินทางสายมู", icon: "🎐" },
+  { at: 10, name: "นักสะสมฝาท่อ", icon: "🕳️" },
+  { at: 20, name: "ปรมาจารย์ทาบิ", icon: "🏯" },
+];
+
+/** Profile: trips, charms and covers so far, and a playful level from the collection. */
+function TravellerCard({ tripCount }: { tripCount: number }) {
+  const c = useCollection();
+  if (!c) return null;
+  const got = OMAMORI.filter((o) => c.omamori[o.id]).length;
+  const stamped = MANHOLES.filter((m) => c.stamped[m.city]).length;
+  const score = got + stamped;
+  const level = [...TRAVELLER_LEVELS].reverse().find((l) => score >= l.at)!;
+  const next = TRAVELLER_LEVELS.find((l) => l.at > score);
+  return (
+    <section className="tabi-card tabi-traveller p-4" aria-label="สถิติการเดินทาง">
+      <div className="flex items-center gap-3">
+        <span className="tabi-traveller-badge" aria-hidden>{level.icon}</span>
+        <div className="min-w-0 flex-1">
+          <p className="tabi-muted text-xs">ระดับนักเดินทาง</p>
+          <p className="tabi-title text-lg font-bold">{level.name}</p>
+          {next && (
+            <>
+              <span className="tabi-price-bar mt-1" aria-hidden><span style={{ width: `${Math.round(((score - level.at) / (next.at - level.at)) * 100)}%`, background: "#ff5c9d" }} /></span>
+              <p className="tabi-muted mt-1 text-[11px]">อีก {next.at - score} ชิ้นถึง “{next.name}”</p>
+            </>
+          )}
+        </div>
+      </div>
+      <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+        {[["ทริป", tripCount, "🧳"], ["เครื่องราง", `${got}/${OMAMORI.length}`, "🎐"], ["ฝาท่อ", `${stamped}/${MANHOLES.length}`, "🕳️"]].map(([label, value, icon]) => (
+          <div key={label} className="rounded-2xl bg-[var(--t-blue-soft)] px-2 py-2">
+            <dd className="tabi-title text-lg font-bold"><span aria-hidden>{icon} </span>{value}</dd>
+            <dt className="tabi-muted text-xs">{label}</dt>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 /** "ได้เครื่องรางใหม่!" — the charm swings in at the bottom of the screen for a few seconds. */
 function EarnToast({ onOpen }: { onOpen: () => void }) {
   const [shown, setShown] = useState<(Earned & { key: number }) | null>(null);
@@ -2311,15 +2404,19 @@ function ProfileScreen({ me, tripCount, onSignOut, onDeleteAll }: {
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const privacy = (
-    <div className="tabi-muted space-y-1 text-xs">
-      <p>Nagame นับสถิติการใช้งานแบบไม่ระบุตัวตน เช่น จำนวนคนที่จัดแผนสำเร็จ เพื่อปรับปรุงทาบิ ไม่เก็บชื่อ อีเมล หรือข้อความที่พิมพ์</p>
-      <p>คำถามทั่วไปที่ไม่เกี่ยวกับทริปจะส่งให้ AI ภายนอก (Typhoon) ช่วยตอบ อย่าพิมพ์ข้อมูลส่วนตัวในแชท</p>
-    </div>
+    <details className="tabi-privacy">
+      <summary>ข้อมูลของพี่เก็บยังไง</summary>
+      <div className="tabi-muted mt-2 space-y-1 text-xs">
+        <p>Nagame นับสถิติการใช้งานแบบไม่ระบุตัวตน เช่น จำนวนคนที่จัดแผนสำเร็จ เพื่อปรับปรุงทาบิ ไม่เก็บชื่อ อีเมล หรือข้อความที่พิมพ์</p>
+        <p>คำถามทั่วไปที่ไม่เกี่ยวกับทริปจะส่งให้ AI ภายนอก (Typhoon) ช่วยตอบ อย่าพิมพ์ข้อมูลส่วนตัวในแชท</p>
+      </div>
+    </details>
   );
   return (
     <div className="tabi-rise space-y-4">
       <TopBar />
       <h1 className="text-2xl font-bold">โปรไฟล์</h1>
+      <TravellerCard tripCount={tripCount} />
       {!me ? (
         <section className="tabi-card h-40 animate-pulse" />
       ) : !me.enabled ? (
