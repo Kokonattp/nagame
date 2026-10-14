@@ -439,6 +439,38 @@ function SeasonFx() {
     </div>
   );
 }
+/* ── Yen shown with baht beside it: today's ECB reference rate from /api/tabi/fx, fetched once per visit.
+   Without a rate the yen figure stays alone — never a guessed rate. ── */
+type Fx = { rate: number; date: string };
+let fxOnce: Promise<Fx | null> | null = null;
+function useFx(): Fx | null {
+  const [fx, setFx] = useState<Fx | null>(null);
+  useEffect(() => {
+    let live = true;
+    fxOnce ??= fetch("/api/tabi/fx").then((r) => r.json()).then((d: { rate?: number | null; date?: string }) => (d.rate ? { rate: d.rate, date: d.date ?? "" } : null)).catch(() => null);
+    fxOnce.then((v) => { if (live && v) setFx(v); });
+    return () => { live = false; };
+  }, []);
+  return fx;
+}
+/** round to ฿10 for small amounts, ฿100 above ฿1,000 (these are estimates, not prices) */
+function bahtOf(yen: number, rate: number) {
+  const b = yen * rate;
+  const step = b < 1000 ? 10 : 100;
+  return Math.round(b / step) * step;
+}
+const num = (n: number) => n.toLocaleString("en-US");
+/** "¥580" → "¥580 (~฿120)", "¥13,320–14,170" → "… (~฿2,800–3,000)", "50,000 เยน" → "50,000 เยน (~฿10,600)" */
+function withBaht(text: string, rate?: number) {
+  if (!rate) return text;
+  return text.replace(/¥\s?(\d[\d,]*)(?:–(\d[\d,]*))?|(\d[\d,]{2,})\s*เยน/g, (m: string, a: string | undefined, b: string | undefined, c: string | undefined, at: number) => {
+    const lo = bahtOf(Number((a ?? c)!.replace(/,/g, "")), rate);
+    const hi = b ? bahtOf(Number(b.replace(/,/g, "")), rate) : lo;
+    const next = text[at + m.length]; // "50,000 เยนขึ้นไป" keeps a space before the next word
+    return `${m} (~฿${num(lo)}${hi !== lo ? `–${num(hi)}` : ""})${next && /[฀-๿a-z]/i.test(next) ? " " : ""}`;
+  });
+}
+
 const PLACE_ICON = { eat: "🍜", buy: "🛍️", sleep: "🛏️", see: "⛩️" } as const;
 
 /** Straight line ×1.3 at 80 m/min for a walk; beyond ~1.5 km just the distance (a bus or train is likelier). */
@@ -449,6 +481,7 @@ function stopDistance({ name, km }: { name: string; km: number }) {
 
 /** Restaurants / shops / stays in an answer: one card each, rating first, the whole card opens Google Maps. */
 function PlaceCards({ places }: { places: PlaceCard[] }) {
+  const fx = useFx();
   // one small overview map of all of them (the cards are what you tap)
   const points: MapPoint[] = useMemo(
     () => places.filter((p) => p.lat && p.lon).map((p) => ({ lat: p.lat!, lon: p.lon!, label: p.name, kind: "place" as const })),
@@ -467,7 +500,7 @@ function PlaceCards({ places }: { places: PlaceCard[] }) {
               <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                 {p.rating !== undefined && <span className="font-semibold text-[var(--t-navy)]"><span aria-hidden>⭐</span> {p.rating.toFixed(1)}<span className="tabi-muted font-normal"> ({p.reviews?.toLocaleString("en-US")} รีวิว)</span></span>}
                 {p.tag && <span className="tabi-place-tag">{p.tag}</span>}
-                {p.price && <span className="tabi-muted">{p.price}</span>}
+                {p.price && <span className="tabi-muted">{withBaht(p.price, fx?.rate)}</span>}
                 {p.area && <span className="tabi-muted">· {p.area}</span>}
                 {p.fromStop && <span className="tabi-muted basis-full">📍 {stopDistance(p.fromStop)}</span>}
               </span>
@@ -846,6 +879,7 @@ function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack, live
   turns: Turn[]; loading: boolean; error: string | null; routes: RouteOption[];
   onAsk: (m: string) => void; onPick: (r: RouteOption) => void; onBack: () => void; liveSearch?: boolean;
 }) {
+  const fx = useFx();
   const waiting = loading ? waitingText([...turns].reverse().find((t) => t.role === "user")?.text, liveSearch) : null;
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [turns.length, loading]);
@@ -882,7 +916,7 @@ function ChatScreen({ turns, loading, error, routes, onAsk, onPick, onBack, live
               <div className="max-w-[82%] space-y-1">
                 <p className="text-xs font-semibold text-[var(--t-pink-ink)]">ทาบิ</p>
                 {t.text.split("\n").map((b, j) => (
-                  <p key={j} className="tabi-card rounded-tl-md px-4 py-2.5">{b}</p>
+                  <p key={j} className="tabi-card rounded-tl-md px-4 py-2.5">{withBaht(b, fx?.rate)}</p>
                 ))}
                 {t.reply?.places?.length ? <PlaceCards places={t.reply.places} /> : null}
                 {t.reply?.links?.length ? (
@@ -1263,7 +1297,7 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
                       <span className="tabi-title font-bold leading-snug">{d.title}</span>
                       {(() => {
                         const w = dayWeather(d.city, start ? isoDay(start, i).getMonth() + 1 : month);
-                        return w && <span className="tabi-day-weather" title={w.label} aria-label={w.label}><span aria-hidden>{w.icon}</span> {w.hi}°/{w.lo}°</span>;
+                        return w && <span className="tabi-day-weather" title={w.label} aria-label={w.label}><span className="tabi-day-weather-icon" aria-hidden>{w.icon}</span><b className="tabi-day-weather-hi">{w.hi}°</b><span className="tabi-day-weather-lo">{w.lo}°</span></span>;
                       })()}
                     </span>
                     <span className="tabi-muted block truncate text-xs">{sights.length ? sights.join(" · ") : d.items[0]?.text}</span>
@@ -1415,15 +1449,16 @@ function TransportCard({ route, onAsk, liveLegs = [] }: { route: RouteOption; on
   const known = legFares.filter((f): f is LegFare => !!f);
   const unknown = legFares.length - known.length;
   const liveAt = liveLegs.find((l) => l)?.checkedAt;
-  const hops = [
+  const fx = useFx();
+  const hops: { label: string; fare?: string; line?: string; links: LegLink[] }[] = [
     { label: hopLabel(`airport:${route.gateway.airport}`, first.city, "เข้าเมือง"), links: legLinks(`airport:${route.gateway.airport}`, first.city) },
     ...route.stops.slice(1).map((s, i) => {
       const fare = legFares[i];
       const live = fare && "live" in fare ? fare.live : null;
-      const label = live
-        ? `🚆 ไปเมืองถัดไป ${live.duration ? `${live.duration.replace(" hr", " ชม.").replace(" min", " นาที")} · ` : ""}¥${live.yen.toLocaleString("en-US")}${live.line ? ` · ${live.line.replace(/\s{2,}/g, " + ")}` : ""}`
-        : `${hopLabel(route.stops[i].city, s.city, "ไปเมืองถัดไป")}${fare ? ` · ${yenRange(fare)}` : ""}`;
-      return { label, links: legLinks(route.stops[i].city, s.city) };
+      const label = live?.duration
+        ? `🚆 ไปเมืองถัดไป ${live.duration.replace(" hr", " ชม.").replace(" min", " นาที")}`
+        : hopLabel(route.stops[i].city, s.city, "ไปเมืองถัดไป");
+      return { label, fare: fare ? yenRange(fare) : undefined, line: live?.line?.replace(/\s{2,}/g, " + "), links: legLinks(route.stops[i].city, s.city) };
     }),
     { label: hopLabel(last.city, `airport:${out}`, "ไปสนามบิน"), links: legLinks(last.city, `airport:${out}`) },
   ];
@@ -1449,7 +1484,11 @@ function TransportCard({ route, onAsk, liveLegs = [] }: { route: RouteOption; on
             )}
             {i < hops.length && (
               <span className="tabi-track-hop">
-                <span className="tabi-muted text-xs">{hops[i].label}</span>
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <span className="tabi-hop-pill">{hops[i].label}</span>
+                  {hops[i].fare && <span className="tabi-hop-pill tabi-hop-fare"><span aria-hidden>💴</span> {withBaht(hops[i].fare!, fx?.rate)}</span>}
+                </span>
+                {hops[i].line && <span className="tabi-muted text-xs">{hops[i].line}</span>}
                 <LegLinks links={hops[i].links} />
               </span>
             )}
@@ -1461,7 +1500,7 @@ function TransportCard({ route, onAsk, liveLegs = [] }: { route: RouteOption; on
           <p>
             💴 ค่ารถไฟระหว่างเมือง{" "}
             {known.length
-              ? <b>~{yenRange({ min: known.reduce((a, f) => a + f.min, 0), max: known.reduce((a, f) => a + f.max, 0) })}</b>
+              ? <b>~{withBaht(yenRange({ min: known.reduce((a, f) => a + f.min, 0), max: known.reduce((a, f) => a + f.max, 0) }), fx?.rate)}</b>
               : "ดูราคาในปุ่มดูทาง (Google Maps บอกค่ารถ)"}
             {known.length > 0 && unknown > 0 ? ` + อีก ${unknown} ช่วงดูราคาในปุ่มดูทาง` : ""}
           </p>
@@ -1495,13 +1534,85 @@ function TransportCard({ route, onAsk, liveLegs = [] }: { route: RouteOption; on
 const STAY_YEN_NIGHT = 10_800;
 const FOOD_YEN_DAY = 6_300;
 
-function BudgetCard({ trip, liveLegs = [] }: { trip: SavedTrip; liveLegs?: LiveLeg[] }) {
-  const [fx, setFx] = useState<{ rate: number; date: string } | null>(null);
+/* ── Scratch card: the trip total hides under a foil the traveller rubs off (or opens with the button).
+   Once opened it stays open for that trip on this device. The figure stays in the page for screen
+   readers; the foil is decoration. ── */
+const SCRATCH_KEY = "nagame-tabi-scratched-v1";
+function scratched(): string[] {
+  try { return JSON.parse(localStorage.getItem(SCRATCH_KEY) ?? "[]") as string[]; } catch { return []; }
+}
+function ScratchReveal({ id, hint, children }: { id: string; hint: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState<boolean | null>(null); // null until this device's record is read
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const strokes = useRef(0);
+  useEffect(() => { setOpen(scratched().includes(id)); }, [id]);
+  const reveal = useCallback(() => {
+    setOpen(true);
+    try { localStorage.setItem(SCRATCH_KEY, JSON.stringify([...scratched().filter((x) => x !== id), id].slice(-30))); } catch { /* private mode: opens for this visit only */ }
+  }, [id]);
   useEffect(() => {
-    let live = true;
-    fetch("/api/tabi/fx").then((r) => r.json()).then((d: { rate?: number | null; date?: string }) => { if (live && d.rate) setFx({ rate: d.rate, date: d.date ?? "" }); }).catch(() => {});
-    return () => { live = false; };
-  }, []);
+    const c = canvas.current;
+    if (open !== false || !c) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const { width, height } = c.getBoundingClientRect();
+    c.width = Math.round(width * dpr);
+    c.height = Math.round(height * dpr);
+    const g = c.getContext("2d");
+    if (!g) return;
+    g.scale(dpr, dpr);
+    const foil = g.createLinearGradient(0, 0, width, height);
+    foil.addColorStop(0, "#1a66d9");
+    foil.addColorStop(1, "#ff5c9d");
+    g.fillStyle = foil;
+    g.fillRect(0, 0, width, height);
+    g.fillStyle = "rgba(255,255,255,0.16)";
+    for (let x = -height; x < width; x += 12) { g.beginPath(); g.moveTo(x, height); g.lineTo(x + height, 0); g.lineTo(x + height + 4, 0); g.lineTo(x + 4, height); g.fill(); }
+    g.fillStyle = "#fff";
+    g.font = `700 14px ${getComputedStyle(c).fontFamily}`;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText(hint, width / 2, height / 2);
+    g.globalCompositeOperation = "destination-out";
+    strokes.current = 0;
+  }, [open, hint]);
+  const rub = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType === "mouse" && e.buttons !== 1) return;
+    const c = e.currentTarget;
+    const g = c.getContext("2d");
+    if (!g) return;
+    const box = c.getBoundingClientRect();
+    g.beginPath();
+    g.arc(e.clientX - box.left, e.clientY - box.top, 18, 0, Math.PI * 2);
+    g.fill();
+    // every few strokes, see how much foil is left (sampled, cheap); past 45% gone it opens
+    if (++strokes.current % 6) return;
+    const px = g.getImageData(0, 0, c.width, c.height).data;
+    let clear = 0, seen = 0;
+    for (let i = 3; i < px.length; i += 64) { seen++; if (px[i] < 40) clear++; }
+    if (clear / seen > 0.45) reveal();
+  };
+  return (
+    <span className="tabi-scratch">
+      <span className="tabi-scratch-under">
+        {children}
+        {open === false && <canvas ref={canvas} className="tabi-scratch-foil" aria-hidden onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); rub(e); }} onPointerMove={rub} />}
+      </span>
+      {open === false && <button type="button" className="tabi-scratch-open" onClick={reveal}>เปิดดูเลย</button>}
+      {open && <span className="tabi-scratch-pop" aria-hidden>✨</span>}
+    </span>
+  );
+}
+
+const BUDGET_PART = {
+  flight: { icon: "✈️", color: "#1a66d9", name: "ตั๋วเครื่องบิน", tip: "ตั๋วเครื่องบินแพงสุดในทริปนี้ เปลี่ยนวันบินแล้วราคาต่างกันมาก ดูวันถูกได้ในหน้าตั๋ว" },
+  rail: { icon: "🚃", color: "#22b07d", name: "รถไฟ", tip: "ค่ารถไฟแพงสุดในทริปนี้ ถ้าตัดเมืองที่อยู่ไกลออกจะประหยัดได้" },
+  stay: { icon: "🛏️", color: "#ff5c9d", name: "ที่พัก", tip: "ที่พักแพงสุดในทริปนี้ ตัวเลขนี้เป็นค่าเฉลี่ย กด “ดูราคาจริง” เพื่อดูราคาของวันที่ไป" },
+  food: { icon: "🍜", color: "#ff9e45", name: "อาหาร", tip: "อาหารแพงสุดในทริปนี้ ตัวเลขนี้เป็นค่าเฉลี่ย กินร้านธรรมดาจะถูกกว่านี้" },
+} as const;
+type BudgetKey = keyof typeof BUDGET_PART;
+
+function BudgetCard({ trip, liveLegs = [] }: { trip: SavedTrip; liveLegs?: LiveLeg[] }) {
+  const fx = useFx();
   const route = trip.route;
   if (!route) return null;
   const month = trip.intent.startDate ? Number(trip.intent.startDate.slice(5, 7)) : trip.intent.month;
@@ -1512,43 +1623,88 @@ function BudgetCard({ trip, liveLegs = [] }: { trip: SavedTrip; liveLegs?: LiveL
   const days = nights + 1;
   const stayYen = STAY_YEN_NIGHT * nights;
   const foodYen = FOOD_YEN_DAY * days;
-  // round to ฿10 for small amounts, ฿100 above ฿1,000 (these are estimates, not prices)
-  const baht = (yen: number) => { const b = yen * fx!.rate; const step = b < 1000 ? 10 : 100; return Math.round(b / step) * step; };
-  const money = (yen: number) => (fx ? `~฿${baht(yen).toLocaleString("en-US")}` : `~¥${yen.toLocaleString("en-US")}`);
-  const total = fx && fare ? fare.snap.cheapest! + baht(stayYen) + baht(foodYen) + (railYen ? baht((railYen.min + railYen.max) / 2) : 0) : null;
+  const baht = (yen: number) => bahtOf(yen, fx!.rate);
+  const money = (yen: number) => (fx ? `~฿${num(baht(yen))}` : `~¥${num(yen)}`);
+  // the picture needs every part in one currency: baht once the rate is in
+  const parts: { key: BudgetKey; baht: number }[] = fx
+    ? [
+        ...(fare ? [{ key: "flight" as const, baht: fare.snap.cheapest! }] : []),
+        ...(railYen ? [{ key: "rail" as const, baht: baht((railYen.min + railYen.max) / 2) }] : []),
+        { key: "stay" as const, baht: baht(stayYen) },
+        { key: "food" as const, baht: baht(foodYen) },
+      ]
+    : [];
+  const sum = parts.reduce((a, x) => a + x.baht, 0);
+  // whole percentages that add up to 100: round down, then give the leftover points to the largest remainders
+  const pcts = new Map<BudgetKey, number>(parts.map((x) => [x.key, Math.floor((x.baht / sum) * 100)]));
+  [...parts].sort((a, b) => ((b.baht / sum) * 100) % 1 - ((a.baht / sum) * 100) % 1)
+    .slice(0, parts.length ? 100 - [...pcts.values()].reduce((a, n) => a + n, 0) : 0)
+    .forEach((x) => pcts.set(x.key, pcts.get(x.key)! + 1));
+  const share = (key: BudgetKey) => pcts.get(key) ?? null;
+  // the checked fare is a return ticket to the arrival airport; say so when the trip flies home from another one
+  const openJaw = nearestGateway(route.stops[route.stops.length - 1]).g.airport !== route.gateway.airport;
+  const biggest = parts.length ? parts.reduce((a, x) => (x.baht > a.baht ? x : a)) : null;
+  const total = fx && fare ? sum : null;
+  const inJapan = fx ? sum - (fare ? fare.snap.cheapest! : 0) : 0;
   const first = route.stops[0];
   const hotels = `https://www.google.com/travel/hotels?q=${encodeURIComponent(`hotels in ${first.city}${trip.intent.startDate ? ` ${trip.intent.startDate}` : ""}`)}`;
   const row = "flex items-baseline justify-between gap-3";
+  const dot = (key: BudgetKey) => <span className="tabi-budget-dot" style={{ background: BUDGET_PART[key].color }} aria-hidden />;
+  const pct = (key: BudgetKey) => { const n = share(key); return n === null ? null : <span className="tabi-muted ml-1 text-[11px] font-normal">{n}%</span>; };
   return (
     <section className="tabi-card p-4" aria-labelledby="tabi-budget-title">
       <h2 id="tabi-budget-title" className="mb-2 flex items-center gap-2 font-bold"><span aria-hidden>💰</span>งบคร่าว ๆ ต่อคน</h2>
+      {parts.length > 1 && (
+        <div className="tabi-budget-bar mb-3" role="img" aria-label={`สัดส่วนงบ ${parts.map((x) => `${BUDGET_PART[x.key].name} ${share(x.key)}%`).join(" ")}`}>
+          {parts.map((x) => (
+            <span key={x.key} style={{ flexGrow: x.baht, background: BUDGET_PART[x.key].color }}>
+              {x.baht / sum >= 0.14 && <span aria-hidden>{BUDGET_PART[x.key].icon}</span>}
+            </span>
+          ))}
+        </div>
+      )}
       <ul className="space-y-2 text-sm">
         <li className={row}>
-          <span>✈️ ตั๋วไป-กลับ{CITY_BY_NAME.get(route.gateway.city) ? ` ${CITY_BY_NAME.get(route.gateway.city)!.th}` : ""}{fare && !fare.exact ? ` (ตัวอย่าง ${MONTH_SHORT[Number(fare.snap.month.slice(5, 7))]})` : ""}</span>
-          {fare ? <b className="whitespace-nowrap">~฿{fare.snap.cheapest!.toLocaleString("en-US")}</b> : <span className="tabi-muted">ดูในหน้าตั๋ว</span>}
+          <span>{dot("flight")}✈️ ตั๋วไป-กลับ{CITY_BY_NAME.get(route.gateway.city) ? ` ${CITY_BY_NAME.get(route.gateway.city)!.th}` : ""}{fare && !fare.exact ? ` (ตัวอย่าง ${MONTH_SHORT[Number(fare.snap.month.slice(5, 7))]})` : ""}</span>
+          {fare ? <b className="whitespace-nowrap">~฿{num(fare.snap.cheapest!)}{pct("flight")}</b> : <span className="tabi-muted">ดูในหน้าตั๋ว</span>}
         </li>
         <li className={row}>
-          <span>🚃 รถไฟระหว่างเมือง</span>
-          {railYen ? <b className="whitespace-nowrap">{fx ? (baht(railYen.min) === baht(railYen.max) ? `~฿${baht(railYen.min).toLocaleString("en-US")}` : `~฿${baht(railYen.min).toLocaleString("en-US")}–${baht(railYen.max).toLocaleString("en-US")}`) : `~${yenRange(railYen)}`}</b> : <span className="tabi-muted">{route.stops.length > 1 ? "ดูในปุ่มดูทาง" : "ไม่ต้องย้ายเมือง"}</span>}
+          <span>{dot("rail")}🚃 รถไฟระหว่างเมือง</span>
+          {railYen ? <b className="whitespace-nowrap">{fx ? (baht(railYen.min) === baht(railYen.max) ? `~฿${num(baht(railYen.min))}` : `~฿${num(baht(railYen.min))}–${num(baht(railYen.max))}`) : `~${yenRange(railYen)}`}{pct("rail")}</b> : <span className="tabi-muted">{route.stops.length > 1 ? "ดูในปุ่มดูทาง" : "ไม่ต้องย้ายเมือง"}</span>}
         </li>
         <li className={row}>
-          <span>🛏️ ที่พัก {nights} คืน <a href={hotels} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-[var(--t-blue)] underline underline-offset-2">ดูราคาจริง ↗</a></span>
-          <b className="whitespace-nowrap">{money(stayYen)}</b>
+          <span>{dot("stay")}🛏️ ที่พัก {nights} คืน <a href={hotels} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-[var(--t-blue)] underline underline-offset-2">ดูราคาจริง ↗</a></span>
+          <b className="whitespace-nowrap">{money(stayYen)}{pct("stay")}</b>
         </li>
         <li className={row}>
-          <span>🍜 อาหาร {days} วัน</span>
-          <b className="whitespace-nowrap">{money(foodYen)}</b>
+          <span>{dot("food")}🍜 อาหาร {days} วัน</span>
+          <b className="whitespace-nowrap">{money(foodYen)}{pct("food")}</b>
         </li>
-        {total && (
-          <li className={`${row} border-t border-[var(--t-line)] pt-2`}>
-            <span className="font-bold">รวมประมาณ</span>
-            <b className="whitespace-nowrap text-base text-[var(--t-blue)]">~฿{total.toLocaleString("en-US")}</b>
-          </li>
-        )}
       </ul>
+      {fx && (
+        <div className="tabi-budget-sign mt-3">
+          <Avatar size={52} mood={total ? "happy" : "idle"} animated={false} />
+          <div className="min-w-0 flex-1">
+            {total ? (
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="text-sm font-bold">รวมประมาณ</span>
+                <ScratchReveal id={trip.id} hint="ขูดตรงนี้ ✨"><b className="text-xl text-[var(--t-blue)]">~฿{num(total)}</b></ScratchReveal>
+              </p>
+            ) : (
+              <p className="text-sm font-bold">ยังไม่รวมตั๋วเครื่องบิน</p>
+            )}
+            <p className="mt-1 flex flex-wrap gap-1.5">
+              <span className="tabi-budget-chip">📅 อยู่ญี่ปุ่นวันละ ~฿{num(Math.round(inJapan / days / 10) * 10)}</span>
+              <span className="tabi-budget-chip">🍽️ แบ่ง 3 มื้อ ตกมื้อละ ~฿{num(bahtOf(FOOD_YEN_DAY / 3, fx.rate))}</span>
+            </p>
+            {biggest && parts.length > 1 && <p className="tabi-muted mt-1 text-xs">{BUDGET_PART[biggest.key].tip}</p>}
+          </div>
+        </div>
+      )}
       <p className="tabi-muted mt-2 text-[11px] leading-snug">
         ตัวเลขประมาณทั้งหมด · ที่พักและอาหารใช้ค่าเฉลี่ยนักท่องเที่ยวต่างชาติ (สำนักงานการท่องเที่ยวญี่ปุ่น ม.ค.–มี.ค. 2025) · ไม่รวมค่าเข้าชมและรถไฟในเมือง
         {fare ? ` · ตั๋วเช็กเมื่อ ${thaiDate(isoDay(FLIGHTS_CHECKED_AT.slice(0, 10)))}` : ""}
+        {fare && openJaw ? " · ราคาตั๋วคิดแบบไป-กลับสนามบินเดียว ทริปนี้บินกลับจากอีกสนามบิน ราคาจริงอาจต่าง" : ""}
         {fx ? ` · ¥1 = ฿${fx.rate.toFixed(3)}` : ""}
       </p>
     </section>

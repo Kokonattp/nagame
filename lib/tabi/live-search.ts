@@ -4,6 +4,9 @@
 // Off unless LIVE_SEARCH_URL and LIVE_SEARCH_TOKEN are set. Only a destination, dates or an area
 // and a dish go out — nothing about the traveller. Server only.
 
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash } from "node:crypto";
+
 export type LiveFlight = { cheapest: number | null; nonstop: { price: number; airline: string; duration: string; route: string } | null; results: number; url: string; checkedAt: string };
 export type LivePlace = { n: string; r: number; rc: number; la: number; lo: number; cat: string; url: string; price?: { cur: "THB" | "JPY"; amount: number } | null };
 export type LivePlaces = { places: LivePlace[]; url: string; checkedAt: string };
@@ -11,13 +14,22 @@ export type LiveRail = { yen: number | null; duration: string | null; line: stri
 export type LiveKind = "eat" | "stay" | "buy" | "sight";
 type Failure = { error: "busy" | "cap" | "blocked" | "failed" };
 
+// Who is asking, for the worker's per-visitor daily cap: a hash of the address, the day and the
+// worker token — it changes every day and cannot be turned back into an address.
+const asker = new AsyncLocalStorage<string>();
+export function withLiveUser<T>(ip: string, run: () => Promise<T>): Promise<T> {
+  const day = new Date().toISOString().slice(0, 10);
+  const id = createHash("sha256").update(`${ip}|${day}|${process.env.LIVE_SEARCH_TOKEN ?? ""}`).digest("hex").slice(0, 16);
+  return asker.run(id, run);
+}
+
 export const liveConfigured = () => Boolean(process.env.LIVE_SEARCH_URL && process.env.LIVE_SEARCH_TOKEN);
 
 async function call<T>(body: object): Promise<T | Failure> {
   try {
     const r = await fetch(`${process.env.LIVE_SEARCH_URL!.replace(/\/$/, "")}/search`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.LIVE_SEARCH_TOKEN}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.LIVE_SEARCH_TOKEN}`, ...(asker.getStore() ? { "X-Live-User": asker.getStore()! } : {}) },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(50_000),
     });

@@ -50,5 +50,8 @@ docs/BUILD-STATE.md.autoloop.*
 # Tabi place-store build cache (Wikipedia text used only as Jev input)
 data/places/_cache/
 
+# live-search worker's result cache
+workers/live-search/live-search-cache.json*
+
 # copied from node_modules by scripts/copy-maplibre-worker.mjs (postinstall)
 public/maplibre/

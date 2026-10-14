@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CITY_BY_NAME } from "@/lib/tabi/cities";
-import { liveConfigured, liveRail } from "@/lib/tabi/live-search";
+import { liveConfigured, liveRail, withLiveUser } from "@/lib/tabi/live-search";
 import { stationFor } from "@/lib/tabi/transport";
 
 // /api/tabi/fares?legs=Kyoto>Osaka,Osaka>Kinosaki → the train fare, time and line of each leg, checked
@@ -17,12 +17,16 @@ export async function GET(request: NextRequest) {
     .filter((l): l is [string, string] => l.length === 2 && l.every((c) => CITY_BY_NAME.has(c)) && l[0] !== l[1])
     .slice(0, 6);
   if (!legs.length || !liveConfigured()) return NextResponse.json({ legs: [] });
-  const out = [];
-  for (const [a, b] of legs) { // one Chrome behind the worker: one leg at a time
-    const from = stationFor(a), to = stationFor(b);
-    if (!/ Station$/.test(from) || !/ Station$/.test(to)) { out.push(null); continue; }
-    const r = await liveRail(from, to);
-    out.push("error" in r || !r.yen ? null : { from: a, to: b, yen: r.yen, duration: r.duration, line: r.line, checkedAt: r.checkedAt });
-  }
+  const ip = request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const out = await withLiveUser(ip, async () => {
+    const found = [];
+    for (const [a, b] of legs) { // one Chrome behind the worker: one leg at a time
+      const from = stationFor(a), to = stationFor(b);
+      if (!/ Station$/.test(from) || !/ Station$/.test(to)) { found.push(null); continue; }
+      const r = await liveRail(from, to);
+      found.push("error" in r || !r.yen ? null : { from: a, to: b, yen: r.yen, duration: r.duration, line: r.line, checkedAt: r.checkedAt });
+    }
+    return found;
+  });
   return NextResponse.json({ legs: out }, { headers: { "Cache-Control": "public, max-age=3600" } });
 }

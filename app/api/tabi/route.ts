@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { restoreRoute, restoreStops } from "@/lib/tabi/planner";
+import { withLiveUser } from "@/lib/tabi/live-search";
 import { respond } from "@/lib/tabi/respond";
 import { sanitizeIntent } from "@/lib/tabi/sanitize";
 import type { TabiContext } from "@/lib/tabi/types";
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const reply = await respond(message, sanitizeContext(body.context));
+    const reply = await withLiveUser(ip, () => respond(message, sanitizeContext(body.context)));
     return NextResponse.json({ reply });
   } catch (err) {
     console.error("[api/tabi] respond failed", err);

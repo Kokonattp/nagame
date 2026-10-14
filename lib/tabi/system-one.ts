@@ -60,9 +60,49 @@ function spend(tokens: number) {
   usageToday.tokens += tokens;
 }
 
+// ── second engine: Laya (open weights, same protocol) ──
+// When Jev cannot answer — no key, the daily budget is used up, a timeout or an error — the web
+// server asks Laya instead, if LAYA_URL is set (LAYA_MODEL defaults to "multilingual", LAYA_API_KEY
+// is optional). Laya runs on our own machine, so it is outside the token budget. Build scripts
+// never fall back: stored data must not silently come from a different model.
+function laya() {
+  const url = process.env.LAYA_URL?.trim();
+  if (!url || !process.env.NEXT_RUNTIME) return null;
+  return { url, model: process.env.LAYA_MODEL?.trim() || "multilingual", key: process.env.LAYA_API_KEY?.trim() || undefined };
+}
+
 export function systemOneConfigured(): boolean {
   const { remote, key } = config();
-  return (!remote || Boolean(key)) && jevBudgetLeft() > 0;
+  return ((!remote || Boolean(key)) && jevBudgetLeft() > 0) || Boolean(laya());
+}
+
+type Reply<Qs extends Record<string, Question>> = { answers: Answers<Qs>; usage?: { input_tokens?: number; output_tokens?: number } };
+
+// Bounded for chat latency: a timeout or network error fails fast (callers fall back);
+// only explicit "busy" answers get one short retry. Review found 3×8 s retries could
+// chain to ~50 s per chat turn.
+async function post<Qs extends Record<string, Question>>(url: string, key: string | undefined, body: string, timeoutMs: number, retries: number): Promise<Reply<Qs>> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (key) headers.Authorization = `Bearer ${key}`;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(url, { method: "POST", headers, body, signal: AbortSignal.timeout(timeoutMs) });
+    } catch {
+      throw new SystemOneUnavailable("System One request failed or timed out");
+    }
+    if ((res.status === 429 || res.status === 529 || res.status === 503) && attempt < retries) {
+      await new Promise((r) => setTimeout(r, 400));
+      continue;
+    }
+    if (!res.ok) throw new SystemOneUnavailable(`System One HTTP ${res.status}`);
+    try {
+      const json = (await res.json()) as Reply<Qs>;
+      if (json?.answers && typeof json.answers === "object") return json;
+    } catch { /* not JSON: same as unavailable */ }
+    throw new SystemOneUnavailable("System One sent no answers");
+  }
+  throw new SystemOneUnavailable("System One unavailable after retries");
 }
 
 export async function askSystemOne<Qs extends Record<string, Question>>(
@@ -71,31 +111,12 @@ export async function askSystemOne<Qs extends Record<string, Question>>(
   opts: { timeoutMs?: number; onUsage?: (u: SystemOneUsage) => void } = {},
 ): Promise<Answers<Qs>> {
   const { url, model, key, remote } = config();
-  if (remote && !key) throw new SystemOneUnavailable("TYPESAFE_API_KEY is not set");
-  if (jevBudgetLeft() <= 0) throw new SystemOneUnavailable("daily Jev token budget reached");
-
-  const body = JSON.stringify({ model, state, questions });
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (remote && key) headers.Authorization = `Bearer ${key}`;
-
-  // Bounded for chat latency: a timeout or network error fails fast (callers fall back);
-  // only explicit "busy" answers get one short retry. Review found 3×8 s retries could
-  // chain to ~50 s per chat turn.
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const started = performance.now();
-    let res: Response;
-    try {
-      res = await fetch(url, { method: "POST", headers, body, signal: AbortSignal.timeout(opts.timeoutMs ?? 5000) });
-    } catch {
-      throw new SystemOneUnavailable("System One request failed or timed out");
-    }
-    if ((res.status === 429 || res.status === 529 || res.status === 503) && attempt < 1) {
-      await new Promise((r) => setTimeout(r, 400));
-      continue;
-    }
-    if (!res.ok) throw new SystemOneUnavailable(`System One HTTP ${res.status}`);
-
-    const json = (await res.json()) as { answers: Answers<Qs>; usage?: { input_tokens?: number; output_tokens?: number } };
+  const backup = laya();
+  const started = performance.now();
+  try {
+    if (remote && !key) throw new SystemOneUnavailable("TYPESAFE_API_KEY is not set");
+    if (jevBudgetLeft() <= 0) throw new SystemOneUnavailable("daily Jev token budget reached");
+    const json = await post<Qs>(url, remote ? key : undefined, JSON.stringify({ model, state, questions }), opts.timeoutMs ?? 5000, 1);
     // no usage reported → count a typical request (~1,500 tokens) so the cap still holds
     spend((json.usage?.input_tokens ?? 1_500) + (json.usage?.output_tokens ?? 0));
     opts.onUsage?.({
@@ -104,6 +125,10 @@ export async function askSystemOne<Qs extends Record<string, Question>>(
       outputTokens: json.usage?.output_tokens ?? null,
     });
     return json.answers;
+  } catch (err) {
+    if (!(err instanceof SystemOneUnavailable) || !backup) throw err;
+    const json = await post<Qs>(backup.url, backup.key, JSON.stringify({ model: backup.model, state, questions }), Math.min(opts.timeoutMs ?? 4000, 4000), 0);
+    opts.onUsage?.({ latencyMs: Math.round(performance.now() - started), inputTokens: json.usage?.input_tokens ?? null, outputTokens: json.usage?.output_tokens ?? null });
+    return json.answers;
   }
-  throw new SystemOneUnavailable("System One unavailable after retries");
 }

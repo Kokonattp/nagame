@@ -11,13 +11,17 @@ snapshots / guide instead. The cheapest-dates calendar still uses its daily snap
 - **Search only.** No sign-in, no booking. A block or CAPTCHA page ends the search (HTTP 503);
   Tabi then shows the Google link instead. Do **not** point it at a browser service that solves
   CAPTCHAs (Browser Use Cloud does, always) — project rule.
-- **Bounded.** One search at a time (others queue up to 15 s, then get "busy"), `LIVE_DAILY_CAP` searches a day
-  (default 100), results cached in memory (flights 6 h, restaurants 30 days).
+- **Bounded.** One search at a time (others queue up to 15 s, then get "busy"). `LIVE_DAILY_CAP` new searches a
+  day for everyone together (default 1000) and `LIVE_USER_DAILY_CAP` per visitor (default 10; the app sends a
+  one-day hash of the visitor's address, never the address). Answers from the cache count toward neither.
+- **Cached.** Flights and room rates 6 h, everything else 30 days, written to `LIVE_CACHE_FILE`
+  (default `live-search-cache.json` beside `server.py`) so a restart does not start from zero. On a cloud
+  machine point it at a mounted volume, e.g. `LIVE_CACHE_FILE=/data/live-search-cache.json`.
 - Tested: Sasebo ramen 3.4 s, Bangkok ⇄ Sendai 7.4 s, Bangkok ⇄ Tokyo 7.6 s, cache hit 0.06 s.
 
 ## Endpoints
 ```
-GET  /health                                   {"ok": true, "usedToday": 3, "cap": 100}
+GET  /health                                   {"ok": true, "usedToday": 3, "cap": 1000, "userCap": 10, "cached": 42}
 POST /search   Authorization: Bearer <token>
      {"kind":"flight","to":"Sendai","depart":"2026-12-10","back":"2026-12-15"}
      {"kind":"eat","area":"Sasebo","what":"ramen"}

@@ -13,7 +13,8 @@ search only, no sign-in, no booking, and a block or CAPTCHA page ends the search
   GET  /health
 
 Env: LIVE_SEARCH_TOKEN (required), LIVE_CDP_URL (default http://127.0.0.1:9224),
-     LIVE_DAILY_CAP (default 100 searches a day), TYPESAFE_API_KEY, PORT (default 8790).
+     LIVE_DAILY_CAP (default 1000 new searches a day, everyone together), LIVE_USER_DAILY_CAP (default 10
+     a day per visitor), LIVE_CACHE_FILE (results kept across restarts), TYPESAFE_API_KEY, PORT (default 8790).
 Run: uv run --project <jev-ultrafast> --env-file <env> python workers/live-search/server.py
 """
 
@@ -28,7 +29,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import quote, quote_plus
 
 TOKEN = os.environ.get("LIVE_SEARCH_TOKEN", "")
-CAP = int(os.environ.get("LIVE_DAILY_CAP", "100"))
+CAP = int(os.environ.get("LIVE_DAILY_CAP", "1000"))
+# one visitor must not use up the day for everyone; the app sends a one-day hash, never an address
+USER_CAP = int(os.environ.get("LIVE_USER_DAILY_CAP", "10"))
+USER_ID = re.compile(r"^[a-f0-9]{16}$")
+CACHE_FILE = os.environ.get("LIVE_CACHE_FILE") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "live-search-cache.json")
 PORT = int(os.environ.get("PORT", "8790"))
 DEADLINE_S = 30  # one search; the app waits ~50 s in total
 QUEUE_S = 15  # how long a question waits for the one Chrome
@@ -216,7 +221,39 @@ def run_search(kind, q):
 class State:
     lock = threading.Lock()  # one Chrome, one search at a time
     day, used = date.today(), 0
+    users: dict = {}  # visitor hash → new searches today
     cache: dict = {}
+
+
+def load_cache():
+    """Results survive a restart: a redeploy must not send every question back to Google."""
+    try:
+        with open(CACHE_FILE, encoding="utf-8") as f:
+            saved = json.load(f)
+    except (OSError, ValueError):
+        return
+    now = time.time()
+    for key, (at, result, stamp) in saved.items():
+        try:
+            kind = json.loads(key)[0]
+        except ValueError:
+            continue
+        if kind in TTL and now - at < TTL[kind]:
+            State.cache[key] = (at, result, stamp)
+    print(f"cache: {len(State.cache)} results from {CACHE_FILE}", flush=True)
+
+
+def save_cache():
+    now = time.time()
+    for key in [k for k, v in State.cache.items() if now - v[0] >= TTL[json.loads(k)[0]]]:
+        del State.cache[key]
+    try:
+        tmp = CACHE_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(State.cache, f, ensure_ascii=False)
+        os.replace(tmp, CACHE_FILE)
+    except OSError as e:  # a read-only disk only costs the cache
+        print(f"cache not saved: {e}", flush=True)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -233,7 +270,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/health":
-            return self._send(200, {"ok": True, "usedToday": State.used, "cap": CAP})
+            return self._send(200, {"ok": True, "usedToday": State.used, "cap": CAP, "userCap": USER_CAP, "cached": len(State.cache)})
         self._send(404, {"error": "not found"})
 
     def do_POST(self):
@@ -251,9 +288,13 @@ class Handler(BaseHTTPRequestHandler):
         if hit and time.time() - hit[0] < TTL[kind]:
             return self._send(200, {**hit[1], "checkedAt": hit[2], "cached": True})
         if State.day != date.today():
-            State.day, State.used = date.today(), 0
+            State.day, State.used, State.users = date.today(), 0, {}
         if State.used >= CAP:
             return self._send(429, {"error": "daily cap reached"})
+        user = self.headers.get("X-Live-User", "")
+        user = user if USER_ID.match(user) else None
+        if user and State.users.get(user, 0) >= USER_CAP:
+            return self._send(429, {"error": "user cap reached"})
         # one Chrome: later questions queue briefly, then the app falls back to its snapshots
         if not State.lock.acquire(timeout=QUEUE_S):
             return self._send(429, {"error": "busy"})
@@ -262,6 +303,8 @@ class Handler(BaseHTTPRequestHandler):
                 print("Chrome is not reachable — answering from snapshots", flush=True)
                 return self._send(503, {"error": "browser down"})
             State.used += 1
+            if user:
+                State.users[user] = State.users.get(user, 0) + 1
             t0 = time.monotonic()
             result = run_search(kind, q)
             stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -269,6 +312,7 @@ class Handler(BaseHTTPRequestHandler):
             if result.get("blocked"):
                 return self._send(503, {"error": "blocked"})
             State.cache[key] = (time.time(), result, stamp)
+            save_cache()
             return self._send(200, {**result, "checkedAt": stamp, "cached": False})
         except Exception as e:  # a broken page must not take the worker down
             print(f"{kind} failed: {e}", flush=True)
@@ -280,5 +324,6 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     if not TOKEN:
         raise SystemExit("Set LIVE_SEARCH_TOKEN")
-    print(f"live search on :{PORT}, Chrome at {os.environ['BU_CDP_URL']}, cap {CAP}/day", flush=True)
+    load_cache()
+    print(f"live search on :{PORT}, Chrome at {os.environ['BU_CDP_URL']}, cap {CAP}/day, {USER_CAP}/day per visitor", flush=True)
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
