@@ -37,6 +37,12 @@ export const FLIGHTS_CHECKED_AT = SNAP.checkedAt;
 /** Days since the snapshot was taken; older than ~2 weeks is not worth showing. */
 export const snapshotAgeDays = () => Math.floor((Date.now() - new Date(SNAP.checkedAt).getTime()) / 86_400_000);
 
+/** Every month on file for this gateway, in calendar order (for the price-by-month chart). */
+export function flightMonths(gateway: string): FlightSnap[] {
+  if (snapshotAgeDays() > 14) return [];
+  return SNAP.routes.filter((r) => r.gateway === gateway && r.cheapest).sort((a, b) => a.month.localeCompare(b.month));
+}
+
 /**
  * The sample for this gateway in the trip's month (any year), else the cheapest month on file.
  * `exact` tells the UI whether it is the traveller's month or a nearby suggestion.

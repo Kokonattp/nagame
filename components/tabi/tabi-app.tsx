@@ -22,7 +22,7 @@ import { deleteEverything, fetchMe, forgetAccountTrips, pullAndMerge, pushTrip, 
 import { track } from "@/lib/tabi/track";
 import { signIn, signOut } from "next-auth/react";
 import { FARES_CHECKED, legFare, yenRange, type LegFare } from "@/lib/tabi/fares";
-import { FLIGHTS_CHECKED_AT, flightSnapFor, type FlightSnap } from "@/lib/tabi/flight-snapshot";
+import { FLIGHTS_CHECKED_AT, flightMonths, flightSnapFor, type FlightSnap } from "@/lib/tabi/flight-snapshot";
 import { durationTh, travelTime } from "@/lib/tabi/rail-times";
 import { STAY_AREA } from "@/lib/tabi/stay";
 import { AIRPORTS, jrPassWorthIt, legLinks, stayNear, type LegLink } from "@/lib/tabi/transport";
@@ -1534,9 +1534,10 @@ function TransportCard({ route, onAsk, liveLegs = [] }: { route: RouteOption; on
 const STAY_YEN_NIGHT = 10_800;
 const FOOD_YEN_DAY = 6_300;
 
-/* ── Scratch card: the trip total hides under a foil the traveller rubs off (or opens with the button).
-   Once opened it stays open for that trip on this device. The figure stays in the page for screen
-   readers; the foil is decoration. ── */
+/* ── Scratch card, like a phone top-up card: the trip total hides under a foil and shows only once
+   about 90% of it is rubbed off — no shortcut button (owner decision). Keyboard: Space / Enter / arrows
+   rub one strip at a time. Once opened it stays open for that trip on this device. The figure stays in
+   the page for screen readers. ── */
 const SCRATCH_KEY = "nagame-tabi-scratched-v1";
 function scratched(): string[] {
   try { return JSON.parse(localStorage.getItem(SCRATCH_KEY) ?? "[]") as string[]; } catch { return []; }
@@ -1582,22 +1583,34 @@ function ScratchReveal({ id, hint, children }: { id: string; hint: string; child
     if (!g) return;
     const box = c.getBoundingClientRect();
     g.beginPath();
-    g.arc(e.clientX - box.left, e.clientY - box.top, 18, 0, Math.PI * 2);
+    g.arc(e.clientX - box.left, e.clientY - box.top, 16, 0, Math.PI * 2);
     g.fill();
-    // every few strokes, see how much foil is left (sampled, cheap); past 45% gone it opens
-    if (++strokes.current % 6) return;
+    if (++strokes.current % 3 === 0) check(c, g);
+  };
+  // how much foil is left (sampled, cheap); once 90% is gone the card opens
+  const check = (c: HTMLCanvasElement, g: CanvasRenderingContext2D) => {
     const px = g.getImageData(0, 0, c.width, c.height).data;
     let clear = 0, seen = 0;
     for (let i = 3; i < px.length; i += 64) { seen++; if (px[i] < 40) clear++; }
-    if (clear / seen > 0.45) reveal();
+    if (clear / seen >= 0.9) reveal();
+  };
+  const strip = useRef(0);
+  const rubKey = (e: React.KeyboardEvent<HTMLCanvasElement>) => {
+    if (![" ", "Enter", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+    e.preventDefault();
+    const c = e.currentTarget;
+    const g = c.getContext("2d");
+    if (!g) return;
+    const { width, height } = c.getBoundingClientRect();
+    g.fillRect((strip.current++ % 8) * (width / 8), 0, width / 8 + 1, height);
+    check(c, g);
   };
   return (
     <span className="tabi-scratch">
       <span className="tabi-scratch-under">
         {children}
-        {open === false && <canvas ref={canvas} className="tabi-scratch-foil" aria-hidden onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); rub(e); }} onPointerMove={rub} />}
+        {open === false && <canvas ref={canvas} className="tabi-scratch-foil" tabIndex={0} role="button" aria-label="ขูดเพื่อดูยอดรวม กด Space ซ้ำ ๆ เพื่อขูด" onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); rub(e); }} onPointerMove={rub} onPointerUp={(e) => { const g = e.currentTarget.getContext("2d"); if (g) check(e.currentTarget, g); }} onKeyDown={rubKey} />}
       </span>
-      {open === false && <button type="button" className="tabi-scratch-open" onClick={reveal}>เปิดดูเลย</button>}
       {open && <span className="tabi-scratch-pop" aria-hidden>✨</span>}
     </span>
   );
@@ -1969,18 +1982,60 @@ function BoardingPass({ leg, href, index, ground, fare }: {
   );
 }
 
+/** Bars of the checked round-trip fare, month by month, for one gateway: which month is cheap at a glance. */
+function FlightMonthChart({ gateway, month }: { gateway: string; month?: number }) {
+  const rows = flightMonths(gateway);
+  if (rows.length < 3) return null;
+  const max = Math.max(...rows.map((r) => r.cheapest!));
+  const min = Math.min(...rows.map((r) => r.cheapest!));
+  return (
+    <section className="tabi-card p-4" aria-labelledby="tabi-month-chart-title">
+      <h2 id="tabi-month-chart-title" className="mb-3 flex items-center gap-2 font-bold"><span aria-hidden>📊</span>ราคาตั๋วไป-กลับแต่ละเดือน</h2>
+      <ol className="tabi-month-chart">
+        {rows.map((r) => {
+          const m = Number(r.month.slice(5, 7));
+          const cheapest = r.cheapest === min;
+          return (
+            <li key={r.month} className={`${cheapest ? "is-cheapest" : ""} ${m === month ? "is-mine" : ""}`}>
+              <span className="tabi-month-price">{num(r.cheapest!)}</span>
+              <span className="tabi-month-track" aria-hidden><span className="tabi-month-bar" style={{ height: `${Math.round((r.cheapest! / max) * 100)}%` }}>{cheapest ? "🏷️" : ""}</span></span>
+              <span className="tabi-month-name">{MONTH_SHORT[m]}</span>
+              <span className="sr-only">{cheapest ? "ถูกสุด" : ""}{m === month ? " เดือนของทริปนี้" : ""}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+        <span><span className="tabi-budget-dot" style={{ background: "#ff5c9d" }} aria-hidden />ถูกสุด</span>
+        {month && rows.some((r) => Number(r.month.slice(5, 7)) === month) && <span><span className="tabi-budget-dot" style={{ background: "#fff", boxShadow: "0 0 0 2px #0c1f4a" }} aria-hidden />เดือนของทริปนี้</span>}
+      </p>
+      <p className="tabi-muted mt-1 text-[11px] leading-snug">หน่วยบาท ต่อคน · ราคาตัวอย่างของวันที่ 10–15 ในแต่ละเดือน ทาบิเช็กใน Google Flights เมื่อ {thaiDate(isoDay(FLIGHTS_CHECKED_AT.slice(0, 10)))} · วันอื่นราคาต่างกันได้</p>
+    </section>
+  );
+}
+
 function FlightsScreen({ reply, trip, onPickDates, onBack, onChat, onPickDate }: {
   reply: TabiReply | null; trip: SavedTrip | null; onPickDates: (depart: string, days: number) => void;
   onBack: () => void; onChat: () => void; onPickDate: () => void;
 }) {
   const link = reply?.flight;
+  const gateway = trip?.route?.gateway.airport ?? link?.legs?.[0]?.toCode;
+  const tripMonth = trip?.intent.startDate ? Number(trip.intent.startDate.slice(5, 7)) : trip?.intent.month ?? reply?.intent?.month;
+  const dearest = reply?.dateOptions?.length ? Math.max(...reply.dateOptions.map((o) => o.price)) : 0;
   return (
     <div className="tabi-rise space-y-4">
       <TopBar onBack={onBack} />
       {trip?.route && (
-        <section className="tabi-card p-4">
-          <p className="tabi-title font-bold">{trip.title}</p>
-          <p className="tabi-muted text-sm">บินเข้า {trip.route.gateway.city} ({trip.route.gateway.airport})</p>
+        <section className="tabi-card tabi-flight-hero">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={img(trip.route.highlights[0]?.wikiTitle ?? trip.route.stops[0].city)} alt="" loading="lazy" onError={hideBroken} className="tabi-img" />
+          <div className="min-w-0 flex-1">
+            <p className="tabi-title font-bold leading-snug">{trip.title}</p>
+            <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="tabi-hop-pill">🛬 บินเข้า {CITY_BY_NAME.get(trip.route.gateway.city)?.th ?? trip.route.gateway.city} ({trip.route.gateway.airport})</span>
+              {trip.intent.startDate && <span className="tabi-hop-pill tabi-hop-fare">📅 {thaiDate(isoDay(trip.intent.startDate))}</span>}
+            </p>
+          </div>
         </section>
       )}
       <section className="flex items-start gap-2">
@@ -1998,14 +2053,17 @@ function FlightsScreen({ reply, trip, onPickDates, onBack, onChat, onPickDate }:
                   <b>{thaiDate(isoDay(o.depart))} – {thaiDate(isoDay(o.back))}</b>
                   <span className="tabi-muted"> ({WEEKDAY_SHORT[isoDay(o.depart).getUTCDay()]}–{WEEKDAY_SHORT[isoDay(o.back).getUTCDay()]})</span>
                   <span className="block font-semibold text-[var(--t-navy)]">ไป-กลับ ~฿{o.price.toLocaleString("en-US")}</span>
+                  {dearest > o.price && <span className="block text-xs font-semibold text-[var(--t-green-ink)]">ถูกกว่า ฿{num(dearest - o.price)}</span>}
+                  <span className="tabi-price-bar" aria-hidden><span style={{ width: `${Math.round((o.price / dearest) * 100)}%`, background: i === 0 ? "#ff5c9d" : "#1a66d9" }} /></span>
                 </span>
                 <button type="button" className="tabi-btn tabi-btn--primary min-h-[40px] px-3 text-sm" onClick={() => onPickDates(o.depart, reply.dateOptionsDays ?? 5)}>เลือกช่วงนี้</button>
               </li>
             ))}
           </ul>
-          <p className="tabi-muted text-[11px]">ราคาจาก Google Flights ที่ทาบิเช็กไว้ อาจเปลี่ยนตอนจองจริง</p>
+          <p className="tabi-muted text-[11px]">ราคาจาก Google Flights ที่ทาบิเช็กไว้ อาจเปลี่ยนตอนจองจริง{dearest ? " · “ถูกกว่า” เทียบกับช่วงที่แพงสุดในรายการนี้" : ""}</p>
         </section>
       ) : null}
+      {gateway && <FlightMonthChart gateway={gateway} month={tripMonth} />}
       {link?.legs?.length ? (
         <>
           <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
@@ -2040,7 +2098,7 @@ function TripsScreen({ trips, onOpen, onNew }: { trips: SavedTrip[]; onOpen: (t:
       <h1 className="text-2xl font-bold">ทริปของฉัน</h1>
       {trips.length === 0 ? (
         <section className="tabi-card space-y-3 p-5 text-center">
-          <Avatar size={64} />
+          <Avatar size={96} mood="happy" />
           <p>ยังไม่มีทริปที่เก็บไว้ เริ่มคุยกับทาบิแล้วเลือกเส้นทาง ทริปจะถูกเก็บไว้ในเครื่องนี้อัตโนมัติ</p>
           <button type="button" className="tabi-btn tabi-btn--primary w-full" onClick={onNew}>เริ่มวางแผนทริป</button>
         </section>
@@ -2048,15 +2106,31 @@ function TripsScreen({ trips, onOpen, onNew }: { trips: SavedTrip[]; onOpen: (t:
         <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
           {trips.map((t) => (
             <li key={t.id}>
-              <button type="button" onClick={() => onOpen(t)} className="tabi-card flex w-full items-center gap-3 overflow-hidden p-2 pr-4 text-left">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img(t.route?.highlights[0]?.wikiTitle ?? t.route?.stops[0]?.city ?? "Japan")} alt="" loading="lazy" onError={hideBroken} className="tabi-img h-[72px] w-[88px] shrink-0 rounded-[16px]" />
-                <span className="min-w-0 flex-1">
-                  <span className="tabi-title block font-bold">{t.title}</span>
-                  {t.intent.startDate && <span className="mt-0.5 inline-block rounded-full bg-[#ffd166] px-2 text-[11px] font-bold text-[var(--t-navy)]">{tripCountdown(t.intent.startDate)}</span>}
-                  <span className="tabi-muted block text-xs">{t.itinerary ? `ร่างทริป ${t.itinerary.length} วัน` : "เลือกเส้นทางแล้ว"} · แก้ไขล่าสุด {new Date(t.updatedAt).toLocaleDateString("th-TH")}</span>
+              <button type="button" onClick={() => onOpen(t)} className="tabi-card tabi-trip-card">
+                <span className="tabi-trip-photo">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={img(t.route?.highlights[0]?.wikiTitle ?? t.route?.stops[0]?.city ?? "Japan")} alt="" loading="lazy" onError={hideBroken} className="tabi-img" />
+                  {t.intent.startDate && <span className="tabi-trip-count">{tripCountdown(t.intent.startDate)}</span>}
                 </span>
-                <ArrowRight size={18} className="text-[var(--t-blue)]" />
+                <span className="block min-w-0 p-3 pt-2.5">
+                  <span className="flex items-start justify-between gap-2">
+                    <span className="tabi-title block font-bold leading-snug">{t.title}</span>
+                    <ArrowRight size={18} className="mt-0.5 shrink-0 text-[var(--t-blue)]" />
+                  </span>
+                  {t.route && (
+                    <span className="tabi-trip-stops" aria-label={`เส้นทาง ${t.route.stops.map((s) => s.cityTh).join(" ไป ")}`}>
+                      {t.route.stops.map((s, i) => (
+                        <span key={s.city} aria-hidden><i style={{ background: DAY_COLORS[i % DAY_COLORS.length] }} />{s.cityTh}</span>
+                      ))}
+                    </span>
+                  )}
+                  <span className="mt-1.5 flex flex-wrap gap-1.5">
+                    {t.route && <span className="tabi-hop-pill">🗓️ {t.route.stops.reduce((a, s) => a + s.nights, 0) + 1} วัน</span>}
+                    {t.intent.startDate && <span className="tabi-hop-pill">✈️ {thaiDate(isoDay(t.intent.startDate))}</span>}
+                    <span className={`tabi-hop-pill ${t.itinerary ? "tabi-hop-fare" : ""}`}>{t.itinerary ? "✅ มีแผนรายวันแล้ว" : "🧭 เลือกเส้นทางแล้ว"}</span>
+                  </span>
+                  <span className="tabi-muted mt-1.5 block text-[11px]">แก้ไขล่าสุด {new Date(t.updatedAt).toLocaleDateString("th-TH")}</span>
+                </span>
               </button>
             </li>
           ))}
