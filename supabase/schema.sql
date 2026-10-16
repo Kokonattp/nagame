@@ -122,3 +122,5 @@ create table if not exists push_subscriptions (
 create index if not exists push_subscriptions_window_idx on push_subscriptions (starts_on, ends_on);
 -- ไม่มี policy = anon/publishable key อ่านไม่ได้; service key (API route + worker) ข้าม RLS อยู่แล้ว
 alter table push_subscriptions enable row level security;
+-- เมืองในทริปตามรหัส 気象庁 สำหรับเตือน 警報 อากาศ: [{"office":"260000","areas":["2610000"],"th":"เกียวโต"}]
+alter table push_subscriptions add column if not exists jma jsonb not null default '[]';

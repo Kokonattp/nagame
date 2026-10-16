@@ -1,5 +1,6 @@
-// Nagame quake alerts worker: listens to P2PQuake (relay of 気象庁 bulletins) and sends Thai Web Push
-// to travellers whose trip is in a warned prefecture. Must run 24/7 on one machine — see README.md.
+// Nagame quake alerts worker: sends Thai Web Push to travellers whose trip is in a warned area.
+// Sources: P2PQuake WebSocket (relay of 気象庁, seconds) + 気象庁 XML feed polled every 30 s (official,
+// backup if P2PQuake is down) + 気象庁 weather 警報 polled every 5 min. Must run 24/7 — see README.md.
 //
 //   node index.mjs                     live, sends pushes (needs env below)
 //   node index.mjs --dry               live, prints instead of sending
@@ -8,8 +9,9 @@
 //
 // env: SUPABASE_URL, SUPABASE_SERVICE_KEY, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (mailto:…)
 
-import { readFileSync } from "node:fs";
-import { jst, newMemory, plan } from "./rules.mjs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { FEED_URL, WARNING_URL, feedEntries, recordFromXml, warningsByArea } from "./jma.mjs";
+import { activePhones, jst, newMemory, plan, planWeather } from "./rules.mjs";
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
@@ -33,7 +35,7 @@ async function refreshSubs() {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
   const day = (n) => new Date(Date.now() + 9 * 3_600_000 + n * 86_400_000).toISOString().slice(0, 10);
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth,prefectures,starts_on,ends_on&starts_on=lte.${day(1)}&ends_on=gte.${day(-1)}`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth,prefectures,jma,starts_on,ends_on&starts_on=lte.${day(1)}&ends_on=gte.${day(-1)}`, {
       headers: DB_HEADERS,
       signal: AbortSignal.timeout(10_000),
     });
@@ -113,6 +115,51 @@ async function backfill() {
   } catch (e) { log("backfill:", e.message); }
 }
 
+// ── 気象庁 XML feed: official second source for quake info and tsunami (EEW is not in it) ──
+const jmaSeen = new Set();
+let feedModified = "";
+async function pollJmaFeed() {
+  try {
+    const res = await fetch(FEED_URL, { headers: feedModified ? { "If-Modified-Since": feedModified } : {}, signal: AbortSignal.timeout(15_000) });
+    if (res.status === 304 || !res.ok) return;
+    feedModified = res.headers.get("last-modified") ?? "";
+    for (const e of feedEntries(await res.text()).reverse()) {
+      if (jmaSeen.has(e.url)) continue;
+      jmaSeen.add(e.url);
+      if (Date.now() - Date.parse(e.updated) > 30 * 60_000) continue; // rules would skip it anyway; save the fetch
+      const xml = await fetch(e.url, { signal: AbortSignal.timeout(15_000) }).then((r) => (r.ok ? r.text() : "")).catch(() => "");
+      const rec = xml && recordFromXml(xml, e.url);
+      if (rec) await handle(rec);
+    }
+  } catch (err) { log("jma feed:", err.message); }
+}
+
+// ── weather 警報: only the forecast offices someone on a trip needs ──
+const STATE_FILE = new URL("./.weather-state.json", import.meta.url);
+function loadWeatherState() {
+  try {
+    if (existsSync(STATE_FILE)) mem.weather = new Map(Object.entries(JSON.parse(readFileSync(STATE_FILE, "utf8"))).map(([k, v]) => [k, new Map(v)]));
+  } catch { /* start fresh */ }
+}
+function saveWeatherState() {
+  try { writeFileSync(STATE_FILE, JSON.stringify(Object.fromEntries([...mem.weather].map(([k, v]) => [k, [...v]])))); } catch (e) { log("weather state:", e.message); }
+}
+async function pollWeather() {
+  const offices = [...new Set(activePhones(subs, Date.now()).flatMap((s) => (s.jma ?? []).map((w) => w.office)))];
+  if (!offices.length) return;
+  const byOffice = new Map();
+  await Promise.all(offices.map(async (office) => {
+    try {
+      const res = await fetch(WARNING_URL(office), { signal: AbortSignal.timeout(15_000) });
+      if (res.ok) byOffice.set(office, warningsByArea(await res.json()));
+    } catch { /* office unreachable → its towns keep their last state */ }
+  }));
+  const sends = planWeather(byOffice, subs, mem);
+  saveWeatherState();
+  log(`weather: ${byOffice.size}/${offices.length} offices → ${sends.length} push`);
+  if (sends.length) await deliver(sends, Date.now());
+}
+
 function connect(attempt = 0) {
   const ws = new WebSocket(WS_URL);
   ws.onopen = () => { log("connected", WS_URL); attempt = 0; backfill(); };
@@ -139,11 +186,16 @@ if (opt("--replay")) {
   setInterval(() => {
     const cutoff = Date.now() - 3_600_000;
     for (const [id, t] of seen) if (t < cutoff) seen.delete(id);
-    if (seen.size === 0) Object.assign(mem, newMemory()); // quiet for an hour: forget who was told
+    if (seen.size === 0) { const fresh = newMemory(); mem.eew = fresh.eew; mem.quake = fresh.quake; mem.tsunami = fresh.tsunami; } // quiet hour: forget quake state (weather state is kept)
     log(`alive, ${subs.length} active subscriptions`);
   }, 3_600_000);
   dropFinishedTrips();
   setInterval(dropFinishedTrips, 24 * 3_600_000);
   if (!DRY) await sender(); // fail fast on missing keys, not at the first earthquake
+  loadWeatherState();
   connect();
+  pollJmaFeed();
+  setInterval(pollJmaFeed, 30_000);
+  pollWeather();
+  setInterval(pollWeather, 5 * 60_000);
 }

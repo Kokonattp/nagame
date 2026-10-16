@@ -60,6 +60,39 @@ export function prefOf(jaName = "") {
   return null;
 }
 
+// ── epicentre names (JMA 震央地名) in Thai: prefecture + direction, or a known sea/island area ──
+const DIR_TH = [
+  ["北西部", "ตะวันตกเฉียงเหนือ"], ["北東部", "ตะวันออกเฉียงเหนือ"], ["南西部", "ตะวันตกเฉียงใต้"], ["南東部", "ตะวันออกเฉียงใต้"],
+  ["北部", "ตอนเหนือ"], ["南部", "ตอนใต้"], ["東部", "ตะวันออก"], ["西部", "ตะวันตก"], ["中部", "ตอนกลาง"],
+];
+const OFFSHORE_TH = [["東方沖", " ด้านตะวันออก"], ["南東沖", " ด้านตะวันออกเฉียงใต้"], ["南西沖", " ด้านตะวันตกเฉียงใต้"], ["北西沖", " ด้านตะวันตกเฉียงเหนือ"], ["沖", ""]];
+const SEA_TH = {
+  三陸沖: "นอกชายฝั่งซันริกุ", 釧路沖: "นอกชายฝั่งคุชิโระ", 十勝沖: "นอกชายฝั่งโทคาจิ", 浦河沖: "นอกชายฝั่งอุรากาวะ",
+  根室半島南東沖: "นอกคาบสมุทรเนมุโระ", 日向灘: "ทะเลฮิวกะนาดะ", 遠州灘: "ทะเลเอ็นชูนาดะ", 熊野灘: "ทะเลคุมาโนะนาดะ",
+  相模湾: "อ่าวซางามิ", 駿河湾: "อ่าวซุรุกะ", 東京湾: "อ่าวโตเกียว", 伊予灘: "ทะเลอิโยนาดะ", 豊後水道: "ช่องแคบบุงโงะ",
+  紀伊水道: "ช่องแคบคิอิ", 安芸灘: "ทะเลอากินาดะ", 若狭湾: "อ่าววากาสะ", 能登半島沖: "นอกคาบสมุทรโนโตะ",
+  伊豆大島近海: "ใกล้เกาะอิซุโอชิมะ", "新島・神津島近海": "ใกล้เกาะนีจิมะ", 八丈島東方沖: "นอกเกาะฮาจิโจ",
+  鳥島近海: "ใกล้เกาะโทริชิมะ", 奄美大島近海: "ใกล้เกาะอามามิ", 沖縄本島近海: "ใกล้เกาะโอกินาวา", 宮古島近海: "ใกล้เกาะมิยาโกะ",
+  石垣島近海: "ใกล้เกาะอิชิงากิ", 与那国島近海: "ใกล้เกาะโยนากุนิ", 台湾付近: "ใกล้ไต้หวัน", 千島列島: "หมู่เกาะคูริล",
+  カムチャツカ半島付近: "ใกล้คาบสมุทรคัมชัตคา", サハリン近海: "ใกล้เกาะซาคาลิน", 朝鮮半島南部: "คาบสมุทรเกาหลีตอนใต้",
+};
+
+/** "千葉県北西部" → "ชิบะ ตะวันตกเฉียงเหนือ (千葉県北西部)"; unknown names stay Japanese (still findable on JMA). */
+export function epicentreTh(ja = "") {
+  const name = ja.trim();
+  if (!name) return "";
+  if (SEA_TH[name]) return `${SEA_TH[name]} (${name})`;
+  const en = prefOf(name);
+  if (!en) return name;
+  const stem = PREFS[en].ja.find((j) => name.startsWith(j));
+  const rest = name.slice(stem.length).replace(/^[都道府県]/, "");
+  const th = PREFS[en].th;
+  const off = OFFSHORE_TH.find(([j]) => rest.endsWith(j));
+  if (off) return `นอกชายฝั่ง${th}${off[1]} (${name})`;
+  const dir = DIR_TH.find(([j]) => rest === j);
+  return `${th}${dir ? ` ${dir[1]}` : ""} (${name})`;
+}
+
 const SHINDO_TH = { 10: "1", 20: "2", 30: "3", 40: "4", 45: "5 ล่าง", 50: "5 บน", 55: "6 ล่าง", 60: "6 บน", 70: "7" };
 export const QUAKE_MIN_SCALE = 45; // 5 ล่าง: trains stop, things fall — below that, no push
 const SOURCE = "ที่มา: 気象庁";
@@ -90,7 +123,7 @@ function prefList(prefs, mine) {
 
 /** Memory of what each phone was already told (so serial 2, 3 … of the same EEW stay quiet). */
 export function newMemory() {
-  return { eew: new Map(), quake: new Map(), tsunami: new Map() };
+  return { eew: new Map(), quake: new Map(), tsunami: new Map(), weather: new Map() };
 }
 function sentTo(map, key, endpoint) {
   let set = map.get(key);
@@ -107,15 +140,21 @@ function sentTo(map, key, endpoint) {
  * @param now  epoch ms (record time when replaying)
  * @returns {{ sub, payload }[]}
  */
-export function plan(rec, subs, mem, now = Date.now()) {
-  // one phone may follow two trips: merge them so it never gets the same alert twice
+/** Subscriptions on a trip now, one per phone (a phone may follow two trips: merged, so no double alerts). */
+export function activePhones(subs, now) {
   const byPhone = new Map();
   for (const s of subs) {
     if (!isActive(s, now)) continue;
     const had = byPhone.get(s.endpoint);
-    byPhone.set(s.endpoint, had ? { ...had, prefectures: [...new Set([...had.prefectures, ...s.prefectures])] } : s);
+    byPhone.set(s.endpoint, had
+      ? { ...had, prefectures: [...new Set([...had.prefectures, ...s.prefectures])], jma: [...(had.jma ?? []), ...(s.jma ?? [])] }
+      : s);
   }
-  const active = [...byPhone.values()];
+  return [...byPhone.values()];
+}
+
+export function plan(rec, subs, mem, now = Date.now()) {
+  const active = activePhones(subs, now);
   if (rec.code === 556) return planEew(rec, active, mem, now);
   if (rec.code === 551) return planQuake(rec, active, mem, now);
   if (rec.code === 552) return planTsunami(rec, active, mem, now);
@@ -173,7 +212,7 @@ function planQuake(rec, subs, mem, now) {
     const top = hits.reduce((a, b) => (maxByPref.get(b) > maxByPref.get(a) ? b : a));
     const scale = SHINDO_TH[maxByPref.get(top)] ?? "?";
     const h = q.hypocenter ?? {};
-    const where = [h.magnitude > 0 ? `M${h.magnitude}` : "", h.name ?? ""].filter(Boolean).join(" ");
+    const where = [h.magnitude > 0 ? `M${h.magnitude}` : "", epicentreTh(h.name)].filter(Boolean).join(" ");
     const tsunami = q.domesticTsunami === "None" ? "ไม่มีความเสี่ยงสึนามิ" : q.domesticTsunami === "Checking" ? "กำลังตรวจสอบสึนามิ ห่างชายฝั่งไว้ก่อน" : "ดูประกาศสึนามิ ห่างชายฝั่งไว้ก่อน";
     out.push({
       sub,
@@ -220,6 +259,51 @@ function planTsunami(rec, subs, mem, now) {
         body: `${rank >= 2 ? "ออกห่างชายฝั่งและปากแม่น้ำทันที ขึ้นที่สูงหรืออาคารสูง" : "อย่าลงทะเลหรือเข้าใกล้ชายฝั่งจนกว่าจะยกเลิก"}\nเขต: ${zones.slice(0, 4).join(", ")}${zones.length > 4 ? ` และอีก ${zones.length - 4} เขต` : ""}\n${SOURCE}`,
       },
     });
+  }
+  return out;
+}
+
+// ── weather 警報 (JMA bosai warnings, polled) ──
+const HAZARD_TH = { rain: "ฝนตกหนัก", landslide: "ดินถล่ม", wind: "ลมแรง", snowstorm: "พายุหิมะ", snow: "หิมะตกหนัก", surge: "น้ำทะเลหนุนสูง", waves: "คลื่นสูง" };
+const HAZARD_DO = {
+  rain: "เลี่ยงริมแม่น้ำ ที่ต่ำ และทางลอดใต้ดิน", landslide: "เลี่ยงเชิงเขาและหน้าผา อยู่ในอาคารแข็งแรง",
+  wind: "อยู่ในอาคาร ระวังของปลิว รถไฟอาจหยุดวิ่ง", snowstorm: "งดขับรถ เผื่อเวลารถไฟล่าช้าหรือหยุดวิ่ง",
+  snow: "งดขับรถ เผื่อเวลารถไฟล่าช้า", surge: "ออกห่างชายฝั่งและท่าเรือ", waves: "ออกห่างชายฝั่งและท่าเรือ",
+};
+const LEVEL_JA = { 30: "警報", 40: "危険警報", 50: "特別警報" };
+
+/**
+ * @param byOffice Map(office → Map(areaCode → Map(hazard → level))) for the offices that loaded this round
+ * @returns sends for hazards that are new, or stronger than what this phone was last told, per town
+ */
+export function planWeather(byOffice, subs, mem, now = Date.now()) {
+  const out = [];
+  for (const sub of activePhones(subs, now)) {
+    const told = mem.weather.get(sub.endpoint) ?? new Map(); // "town|hazard" → level
+    const seenTowns = new Set();
+    for (const w of sub.jma ?? []) {
+      const office = byOffice.get(w.office);
+      if (!office || seenTowns.has(w.th)) continue; // office failed to load → keep what we knew
+      seenTowns.add(w.th);
+      const now_ = new Map();
+      for (const a of w.areas ?? []) for (const [h, lv] of office.get(a) ?? []) if ((now_.get(h) ?? 0) < lv) now_.set(h, lv);
+      for (const key of [...told.keys()]) if (key.startsWith(`${w.th}|`) && !now_.has(key.slice(w.th.length + 1))) told.delete(key);
+      const rising = [...now_].filter(([h, lv]) => (told.get(`${w.th}|${h}`) ?? 0) < lv);
+      for (const [h, lv] of now_) told.set(`${w.th}|${h}`, lv);
+      if (!rising.length) continue;
+      const top = Math.max(...rising.map(([, lv]) => lv));
+      const names = rising.map(([h]) => HAZARD_TH[h]).join(", ");
+      out.push({
+        sub,
+        payload: {
+          kind: "weather", tag: `weather-${w.th}`, urgent: top >= 40, ttl: 6 * 3600, url: "/",
+          title: top === 50 ? `🚨 เตือนภัยขั้นสูงสุด: ${names} ที่${w.th}` : top === 40 ? `⚠️ อันตราย: ${names} ที่${w.th}` : `⛈️ เตือน${names}ที่${w.th}`,
+          body: `${[...new Set(rising.map(([h]) => HAZARD_DO[h]))].join(" · ")}
+${LEVEL_JA[top]} · ${SOURCE}`,
+        },
+      });
+    }
+    mem.weather.set(sub.endpoint, told);
   }
   return out;
 }

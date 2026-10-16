@@ -8,11 +8,11 @@ import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowRight, ArrowUp, CalendarDays, ChevronLeft, CircleHelp, Heart, Home, Map as MapIcon, Pencil, Plane, Plus, Send, User } from "lucide-react";
-import type { HazardAlert } from "@/lib/tabi/alerts";
+import { jmaWatch, type HazardAlert } from "@/lib/tabi/alerts";
 import type { SafetyEvent } from "@/lib/tabi/safety";
 import { dayWeather } from "@/lib/tabi/day-weather";
 import { FujiMark } from "./fuji-mark";
-import { QuakeAlertToggle } from "./quake-alert-toggle";
+import { QuakeAlertToggle, type JmaWatch } from "./quake-alert-toggle";
 import { EMERGENCY_TEL, JNTO_HOTLINE, SAFETY_LINKS, THAI_MISSION_TEL } from "@/lib/tabi/safety-links";
 import { CITY_BY_NAME, nearestGateway } from "@/lib/tabi/cities";
 import { TABI_ART, TABI_DANCE, type TabiMood } from "@/lib/tabi/mascot";
@@ -1214,6 +1214,13 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
   // last day); a volcano warning lasts for months, so it shows whenever the route passes one
   const nearTrip = countdown !== null && countdown <= 7 && countdown > -days.length;
   const alertCities = trip.route?.stops.map((s) => s.city).join(",") ?? "";
+  const alertJma = useMemo(
+    () => (trip.route?.stops ?? []).flatMap((s): JmaWatch[] => {
+      const w = jmaWatch(s.city);
+      return w ? [{ office: w.office, areas: w.areas, th: s.cityTh }] : [];
+    }),
+    [trip.route],
+  );
   const alertPrefectures = useMemo(
     () => [...new Set(alertCities.split(",").map((c) => CITY_BY_NAME.get(c)?.prefecture).filter((p): p is string => Boolean(p)))],
     [alertCities],
@@ -1417,6 +1424,7 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
           <QuakeAlertToggle
             tripId={trip.id}
             prefectures={alertPrefectures}
+            jma={alertJma}
             places={trip.route.stops.map((s) => s.cityTh).join(", ")}
             startsOn={start ?? null}
             endsOn={start ? isoDay(start, Math.max(days.length, 1) - 1).toISOString().slice(0, 10) : null}
