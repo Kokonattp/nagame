@@ -120,3 +120,5 @@ create table if not exists push_subscriptions (
 );
 
 create index if not exists push_subscriptions_window_idx on push_subscriptions (starts_on, ends_on);
+-- ไม่มี policy = anon/publishable key อ่านไม่ได้; service key (API route + worker) ข้าม RLS อยู่แล้ว
+alter table push_subscriptions enable row level security;
