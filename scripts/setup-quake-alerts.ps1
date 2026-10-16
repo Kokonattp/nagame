@@ -45,11 +45,11 @@ $local = Read-EnvFile $envLocal
 $url = if ($have["SUPABASE_URL"]) { $have["SUPABASE_URL"] } else { $local["SUPABASE_URL"] }
 $key = if ($have["SUPABASE_SERVICE_KEY"]) { $have["SUPABASE_SERVICE_KEY"] } else { $local["SUPABASE_SERVICE_KEY"] }
 if (-not $url) {
-  Write-Host "Supabase > Project Settings > API: copy 'Project URL' and the 'service_role' secret key."
+  Write-Host "Supabase > Project Settings > API Keys: copy a Secret key (sb_secret_...) or the legacy service_role key."
   $url = (Read-Host "Project URL (https://xxxx.supabase.co)").Trim().TrimEnd("/")
 }
 if ($url -notmatch '^https://[a-z0-9]+\.supabase\.co$') { throw "That does not look like a Supabase project URL: $url" }
-if (-not $key) { $key = (Read-Secret "service_role key (hidden)").Trim() }
+if (-not $key) { $key = (Read-Secret "secret key (hidden)").Trim() }
 if ($key.Length -lt 20) { throw "service_role key looks too short" }
 Write-Host "OK  $url"
 
@@ -94,7 +94,8 @@ try {
 } finally { Pop-Location }
 
 Write-Host "`n== Check: does the push_subscriptions table exist? ==" -ForegroundColor Cyan
-$headers = @{ apikey = $key; Authorization = "Bearer $key" }
+$headers = @{ apikey = $key }
+if ($key.StartsWith("eyJ")) { $headers["Authorization"] = "Bearer $key" }  # legacy service_role JWT
 try {
   Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri "$url/rest/v1/push_subscriptions?select=endpoint&limit=1" | Out-Null
   Write-Host "OK  table is there." -ForegroundColor Green

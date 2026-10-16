@@ -19,6 +19,8 @@ const WS_URL = flag("--sandbox") ? "wss://api-realtime-sandbox.p2pquake.net/v2/w
 const HISTORY = "https://api.p2pquake.net/v2/history?codes=551&codes=552&codes=556&limit=20";
 const CODES = new Set([551, 552, 556]);
 const { SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
+// new Supabase secret keys (sb_secret_…) go in `apikey` only; legacy service_role JWTs also as Bearer
+const DB_HEADERS = { apikey: SUPABASE_SERVICE_KEY, ...(SUPABASE_SERVICE_KEY?.startsWith("eyJ") ? { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } : {}) };
 
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 const mem = newMemory();
@@ -32,7 +34,7 @@ async function refreshSubs() {
   const day = (n) => new Date(Date.now() + 9 * 3_600_000 + n * 86_400_000).toISOString().slice(0, 10);
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth,prefectures,starts_on,ends_on&starts_on=lte.${day(1)}&ends_on=gte.${day(-1)}`, {
-      headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
+      headers: DB_HEADERS,
       signal: AbortSignal.timeout(10_000),
     });
     if (res.ok) subs = await res.json();
@@ -42,14 +44,14 @@ async function refreshSubs() {
 async function dropSub(endpoint) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
   await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}`, {
-    method: "DELETE", headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
+    method: "DELETE", headers: DB_HEADERS,
   }).catch(() => {});
 }
 async function dropFinishedTrips() {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
   const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
   await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?ends_on=lt.${weekAgo}`, {
-    method: "DELETE", headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
+    method: "DELETE", headers: DB_HEADERS,
   }).catch(() => {});
 }
 
