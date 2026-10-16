@@ -81,17 +81,21 @@ Write-Host "OK  workers\quake-alert\.env (5 keys), .env.local (3 keys)"
 
 Write-Host "`n== 4/4 Vercel (production) ==" -ForegroundColor Cyan
 Push-Location $root
+# Windows PowerShell 5.1 turns the CLI's progress text on stderr ("Retrieving project...") into a
+# terminating error under "Stop" — judge the vercel calls by exit code instead
+$ErrorActionPreference = "Continue"
 try {
   $existing = (vercel env ls production 2>$null) -join "`n"
+  if ($LASTEXITCODE -ne 0) { throw "vercel env ls failed - run 'vercel login' and 'vercel link' in the repo, then re-run" }
   foreach ($kv in @(@("SUPABASE_URL", $url, $false), @("SUPABASE_SERVICE_KEY", $key, $true), @("VAPID_PUBLIC_KEY", $vapidPublic, $false))) {
     if ($existing -match "(?m)^\s*$($kv[0])\s") { Write-Host "skip $($kv[0]) (already on Vercel)"; continue }
     $flags = @("env", "add", $kv[0], "production", "--value", $kv[1], "--yes")
     if ($kv[2]) { $flags += "--sensitive" }
-    vercel @flags | Out-Null
+    vercel @flags 2>$null | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "vercel env add $($kv[0]) failed" }
     Write-Host "added $($kv[0])"
   }
-} finally { Pop-Location }
+} finally { Pop-Location; $ErrorActionPreference = "Stop" }
 
 Write-Host "`n== Check: does the push_subscriptions table exist? ==" -ForegroundColor Cyan
 $headers = @{ apikey = $key }
