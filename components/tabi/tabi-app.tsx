@@ -12,6 +12,7 @@ import type { HazardAlert } from "@/lib/tabi/alerts";
 import type { SafetyEvent } from "@/lib/tabi/safety";
 import { dayWeather } from "@/lib/tabi/day-weather";
 import { FujiMark } from "./fuji-mark";
+import { QuakeAlertToggle } from "./quake-alert-toggle";
 import { EMERGENCY_TEL, JNTO_HOTLINE, SAFETY_LINKS, THAI_MISSION_TEL } from "@/lib/tabi/safety-links";
 import { CITY_BY_NAME, nearestGateway } from "@/lib/tabi/cities";
 import { TABI_ART, TABI_DANCE, type TabiMood } from "@/lib/tabi/mascot";
@@ -1213,6 +1214,10 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
   // last day); a volcano warning lasts for months, so it shows whenever the route passes one
   const nearTrip = countdown !== null && countdown <= 7 && countdown > -days.length;
   const alertCities = trip.route?.stops.map((s) => s.city).join(",") ?? "";
+  const alertPrefectures = useMemo(
+    () => [...new Set(alertCities.split(",").map((c) => CITY_BY_NAME.get(c)?.prefecture).filter((p): p is string => Boolean(p)))],
+    [alertCities],
+  );
   const [safety, setSafety] = useState<{ alerts: HazardAlert[]; events: SafetyEvent[] }>({ alerts: [], events: [] });
   useEffect(() => {
     if (!alertCities) return;
@@ -1407,7 +1412,17 @@ function ItineraryScreen({ trip, sharedState, onKeep, onShare, onEdit, onBack, o
           ))}
         </ul>
       </section>
-      <SafetyCard />
+      <SafetyCard>
+        {sharedState !== "unsaved" && trip.route && (
+          <QuakeAlertToggle
+            tripId={trip.id}
+            prefectures={alertPrefectures}
+            places={trip.route.stops.map((s) => s.cityTh).join(", ")}
+            startsOn={start ?? null}
+            endsOn={start ? isoDay(start, Math.max(days.length, 1) - 1).toISOString().slice(0, 10) : null}
+          />
+        )}
+      </SafetyCard>
 
       <div className="grid grid-cols-3 gap-2">
         <button type="button" className="tabi-btn tabi-btn--soft whitespace-nowrap px-2 text-sm" onClick={onMap}><MapIcon size={18} />แผนที่</button>
@@ -1798,7 +1813,7 @@ function HazardCard({ alerts, events }: { alerts: HazardAlert[]; events: SafetyE
 }
 
 /** Always on the trip: who to call, the alert app in Thai, the embassy — kept short (numbers first). */
-function SafetyCard() {
+function SafetyCard({ children }: { children?: React.ReactNode }) {
   return (
     <section className="tabi-card p-4" aria-labelledby="tabi-safety-title">
       <h2 id="tabi-safety-title" className="flex items-center gap-2 font-bold"><span aria-hidden>🛟</span>ความปลอดภัย</h2>
@@ -1819,6 +1834,7 @@ function SafetyCard() {
           ))}
         </ul>
       </details>
+      {children}
     </section>
   );
 }

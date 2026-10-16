@@ -1,0 +1,14 @@
+{
+  "name": "nagame-quake-alert",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node index.mjs",
+    "dry": "node index.mjs --dry",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

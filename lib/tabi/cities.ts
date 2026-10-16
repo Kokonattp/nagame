@@ -31,6 +31,9 @@ const PREFECTURE_REGION: Record<string, Region> = {
   Okinawa: "okinawa",
 };
 
+/** English names of the 47 prefectures (what quake alerts store; the worker maps them to JMA names). */
+export const PREFECTURES = Object.keys(PREFECTURE_REGION);
+
 /** Airports with direct-flight demand from Bangkok, keyed by the hub city. */
 export const GATEWAYS: { city: string; airport: string; searchName: string }[] = [
   { city: "Tokyo", airport: "TYO", searchName: "Tokyo" },

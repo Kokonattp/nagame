@@ -1,0 +1,1725 @@
+[
+ {
+  "areas": [
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "根室地方北部",
+    "pref": "北海道道東",
+    "scaleFrom": 45,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "根室地方中部",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "根室地方南部",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "網走地方",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "北見地方",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "釧路地方北部",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "紋別地方",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "釧路地方中南部",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "宗谷地方北部",
+    "pref": "北海道道北",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "宗谷地方南部",
+    "pref": "北海道道北",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:07",
+    "kindCode": "10",
+    "name": "上川地方北部",
+    "pref": "北海道道北",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:25",
+    "kindCode": "10",
+    "name": "空知地方南部",
+    "pref": "北海道道央",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:33",
+    "kindCode": "10",
+    "name": "胆振地方中東部",
+    "pref": "北海道道南",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:34",
+    "kindCode": "10",
+    "name": "石狩地方中部",
+    "pref": "北海道道央",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "十勝地方北部",
+    "pref": "北海道道東",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:03",
+    "kindCode": "10",
+    "name": "上川地方中部",
+    "pref": "北海道道北",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:07",
+    "kindCode": "10",
+    "name": "留萌地方中北部",
+    "pref": "北海道道北",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:07",
+    "kindCode": "10",
+    "name": "十勝地方中部",
+    "pref": "北海道道東",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:12",
+    "kindCode": "10",
+    "name": "北海道利尻礼文",
+    "pref": "北海道道北",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:13",
+    "kindCode": "10",
+    "name": "十勝地方南部",
+    "pref": "北海道道東",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:15",
+    "kindCode": "10",
+    "name": "上川地方南部",
+    "pref": "北海道道北",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:15",
+    "kindCode": "10",
+    "name": "留萌地方南部",
+    "pref": "北海道道北",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:17",
+    "kindCode": "10",
+    "name": "空知地方北部",
+    "pref": "北海道道央",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:21",
+    "kindCode": "10",
+    "name": "空知地方中部",
+    "pref": "北海道道央",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:27",
+    "kindCode": "10",
+    "name": "日高地方西部",
+    "pref": "北海道道南",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:29",
+    "kindCode": "10",
+    "name": "石狩地方北部",
+    "pref": "北海道道央",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:29",
+    "kindCode": "10",
+    "name": "日高地方東部",
+    "pref": "北海道道南",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:32",
+    "kindCode": "10",
+    "name": "日高地方中部",
+    "pref": "北海道道南",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:36",
+    "kindCode": "10",
+    "name": "石狩地方南部",
+    "pref": "北海道道央",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:38",
+    "kindCode": "10",
+    "name": "後志地方北部",
+    "pref": "北海道道央",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:56",
+    "kindCode": "10",
+    "name": "渡島地方東部",
+    "pref": "北海道道南",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:45",
+    "kindCode": "10",
+    "name": "胆振地方西部",
+    "pref": "北海道道南",
+    "scaleFrom": 30,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:47",
+    "kindCode": "10",
+    "name": "後志地方西部",
+    "pref": "北海道道央",
+    "scaleFrom": 30,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:48",
+    "kindCode": "10",
+    "name": "後志地方東部",
+    "pref": "北海道道央",
+    "scaleFrom": 30,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:02",
+    "kindCode": "10",
+    "name": "青森県下北",
+    "pref": "青森",
+    "scaleFrom": 30,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:15",
+    "kindCode": "10",
+    "name": "青森県三八上北",
+    "pref": "青森",
+    "scaleFrom": 30,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:57",
+    "kindCode": "10",
+    "name": "渡島地方北部",
+    "pref": "北海道道南",
+    "scaleFrom": 30,
+    "scaleTo": 55
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:13",
+    "kindCode": "10",
+    "name": "青森県津軽北部",
+    "pref": "青森",
+    "scaleFrom": 30,
+    "scaleTo": 55
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:33",
+    "kindCode": "10",
+    "name": "岩手県内陸北部",
+    "pref": "岩手",
+    "scaleFrom": 30,
+    "scaleTo": 55
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:05",
+    "kindCode": "10",
+    "name": "檜山地方",
+    "pref": "北海道道南",
+    "scaleFrom": 20,
+    "scaleTo": 55
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:08",
+    "kindCode": "10",
+    "name": "渡島地方西部",
+    "pref": "北海道道南",
+    "scaleFrom": 20,
+    "scaleTo": 55
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:16",
+    "kindCode": "10",
+    "name": "岩手県沿岸北部",
+    "pref": "岩手",
+    "scaleFrom": 20,
+    "scaleTo": 55
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:41",
+    "kindCode": "10",
+    "name": "秋田県沿岸北部",
+    "pref": "秋田",
+    "scaleFrom": 20,
+    "scaleTo": 55
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:50",
+    "kindCode": "10",
+    "name": "宮城県中部",
+    "pref": "宮城",
+    "scaleFrom": 20,
+    "scaleTo": 55
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:52",
+    "kindCode": "10",
+    "name": "宮城県北部",
+    "pref": "宮城",
+    "scaleFrom": 20,
+    "scaleTo": 55
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:14",
+    "kindCode": "10",
+    "name": "北海道奥尻島",
+    "pref": "北海道道南",
+    "scaleFrom": 20,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:23",
+    "kindCode": "10",
+    "name": "青森県津軽南部",
+    "pref": "青森",
+    "scaleFrom": 20,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:28",
+    "kindCode": "10",
+    "name": "岩手県沿岸南部",
+    "pref": "岩手",
+    "scaleFrom": 20,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:29",
+    "kindCode": "10",
+    "name": "秋田県内陸北部",
+    "pref": "秋田",
+    "scaleFrom": 20,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:43",
+    "kindCode": "10",
+    "name": "岩手県内陸南部",
+    "pref": "岩手",
+    "scaleFrom": 20,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:43",
+    "kindCode": "10",
+    "name": "秋田県沿岸南部",
+    "pref": "秋田",
+    "scaleFrom": 20,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:43",
+    "kindCode": "10",
+    "name": "秋田県内陸南部",
+    "pref": "秋田",
+    "scaleFrom": 20,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:03",
+    "kindCode": "10",
+    "name": "宮城県南部",
+    "pref": "宮城",
+    "scaleFrom": 20,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:10",
+    "kindCode": "10",
+    "name": "福島県中通り",
+    "pref": "福島",
+    "scaleFrom": 20,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:00",
+    "kindCode": "10",
+    "name": "山形県庄内",
+    "pref": "山形",
+    "scaleFrom": 20,
+    "scaleTo": 45
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:05",
+    "kindCode": "10",
+    "name": "山形県村山",
+    "pref": "山形",
+    "scaleFrom": 20,
+    "scaleTo": 45
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:15",
+    "kindCode": "10",
+    "name": "福島県浜通り",
+    "pref": "福島",
+    "scaleFrom": 20,
+    "scaleTo": 45
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:55",
+    "kindCode": "10",
+    "name": "山形県最上",
+    "pref": "山形",
+    "scaleFrom": 10,
+    "scaleTo": 45
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:10",
+    "kindCode": "10",
+    "name": "山形県置賜",
+    "pref": "山形",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:18",
+    "kindCode": "10",
+    "name": "新潟県下越",
+    "pref": "新潟",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:25",
+    "kindCode": "10",
+    "name": "福島県会津",
+    "pref": "福島",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:31",
+    "kindCode": "10",
+    "name": "栃木県北部",
+    "pref": "栃木",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:35",
+    "kindCode": "10",
+    "name": "新潟県佐渡",
+    "pref": "新潟",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:39",
+    "kindCode": "10",
+    "name": "栃木県南部",
+    "pref": "栃木",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:41",
+    "kindCode": "10",
+    "name": "茨城県北部",
+    "pref": "茨城",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:41",
+    "kindCode": "10",
+    "name": "新潟県中越",
+    "pref": "新潟",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:47",
+    "kindCode": "10",
+    "name": "茨城県南部",
+    "pref": "茨城",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:48",
+    "kindCode": "10",
+    "name": "群馬県北部",
+    "pref": "群馬",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:48",
+    "kindCode": "10",
+    "name": "千葉県北東部",
+    "pref": "千葉",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:48",
+    "kindCode": "10",
+    "name": "新潟県上越",
+    "pref": "新潟",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:52",
+    "kindCode": "10",
+    "name": "群馬県南部",
+    "pref": "群馬",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:52",
+    "kindCode": "10",
+    "name": "埼玉県北部",
+    "pref": "埼玉",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:53",
+    "kindCode": "10",
+    "name": "埼玉県南部",
+    "pref": "埼玉",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:53",
+    "kindCode": "10",
+    "name": "千葉県北西部",
+    "pref": "千葉",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:56",
+    "kindCode": "10",
+    "name": "石川県能登",
+    "pref": "石川",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:57",
+    "kindCode": "10",
+    "name": "東京都２３区",
+    "pref": "東京",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:02",
+    "kindCode": "10",
+    "name": "長野県北部",
+    "pref": "長野",
+    "scaleFrom": 10,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:03",
+    "kindCode": "10",
+    "name": "神奈川県東部",
+    "pref": "神奈川",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:09",
+    "kindCode": "10",
+    "name": "千葉県南部",
+    "pref": "千葉",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:11",
+    "kindCode": "10",
+    "name": "長野県中部",
+    "pref": "長野",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:16",
+    "kindCode": "10",
+    "name": "山梨県中・西部",
+    "pref": "山梨",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:58",
+    "kindCode": "10",
+    "name": "埼玉県秩父",
+    "pref": "埼玉",
+    "scaleFrom": 0,
+    "scaleTo": 30
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:02",
+    "kindCode": "10",
+    "name": "東京都多摩東部",
+    "pref": "東京",
+    "scaleFrom": 0,
+    "scaleTo": 30
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:07",
+    "kindCode": "10",
+    "name": "富山県東部",
+    "pref": "富山",
+    "scaleFrom": 0,
+    "scaleTo": 30
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:08",
+    "kindCode": "10",
+    "name": "神奈川県西部",
+    "pref": "神奈川",
+    "scaleFrom": 0,
+    "scaleTo": 30
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:10",
+    "kindCode": "10",
+    "name": "富山県西部",
+    "pref": "富山",
+    "scaleFrom": 0,
+    "scaleTo": 30
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:14",
+    "kindCode": "10",
+    "name": "山梨県東部・富士五湖",
+    "pref": "山梨",
+    "scaleFrom": 0,
+    "scaleTo": 30
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:15",
+    "kindCode": "10",
+    "name": "石川県加賀",
+    "pref": "石川",
+    "scaleFrom": 0,
+    "scaleTo": 30
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:15",
+    "kindCode": "10",
+    "name": "岐阜県飛騨",
+    "pref": "岐阜",
+    "scaleFrom": 0,
+    "scaleTo": 30
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:20",
+    "kindCode": "10",
+    "name": "静岡県東部",
+    "pref": "静岡",
+    "scaleFrom": 0,
+    "scaleTo": 30
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:22",
+    "kindCode": "10",
+    "name": "静岡県伊豆",
+    "pref": "静岡",
+    "scaleFrom": 0,
+    "scaleTo": 30
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:13",
+    "kindCode": "10",
+    "name": "長野県南部",
+    "pref": "長野",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:21",
+    "kindCode": "10",
+    "name": "伊豆大島",
+    "pref": "伊豆諸島",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:25",
+    "kindCode": "10",
+    "name": "新島",
+    "pref": "伊豆諸島",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:25",
+    "kindCode": "10",
+    "name": "静岡県中部",
+    "pref": "静岡",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:29",
+    "kindCode": "10",
+    "name": "岐阜県美濃中西部",
+    "pref": "岐阜",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:31",
+    "kindCode": "10",
+    "name": "三宅島",
+    "pref": "伊豆諸島",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:33",
+    "kindCode": "10",
+    "name": "神津島",
+    "pref": "伊豆諸島",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:34",
+    "kindCode": "10",
+    "name": "愛知県西部",
+    "pref": "愛知",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:35",
+    "kindCode": "10",
+    "name": "静岡県西部",
+    "pref": "静岡",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   }
+  ],
+  "cancelled": false,
+  "code": 556,
+  "earthquake": {
+   "arrivalTime": "2026/10/16 12:38:10",
+   "condition": "",
+   "hypocenter": {
+    "depth": 140,
+    "latitude": 48.2,
+    "longitude": 153.4,
+    "magnitude": 9.9,
+    "name": "千島列島",
+    "reduceName": "千島列島\n"
+   },
+   "originTime": "2026/10/16 12:36:27"
+  },
+  "id": "6ad19c93e88ee598246bf3ed",
+  "issue": {
+   "eventId": "20261016123810",
+   "serial": "1",
+   "time": "2026/10/16 12:40:02"
+  },
+  "time": "2026/10/16 12:40:02.961",
+  "timestamp": {
+   "convert": "2026/10/16 12:40:02.764",
+   "register": "2026/10/16 12:40:02.961"
+  },
+  "user_agent": "jmaxml-seis-parser-go, relay, register-api",
+  "ver": "20231023"
+ },
+ {
+  "areas": [
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "根室地方北部",
+    "pref": "北海道道東",
+    "scaleFrom": 45,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "根室地方南部",
+    "pref": "北海道道東",
+    "scaleFrom": 45,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "網走地方",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "根室地方中部",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "釧路地方北部",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "紋別地方",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "北見地方",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "宗谷地方北部",
+    "pref": "北海道道北",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "宗谷地方南部",
+    "pref": "北海道道北",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "釧路地方中南部",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "上川地方北部",
+    "pref": "北海道道北",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "留萌地方中北部",
+    "pref": "北海道道北",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "十勝地方北部",
+    "pref": "北海道道東",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "空知地方南部",
+    "pref": "北海道道央",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "日高地方西部",
+    "pref": "北海道道南",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "石狩地方北部",
+    "pref": "北海道道央",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "胆振地方中東部",
+    "pref": "北海道道南",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "石狩地方中部",
+    "pref": "北海道道央",
+    "scaleFrom": 40,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "上川地方中部",
+    "pref": "北海道道北",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "十勝地方中部",
+    "pref": "北海道道東",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "北海道利尻礼文",
+    "pref": "北海道道北",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "上川地方南部",
+    "pref": "北海道道北",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "留萌地方南部",
+    "pref": "北海道道北",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "空知地方北部",
+    "pref": "北海道道央",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "十勝地方南部",
+    "pref": "北海道道東",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "空知地方中部",
+    "pref": "北海道道央",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "日高地方東部",
+    "pref": "北海道道南",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "日高地方中部",
+    "pref": "北海道道南",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "石狩地方南部",
+    "pref": "北海道道央",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": null,
+    "kindCode": "11",
+    "name": "後志地方北部",
+    "pref": "北海道道央",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:45",
+    "kindCode": "10",
+    "name": "胆振地方西部",
+    "pref": "北海道道南",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:47",
+    "kindCode": "10",
+    "name": "後志地方西部",
+    "pref": "北海道道央",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:48",
+    "kindCode": "10",
+    "name": "後志地方東部",
+    "pref": "北海道道央",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:56",
+    "kindCode": "10",
+    "name": "渡島地方東部",
+    "pref": "北海道道南",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:40:57",
+    "kindCode": "10",
+    "name": "渡島地方北部",
+    "pref": "北海道道南",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:02",
+    "kindCode": "10",
+    "name": "青森県下北",
+    "pref": "青森",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:05",
+    "kindCode": "10",
+    "name": "檜山地方",
+    "pref": "北海道道南",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:08",
+    "kindCode": "10",
+    "name": "渡島地方西部",
+    "pref": "北海道道南",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:13",
+    "kindCode": "10",
+    "name": "青森県津軽北部",
+    "pref": "青森",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:15",
+    "kindCode": "10",
+    "name": "青森県三八上北",
+    "pref": "青森",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:16",
+    "kindCode": "10",
+    "name": "岩手県沿岸北部",
+    "pref": "岩手",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:33",
+    "kindCode": "10",
+    "name": "岩手県内陸北部",
+    "pref": "岩手",
+    "scaleFrom": 30,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:22",
+    "kindCode": "10",
+    "name": "青森県津軽南部",
+    "pref": "青森",
+    "scaleFrom": 20,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:41",
+    "kindCode": "10",
+    "name": "秋田県沿岸北部",
+    "pref": "秋田",
+    "scaleFrom": 20,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:50",
+    "kindCode": "10",
+    "name": "宮城県中部",
+    "pref": "宮城",
+    "scaleFrom": 20,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:52",
+    "kindCode": "10",
+    "name": "宮城県北部",
+    "pref": "宮城",
+    "scaleFrom": 20,
+    "scaleTo": 70
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:14",
+    "kindCode": "10",
+    "name": "北海道奥尻島",
+    "pref": "北海道道南",
+    "scaleFrom": 20,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:28",
+    "kindCode": "10",
+    "name": "岩手県沿岸南部",
+    "pref": "岩手",
+    "scaleFrom": 20,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:29",
+    "kindCode": "10",
+    "name": "秋田県内陸北部",
+    "pref": "秋田",
+    "scaleFrom": 20,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:43",
+    "kindCode": "10",
+    "name": "岩手県内陸南部",
+    "pref": "岩手",
+    "scaleFrom": 20,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:43",
+    "kindCode": "10",
+    "name": "秋田県沿岸南部",
+    "pref": "秋田",
+    "scaleFrom": 20,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:41:43",
+    "kindCode": "10",
+    "name": "秋田県内陸南部",
+    "pref": "秋田",
+    "scaleFrom": 20,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:00",
+    "kindCode": "10",
+    "name": "山形県庄内",
+    "pref": "山形",
+    "scaleFrom": 20,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:03",
+    "kindCode": "10",
+    "name": "宮城県南部",
+    "pref": "宮城",
+    "scaleFrom": 20,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:05",
+    "kindCode": "10",
+    "name": "山形県村山",
+    "pref": "山形",
+    "scaleFrom": 20,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:10",
+    "kindCode": "10",
+    "name": "福島県中通り",
+    "pref": "福島",
+    "scaleFrom": 20,
+    "scaleTo": 60
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:15",
+    "kindCode": "10",
+    "name": "福島県浜通り",
+    "pref": "福島",
+    "scaleFrom": 20,
+    "scaleTo": 55
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:00",
+    "kindCode": "10",
+    "name": "山形県最上",
+    "pref": "山形",
+    "scaleFrom": 10,
+    "scaleTo": 55
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:10",
+    "kindCode": "10",
+    "name": "山形県置賜",
+    "pref": "山形",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:18",
+    "kindCode": "10",
+    "name": "新潟県下越",
+    "pref": "新潟",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:25",
+    "kindCode": "10",
+    "name": "福島県会津",
+    "pref": "福島",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:31",
+    "kindCode": "10",
+    "name": "栃木県北部",
+    "pref": "栃木",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:35",
+    "kindCode": "10",
+    "name": "新潟県佐渡",
+    "pref": "新潟",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:39",
+    "kindCode": "10",
+    "name": "栃木県南部",
+    "pref": "栃木",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:41",
+    "kindCode": "10",
+    "name": "茨城県北部",
+    "pref": "茨城",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:41",
+    "kindCode": "10",
+    "name": "新潟県中越",
+    "pref": "新潟",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:47",
+    "kindCode": "10",
+    "name": "茨城県南部",
+    "pref": "茨城",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:48",
+    "kindCode": "10",
+    "name": "新潟県上越",
+    "pref": "新潟",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:52",
+    "kindCode": "10",
+    "name": "群馬県南部",
+    "pref": "群馬",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:52",
+    "kindCode": "10",
+    "name": "埼玉県北部",
+    "pref": "埼玉",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:53",
+    "kindCode": "10",
+    "name": "埼玉県南部",
+    "pref": "埼玉",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:53",
+    "kindCode": "10",
+    "name": "千葉県北西部",
+    "pref": "千葉",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:56",
+    "kindCode": "10",
+    "name": "石川県能登",
+    "pref": "石川",
+    "scaleFrom": 10,
+    "scaleTo": 50
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:48",
+    "kindCode": "10",
+    "name": "群馬県北部",
+    "pref": "群馬",
+    "scaleFrom": 10,
+    "scaleTo": 45
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:48",
+    "kindCode": "10",
+    "name": "千葉県北東部",
+    "pref": "千葉",
+    "scaleFrom": 10,
+    "scaleTo": 45
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:57",
+    "kindCode": "10",
+    "name": "東京都２３区",
+    "pref": "東京",
+    "scaleFrom": 10,
+    "scaleTo": 45
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:02",
+    "kindCode": "10",
+    "name": "長野県北部",
+    "pref": "長野",
+    "scaleFrom": 10,
+    "scaleTo": 45
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:04",
+    "kindCode": "10",
+    "name": "神奈川県東部",
+    "pref": "神奈川",
+    "scaleFrom": 10,
+    "scaleTo": 45
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:09",
+    "kindCode": "10",
+    "name": "千葉県南部",
+    "pref": "千葉",
+    "scaleFrom": 10,
+    "scaleTo": 45
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:11",
+    "kindCode": "10",
+    "name": "長野県中部",
+    "pref": "長野",
+    "scaleFrom": 10,
+    "scaleTo": 45
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:16",
+    "kindCode": "10",
+    "name": "山梨県中・西部",
+    "pref": "山梨",
+    "scaleFrom": 10,
+    "scaleTo": 45
+   },
+   {
+    "arrivalTime": "2026/10/16 12:42:58",
+    "kindCode": "10",
+    "name": "埼玉県秩父",
+    "pref": "埼玉",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:02",
+    "kindCode": "10",
+    "name": "東京都多摩東部",
+    "pref": "東京",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:02",
+    "kindCode": "10",
+    "name": "東京都多摩西部",
+    "pref": "東京",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:07",
+    "kindCode": "10",
+    "name": "富山県東部",
+    "pref": "富山",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:08",
+    "kindCode": "10",
+    "name": "神奈川県西部",
+    "pref": "神奈川",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:10",
+    "kindCode": "10",
+    "name": "富山県西部",
+    "pref": "富山",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:14",
+    "kindCode": "10",
+    "name": "山梨県東部・富士五湖",
+    "pref": "山梨",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:15",
+    "kindCode": "10",
+    "name": "石川県加賀",
+    "pref": "石川",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:15",
+    "kindCode": "10",
+    "name": "岐阜県飛騨",
+    "pref": "岐阜",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:20",
+    "kindCode": "10",
+    "name": "静岡県東部",
+    "pref": "静岡",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:22",
+    "kindCode": "10",
+    "name": "静岡県伊豆",
+    "pref": "静岡",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:25",
+    "kindCode": "10",
+    "name": "長野県南部",
+    "pref": "長野",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:25",
+    "kindCode": "10",
+    "name": "岐阜県美濃東部",
+    "pref": "岐阜",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:27",
+    "kindCode": "10",
+    "name": "静岡県中部",
+    "pref": "静岡",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:30",
+    "kindCode": "10",
+    "name": "福井県嶺北",
+    "pref": "福井",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:38",
+    "kindCode": "10",
+    "name": "岐阜県美濃中西部",
+    "pref": "岐阜",
+    "scaleFrom": 0,
+    "scaleTo": 40
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:21",
+    "kindCode": "10",
+    "name": "伊豆大島",
+    "pref": "伊豆諸島",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:25",
+    "kindCode": "10",
+    "name": "新島",
+    "pref": "伊豆諸島",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:31",
+    "kindCode": "10",
+    "name": "三宅島",
+    "pref": "伊豆諸島",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:33",
+    "kindCode": "10",
+    "name": "神津島",
+    "pref": "伊豆諸島",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:34",
+    "kindCode": "10",
+    "name": "愛知県西部",
+    "pref": "愛知",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:35",
+    "kindCode": "10",
+    "name": "静岡県西部",
+    "pref": "静岡",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:36",
+    "kindCode": "10",
+    "name": "愛知県東部",
+    "pref": "愛知",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   },
+   {
+    "arrivalTime": "2026/10/16 12:43:41",
+    "kindCode": "10",
+    "name": "福井県嶺南",
+    "pref": "福井",
+    "scaleFrom": 0,
+    "scaleTo": 0
+   }
+  ],
+  "cancelled": false,
+  "code": 556,
+  "earthquake": {
+   "arrivalTime": "2026/10/16 12:38:10",
+   "condition": "",
+   "hypocenter": {
+    "depth": 140,
+    "latitude": 48.2,
+    "longitude": 153.4,
+    "magnitude": 9.9,
+    "name": "千島列島",
+    "reduceName": "千島列島\n"
+   },
+   "originTime": "2026/10/16 12:36:27"
+  },
+  "id": "6ad19cb9e88ee598246bf3ef",
+  "issue": {
+   "eventId": "20261016123810",
+   "serial": "2",
+   "time": "2026/10/16 12:40:41"
+  },
+  "time": "2026/10/16 12:40:41.752",
+  "timestamp": {
+   "convert": "2026/10/16 12:40:41.712",
+   "register": "2026/10/16 12:40:41.752"
+  },
+  "user_agent": "jmaxml-seis-parser-go, relay, register-api",
+  "ver": "20231023"
+ },
+ {
+  "areas": null,
+  "cancelled": true,
+  "code": 556,
+  "earthquake": null,
+  "id": "6ad19ea2e88ee598246bf3f1",
+  "issue": {
+   "eventId": "20261016123810",
+   "serial": "2",
+   "time": "2026/10/16 12:48:50"
+  },
+  "time": "2026/10/16 12:48:50.829",
+  "timestamp": {
+   "convert": "2026/10/16 12:48:50.82",
+   "register": "2026/10/16 12:48:50.829"
+  },
+  "user_agent": "jmaxml-seis-parser-go, relay, register-api",
+  "ver": "20231023"
+ }
+]

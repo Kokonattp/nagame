@@ -103,3 +103,20 @@ create table if not exists tabi_account_resets (
 alter table tabi_trips enable row level security;
 alter table tabi_account_resets enable row level security;
 alter table tabi_events enable row level security;
+
+-- ── แจ้งเตือนแผ่นดินไหว/สึนามิภาษาไทย (Web Push) — docs/quake-alerts.md ──
+-- เขียนผ่าน /api/tabi/push (service key), อ่าน/ลบโดย workers/quake-alert. ไม่มีชื่อ/บัญชี/ตำแหน่ง:
+-- แค่ปลายทาง push ของเบราว์เซอร์ + จังหวัดในทริป + ช่วงวันเดินทาง. หนึ่งเครื่องตามได้หลายทริป.
+create table if not exists push_subscriptions (
+  endpoint    text not null,               -- URL ของ push service (FCM / Apple / Mozilla / Windows)
+  trip_id     text not null,               -- id ทริปในเบราว์เซอร์ (lib/tabi/store.ts)
+  p256dh      text not null,               -- กุญแจเข้ารหัสของเบราว์เซอร์
+  auth        text not null,
+  prefectures text[] not null,             -- ชื่อจังหวัดภาษาอังกฤษ เช่น {Tokyo,Kyoto}
+  starts_on   date not null,               -- วันแรกของทริป (เวลาญี่ปุ่น)
+  ends_on     date not null,               -- วันสุดท้าย; worker ลบแถวที่จบเกิน 7 วัน
+  updated_at  timestamptz not null default now(),
+  primary key (endpoint, trip_id)
+);
+
+create index if not exists push_subscriptions_window_idx on push_subscriptions (starts_on, ends_on);
