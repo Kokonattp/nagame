@@ -4,8 +4,8 @@
   "type": "module",
   "engines": { "node": ">=22" },
   "scripts": {
-    "start": "node index.mjs",
-    "dry": "node index.mjs --dry",
+    "start": "node --env-file-if-exists=.env index.mjs",
+    "dry": "node --env-file-if-exists=.env index.mjs --dry",
     "test": "node --test"
   },
   "dependencies": {

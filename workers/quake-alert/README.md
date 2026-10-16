@@ -8,18 +8,18 @@ P2PQuake จำกัด 2 การเชื่อมต่อต่อ IP — 
 
 ## เปิดใช้ครั้งแรก (เจ้าของทำ)
 
-1. Supabase: รัน `supabase/schema.sql` ส่วน `push_subscriptions` ใน SQL editor
-2. สร้างกุญแจ: `cd workers/quake-alert && npm install && npx web-push generate-vapid-keys`
-3. Vercel: ใส่ `VAPID_PUBLIC_KEY` (+ `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` ถ้ายังไม่มี) → deploy → ปุ่ม "เปิดแจ้งเตือน" จะขึ้นในการ์ดความปลอดภัยของหน้าทริป
-4. เครื่อง worker: ตั้ง env แล้วรัน
+1. สร้าง project ฟรีที่ supabase.com (ถ้ายังไม่มี)
+2. รันสคริปต์ที่ root ของ repo — ถาม URL + service_role key (พิมพ์แล้วไม่แสดง), สร้างกุญแจ VAPID,
+   เขียน `.env.local` + `workers/quake-alert/.env`, ใส่ env ใน Vercel, เช็กว่ามีตารางแล้ว
+   (ถ้ายังไม่มี จะ copy SQL ให้และเปิดหน้า SQL editor — กด Run แล้วรันสคริปต์ซ้ำ)
+   ```
+   powershell -ExecutionPolicy Bypass -File scripts\setup-quake-alerts.ps1
+   ```
+3. `git push` → Vercel deploy ใหม่ → ปุ่ม "เปิดแจ้งเตือน" ขึ้นในการ์ดความปลอดภัยของหน้าทริป
+4. เครื่อง worker: copy `workers/quake-alert/.env` ไปด้วย แล้ว `npm install && npm start`
+   (อ่าน `.env` เอง) — ใช้ process manager ให้รีสตาร์ทเองเมื่อดับ เช่น `pm2 start npm --name quake-alert -- start`
 
-```
-SUPABASE_URL=...  SUPABASE_SERVICE_KEY=...
-VAPID_PUBLIC_KEY=...  VAPID_PRIVATE_KEY=...  VAPID_SUBJECT=mailto:you@example.com
-node index.mjs
-```
-
-ใช้ process manager ให้รีสตาร์ทเองเมื่อดับ (เช่น `pm2 start index.mjs --name quake-alert` หรือ Task Scheduler/systemd)
+**ห้ามสร้างกุญแจ VAPID ใหม่ทับของเดิม** — การสมัครรับแจ้งเตือนทั้งหมดจะใช้ไม่ได้ (สคริปต์เก็บของเดิมไว้ให้อัตโนมัติ)
 
 ## ทดสอบโดยไม่ส่งจริง
 
